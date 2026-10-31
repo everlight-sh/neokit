@@ -1,0 +1,7 @@
+{
+  "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "cpu": "Apple M1 Pro",
+  "ram_bytes": 17179869184,
+  "swap_after_run": "vm.swapusage: total = 8192.00M  used = 7485.00M  free = 707.00M  (encrypted)",
+  "tools_image": "sha256:d347b7f173307985fa1b7c983ac9b44fd7712aeb047d2dc3bf205f83bf84619e"
+}

@@ -1,0 +1,4 @@
+{
+  "exit_code": 137,
+  "reason": "Host free disk fell below 2 GiB. Guard stopped own benchmark container."
+}

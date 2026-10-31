@@ -1,0 +1,11 @@
+/build/
+**/.axon-build/
+**/__pycache__/
+*.pyc
+.DS_Store
+**/node_modules/
+**/.next/
+**/.astro/
+**/dist-ssr/
+**/dist-static/
+**/out/

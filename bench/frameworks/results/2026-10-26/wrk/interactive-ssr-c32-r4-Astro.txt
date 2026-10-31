@@ -1,0 +1,10 @@
+Running 4s test @ http://127.0.0.1:46137/interactive?n=50&seed=17&token=measured-interactive-ssr-c32-r4-Astro
+  1 threads and 32 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    12.84ms   10.33ms 105.98ms   91.91%
+    Req/Sec     2.84k   800.02     4.00k    80.00%
+  11336 requests in 4.01s, 80.15MB read
+Requests/sec:   2825.68
+Transfer/sec:     19.98MB
+BENCH {"requests":11336,"duration_us":4011779,"bytes":84045104,"p50_us":9173.000,"p95_us":31592.000,"p99_us":63262.000,"max_us":105980.000,"errors":{"connect":0,"read":0,"write":0,"status":0,"timeout":0}}
+

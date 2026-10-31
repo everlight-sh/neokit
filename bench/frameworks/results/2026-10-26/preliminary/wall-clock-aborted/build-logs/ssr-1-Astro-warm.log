@@ -1,0 +1,15 @@
+08:38:58 [types] Generated 33ms
+08:38:58 [build] output: "server"
+08:38:58 [build] mode: "server"
+08:38:58 [build] directory: /work/axon-web/bench/frameworks/apps/astro/dist-ssr/
+08:38:58 [build] adapter: @astrojs/node
+08:38:58 [build] Collecting build info...
+08:38:58 [build] ✓ Completed in 62ms.
+08:38:58 [build] Building server entrypoints...
+08:38:58 [vite] ✓ built in 81ms
+08:38:58 [vite] ✓ built in 108ms
+08:38:58 [vite] ✓ built in 17ms
+08:38:58 [build] Rearranging server assets...
+08:38:58 [build] ✓ Completed in 237ms.
+08:38:58 [build] Server built in 300ms
+08:38:58 [build] Complete!

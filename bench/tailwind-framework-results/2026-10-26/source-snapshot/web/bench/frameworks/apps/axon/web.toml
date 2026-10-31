@@ -1,0 +1,5 @@
+[site]
+name="Framework catalog benchmark"
+
+[css]
+tailwind=["site.css"]

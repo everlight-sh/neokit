@@ -1,0 +1,4 @@
+loader="load_large"
+mode="ssr"
+client=false
+export=true

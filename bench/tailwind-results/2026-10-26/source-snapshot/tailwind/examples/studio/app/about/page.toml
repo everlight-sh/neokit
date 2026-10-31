@@ -1,0 +1,4 @@
+loader = "about_load"
+mode = "static"
+client = false
+export = true

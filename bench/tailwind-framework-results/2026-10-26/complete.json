@@ -1,0 +1,25 @@
+{
+  "complete": true,
+  "self_test": false,
+  "runtime_trials": 27,
+  "build_trials": 36,
+  "source_hashes_unchanged": true,
+  "verification": {
+    "Axon": {
+      "queries": 9,
+      "source_and_original_node_modules_offline": true,
+      "startup_ns": 1821042
+    },
+    "Astro": {
+      "queries": 9,
+      "source_and_original_node_modules_offline": true,
+      "startup_ns": 143283417
+    },
+    "Next": {
+      "queries": 9,
+      "source_and_original_node_modules_offline": true,
+      "startup_ns": 167764542
+    }
+  },
+  "finished_utc": "2026-10-26T12:06:21.198782+00:00"
+}

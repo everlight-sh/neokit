@@ -1,0 +1,5 @@
+[site]
+name = "Axon Web starter"
+
+[css]
+tailwind = ["site.css"]

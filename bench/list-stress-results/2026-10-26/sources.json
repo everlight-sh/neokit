@@ -1,0 +1,8 @@
+{
+  "client/keyed.js": "bdf823b66d459d604a4e074a4b5c08812c9cb4b1fc024679853852bbdf601ed8",
+  "client/keyed.test.js": "e7db6d11c6aff30dc9e5865feb1d0286b885ac4dd098d5e6407c3d642d5a5f5e",
+  "examples/studio/client/widgets/list-stress.js": "5f2cd1b404f19c0379c5861699a4b81569f2095e7b5295c4b0eaa06aed9b88c0",
+  "examples/studio/app/stress/page.ax": "2274dbd71c6a90ad1670c05207fcfb6fd65550ef28e2b5702fa77d60a5a32138",
+  "examples/studio/app/stress/page.toml": "76bdd8e3816eeb0b5b91b1a7826a88eb9d622a0cf301fc41e52508370f810530",
+  "examples/studio/app/stress/page.view": "0b98a02464ad370858eca684a2de84de167108dd9fec4d09eba284686f1b0049"
+}

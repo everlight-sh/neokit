@@ -1,0 +1,10 @@
+{
+  "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "tools_image": "sha256:d347b7f173307985fa1b7c983ac9b44fd7712aeb047d2dc3bf205f83bf84619e",
+  "docker_context": "desktop-linux",
+  "memory_gib": 4,
+  "cpus": 4,
+  "swap_disabled_in_container": true,
+  "cpu": "Apple M1 Pro",
+  "swap_after_run": "vm.swapusage: total = 7168.00M  used = 5595.50M  free = 1572.50M  (encrypted)"
+}

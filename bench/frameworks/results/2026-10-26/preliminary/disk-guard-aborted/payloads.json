@@ -1,0 +1,257 @@
+{
+  "Axon": {
+    "small-ssr": {
+      "html_bytes": 964,
+      "html_gzip_bytes": 541,
+      "html_referenced_external_js_bytes": 0,
+      "html_referenced_external_js_gzip_bytes": 0,
+      "inline_script_bytes": 0,
+      "inline_script_gzip_bytes": 0,
+      "js_assets": {},
+      "css_assets": {
+        "/_web/site-668cbff2887d.css": {
+          "bytes": 830,
+          "gzip_bytes": 456,
+          "sha256": "668cbff2887dea609e0aacd626efa72b38446a2775f43ac8e917f2b77b2c1082"
+        }
+      },
+      "note": "HTML-declared script/preload resources and inline scripts; not a browser network trace or INP measurement"
+    },
+    "large-ssr": {
+      "html_bytes": 104962,
+      "html_gzip_bytes": 9765,
+      "html_referenced_external_js_bytes": 0,
+      "html_referenced_external_js_gzip_bytes": 0,
+      "inline_script_bytes": 0,
+      "inline_script_gzip_bytes": 0,
+      "js_assets": {},
+      "css_assets": {
+        "/_web/site-668cbff2887d.css": {
+          "bytes": 830,
+          "gzip_bytes": 456,
+          "sha256": "668cbff2887dea609e0aacd626efa72b38446a2775f43ac8e917f2b77b2c1082"
+        }
+      },
+      "note": "HTML-declared script/preload resources and inline scripts; not a browser network trace or INP measurement"
+    },
+    "interactive-ssr": {
+      "html_bytes": 6048,
+      "html_gzip_bytes": 1372,
+      "html_referenced_external_js_bytes": 4925,
+      "html_referenced_external_js_gzip_bytes": 2146,
+      "inline_script_bytes": 0,
+      "inline_script_gzip_bytes": 0,
+      "js_assets": {
+        "/_web/client-qnxetx3b.js": {
+          "bytes": 4925,
+          "gzip_bytes": 2146,
+          "sha256": "1d50ab5d30740ea741a82bbc37d9ca15a53dd1f61307e134a979aa002aae2927"
+        }
+      },
+      "css_assets": {
+        "/_web/site-668cbff2887d.css": {
+          "bytes": 830,
+          "gzip_bytes": 456,
+          "sha256": "668cbff2887dea609e0aacd626efa72b38446a2775f43ac8e917f2b77b2c1082"
+        }
+      },
+      "note": "HTML-declared script/preload resources and inline scripts; not a browser network trace or INP measurement"
+    }
+  },
+  "Astro": {
+    "small-ssr": {
+      "html_bytes": 1747,
+      "html_gzip_bytes": 913,
+      "html_referenced_external_js_bytes": 0,
+      "html_referenced_external_js_gzip_bytes": 0,
+      "inline_script_bytes": 0,
+      "inline_script_gzip_bytes": 0,
+      "js_assets": {},
+      "css_assets": {},
+      "note": "HTML-declared script/preload resources and inline scripts; not a browser network trace or INP measurement"
+    },
+    "large-ssr": {
+      "html_bytes": 105546,
+      "html_gzip_bytes": 10280,
+      "html_referenced_external_js_bytes": 0,
+      "html_referenced_external_js_gzip_bytes": 0,
+      "inline_script_bytes": 0,
+      "inline_script_gzip_bytes": 0,
+      "js_assets": {},
+      "css_assets": {},
+      "note": "HTML-declared script/preload resources and inline scripts; not a browser network trace or INP measurement"
+    },
+    "interactive-ssr": {
+      "html_bytes": 7190,
+      "html_gzip_bytes": 1895,
+      "html_referenced_external_js_bytes": 0,
+      "html_referenced_external_js_gzip_bytes": 0,
+      "inline_script_bytes": 399,
+      "inline_script_gzip_bytes": 225,
+      "js_assets": {},
+      "css_assets": {},
+      "note": "HTML-declared script/preload resources and inline scripts; not a browser network trace or INP measurement"
+    }
+  },
+  "Next": {
+    "small-ssr": {
+      "html_bytes": 7550,
+      "html_gzip_bytes": 2344,
+      "html_referenced_external_js_bytes": 569180,
+      "html_referenced_external_js_gzip_bytes": 174370,
+      "inline_script_bytes": 5835,
+      "inline_script_gzip_bytes": 1808,
+      "js_assets": {
+        "/_next/static/chunks/0cz1d0mv5g_q7.js": {
+          "bytes": 112594,
+          "gzip_bytes": 39373,
+          "sha256": "0973c1d64c88adc8e3c950410cb58b288f72118d5965b78049438deb8f2f9683"
+        },
+        "/_next/static/chunks/0h-9-f0-y194u.js": {
+          "bytes": 596,
+          "gzip_bytes": 363,
+          "sha256": "31c77d5f44e4d3d932880c8c6b65263a64a4ec6f77adbe14de8eb4a61383c3dc"
+        },
+        "/_next/static/chunks/0r-yur70-ku2o.js": {
+          "bytes": 185420,
+          "gzip_bytes": 49464,
+          "sha256": "db703d2a75d3d6852ec11fccc98e0ede3f7334b71a38648c117a78c8cdab6c71"
+        },
+        "/_next/static/chunks/0umf92h1sb77c.js": {
+          "bytes": 13822,
+          "gzip_bytes": 3530,
+          "sha256": "c410d0f2543e080768fc14f73b2bd1fdf103e26956e9730390b5e41c4fb5ff8b"
+        },
+        "/_next/static/chunks/3cfn99dbrcvvp.js": {
+          "bytes": 16898,
+          "gzip_bytes": 5916,
+          "sha256": "ce93ca628abb25d17ebc40e5db225cc2b25ca3415910428f5dab7aa049ab506b"
+        },
+        "/_next/static/chunks/3wbm-994r45kr.js": {
+          "bytes": 229820,
+          "gzip_bytes": 71778,
+          "sha256": "0112d166f239984294780810c159749ca06e78e3f1ce5db35ab98f31b95c9d5c"
+        },
+        "/_next/static/chunks/turbopack-3-ry682tkyiqk.js": {
+          "bytes": 10030,
+          "gzip_bytes": 3946,
+          "sha256": "8bbb58cbfd4633c1d828c6bc37bc32abc768a149c01b1dfc4f5131fd81274551"
+        }
+      },
+      "css_assets": {
+        "/_next/static/chunks/342zdbx8pfapx.css": {
+          "bytes": 829,
+          "gzip_bytes": 447,
+          "sha256": "ff9b177d847cb46993761fe87180f338947ea8e7455cc3a32e22ec39775f7fc8"
+        }
+      },
+      "note": "HTML-declared script/preload resources and inline scripts; not a browser network trace or INP measurement"
+    },
+    "large-ssr": {
+      "html_bytes": 408841,
+      "html_gzip_bytes": 32105,
+      "html_referenced_external_js_bytes": 569180,
+      "html_referenced_external_js_gzip_bytes": 174370,
+      "inline_script_bytes": 303128,
+      "inline_script_gzip_bytes": 21347,
+      "js_assets": {
+        "/_next/static/chunks/0cz1d0mv5g_q7.js": {
+          "bytes": 112594,
+          "gzip_bytes": 39373,
+          "sha256": "0973c1d64c88adc8e3c950410cb58b288f72118d5965b78049438deb8f2f9683"
+        },
+        "/_next/static/chunks/0h-9-f0-y194u.js": {
+          "bytes": 596,
+          "gzip_bytes": 363,
+          "sha256": "31c77d5f44e4d3d932880c8c6b65263a64a4ec6f77adbe14de8eb4a61383c3dc"
+        },
+        "/_next/static/chunks/0r-yur70-ku2o.js": {
+          "bytes": 185420,
+          "gzip_bytes": 49464,
+          "sha256": "db703d2a75d3d6852ec11fccc98e0ede3f7334b71a38648c117a78c8cdab6c71"
+        },
+        "/_next/static/chunks/0umf92h1sb77c.js": {
+          "bytes": 13822,
+          "gzip_bytes": 3530,
+          "sha256": "c410d0f2543e080768fc14f73b2bd1fdf103e26956e9730390b5e41c4fb5ff8b"
+        },
+        "/_next/static/chunks/3cfn99dbrcvvp.js": {
+          "bytes": 16898,
+          "gzip_bytes": 5916,
+          "sha256": "ce93ca628abb25d17ebc40e5db225cc2b25ca3415910428f5dab7aa049ab506b"
+        },
+        "/_next/static/chunks/3wbm-994r45kr.js": {
+          "bytes": 229820,
+          "gzip_bytes": 71778,
+          "sha256": "0112d166f239984294780810c159749ca06e78e3f1ce5db35ab98f31b95c9d5c"
+        },
+        "/_next/static/chunks/turbopack-3-ry682tkyiqk.js": {
+          "bytes": 10030,
+          "gzip_bytes": 3946,
+          "sha256": "8bbb58cbfd4633c1d828c6bc37bc32abc768a149c01b1dfc4f5131fd81274551"
+        }
+      },
+      "css_assets": {
+        "/_next/static/chunks/342zdbx8pfapx.css": {
+          "bytes": 829,
+          "gzip_bytes": 447,
+          "sha256": "ff9b177d847cb46993761fe87180f338947ea8e7455cc3a32e22ec39775f7fc8"
+        }
+      },
+      "note": "HTML-declared script/preload resources and inline scripts; not a browser network trace or INP measurement"
+    },
+    "interactive-ssr": {
+      "html_bytes": 26751,
+      "html_gzip_bytes": 4416,
+      "html_referenced_external_js_bytes": 569180,
+      "html_referenced_external_js_gzip_bytes": 174370,
+      "inline_script_bytes": 20005,
+      "inline_script_gzip_bytes": 3029,
+      "js_assets": {
+        "/_next/static/chunks/0cz1d0mv5g_q7.js": {
+          "bytes": 112594,
+          "gzip_bytes": 39373,
+          "sha256": "0973c1d64c88adc8e3c950410cb58b288f72118d5965b78049438deb8f2f9683"
+        },
+        "/_next/static/chunks/0h-9-f0-y194u.js": {
+          "bytes": 596,
+          "gzip_bytes": 363,
+          "sha256": "31c77d5f44e4d3d932880c8c6b65263a64a4ec6f77adbe14de8eb4a61383c3dc"
+        },
+        "/_next/static/chunks/0r-yur70-ku2o.js": {
+          "bytes": 185420,
+          "gzip_bytes": 49464,
+          "sha256": "db703d2a75d3d6852ec11fccc98e0ede3f7334b71a38648c117a78c8cdab6c71"
+        },
+        "/_next/static/chunks/0umf92h1sb77c.js": {
+          "bytes": 13822,
+          "gzip_bytes": 3530,
+          "sha256": "c410d0f2543e080768fc14f73b2bd1fdf103e26956e9730390b5e41c4fb5ff8b"
+        },
+        "/_next/static/chunks/3cfn99dbrcvvp.js": {
+          "bytes": 16898,
+          "gzip_bytes": 5916,
+          "sha256": "ce93ca628abb25d17ebc40e5db225cc2b25ca3415910428f5dab7aa049ab506b"
+        },
+        "/_next/static/chunks/3wbm-994r45kr.js": {
+          "bytes": 229820,
+          "gzip_bytes": 71778,
+          "sha256": "0112d166f239984294780810c159749ca06e78e3f1ce5db35ab98f31b95c9d5c"
+        },
+        "/_next/static/chunks/turbopack-3-ry682tkyiqk.js": {
+          "bytes": 10030,
+          "gzip_bytes": 3946,
+          "sha256": "8bbb58cbfd4633c1d828c6bc37bc32abc768a149c01b1dfc4f5131fd81274551"
+        }
+      },
+      "css_assets": {
+        "/_next/static/chunks/342zdbx8pfapx.css": {
+          "bytes": 829,
+          "gzip_bytes": 447,
+          "sha256": "ff9b177d847cb46993761fe87180f338947ea8e7455cc3a32e22ec39775f7fc8"
+        }
+      },
+      "note": "HTML-declared script/preload resources and inline scripts; not a browser network trace or INP measurement"
+    }
+  }
+}

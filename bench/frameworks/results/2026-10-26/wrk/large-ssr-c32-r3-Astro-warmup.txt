@@ -1,0 +1,10 @@
+Running 1s test @ http://127.0.0.1:43893/large?n=1000&seed=17&token=measured-large-ssr-c32-r3-Astro
+  1 threads and 32 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   152.33ms  176.92ms 949.42ms   86.67%
+    Req/Sec   285.80     86.80   353.00     90.00%
+  285 requests in 1.00s, 28.75MB read
+Requests/sec:    284.37
+Transfer/sec:     28.68MB
+BENCH {"requests":285,"duration_us":1002204,"bytes":30143025,"p50_us":86217.000,"p95_us":589393.000,"p99_us":824147.000,"max_us":949422.000,"errors":{"connect":0,"read":0,"write":0,"status":0,"timeout":0}}
+

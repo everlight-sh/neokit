@@ -1,0 +1,45 @@
+{
+  "passed": true,
+  "rows": 1000,
+  "checks": [
+    {
+      "name": "24 generated-array updates preserve every row node",
+      "passed": true
+    },
+    {
+      "name": "Updates preserve focus, draft and caret",
+      "passed": true
+    },
+    {
+      "name": "Reordering preserves focused node and selection",
+      "passed": true
+    },
+    {
+      "name": "Filtering keeps a matching focused row alive",
+      "passed": true
+    },
+    {
+      "name": "Add/remove preserves existing row nodes",
+      "passed": true
+    },
+    {
+      "name": "Negative control detects full redraw and focus loss",
+      "passed": true
+    },
+    {
+      "name": "Rendered ID cells match their stable row keys",
+      "passed": true
+    },
+    {
+      "name": "No unexplained empty rendered frames",
+      "passed": true
+    }
+  ],
+  "keyedFocusLosses": 0,
+  "expectedFullRedrawFocusLosses": 1,
+  "blankFrames": 0,
+  "serverRefreshes": 0,
+  "p95SteadyPatchMs": 5.599999904632568,
+  "p95AllOperationsMs": 79.39999985694885,
+  "worstFrameMs": 66
+}

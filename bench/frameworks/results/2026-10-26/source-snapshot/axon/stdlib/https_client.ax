@@ -1,0 +1,18 @@
+import "std:http_client"
+import "std:tls"
+import "std:arena"
+import "std:socket_cancel"
+type PlainHTTPCapture = { socket:Ref<Socket>,cancel:Ref<Cancellation> }
+type TLSHTTPCapture = { socket:Ref<Socket>,session:Ref<TlsSession> }
+effect(net,time,process) fn http_plain_read(context:PlainHTTPCapture,deadline:i64) -> BytesResult
+  = socket_read_cancel(borrow_ref(context.socket),borrow_ref(context.cancel),deadline)
+effect(net,time,process) fn http_plain_write(context:PlainHTTPCapture,bytes:Arr u8 n,deadline:i64) -> IntResult
+  = socket_write_cancel(borrow_ref(context.socket),bytes,borrow_ref(context.cancel),deadline)
+effect(net,time,process) fn http_tls_read(context:TLSHTTPCapture,deadline:i64) -> BytesResult
+  = tls_read(borrow_ref(context.socket),borrow_ref(context.session),deadline)
+effect(net,time,process) fn http_tls_write(context:TLSHTTPCapture,bytes:Arr u8 n,deadline:i64) -> IntResult
+  = tls_write(borrow_ref(context.socket),borrow_ref(context.session),bytes,deadline)
+fn http_plain_transport(socket:Ref<Socket>,cancel:Ref<Cancellation>) -> HttpIO<PlainHTTPCapture>
+  = HttpIO::<PlainHTTPCapture> { context=PlainHTTPCapture { socket=socket,cancel=cancel },read=function(http_plain_read),write=function(http_plain_write) }
+fn http_tls_transport(socket:Ref<Socket>,session:Ref<TlsSession>) -> HttpIO<TLSHTTPCapture>
+  = HttpIO::<TLSHTTPCapture> { context=TLSHTTPCapture { socket=socket,session=session },read=function(http_tls_read),write=function(http_tls_write) }

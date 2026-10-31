@@ -1,0 +1,4 @@
+[package]
+name = "axon-web"
+version = "0.1.0-dev.1"
+entry = "src/lib.ax"

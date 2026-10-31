@@ -1,0 +1,20 @@
+08:40:23 [types] Generated 93ms
+08:40:23 [build] output: "static"
+08:40:23 [build] mode: "static"
+08:40:23 [build] directory: /work/axon-web/bench/frameworks/apps/astro/dist-static/
+08:40:23 [build] Collecting build info...
+08:40:23 [build] ✓ Completed in 104ms.
+08:40:23 [build] Building static entrypoints...
+08:40:23 [vite] ✓ built in 97ms
+08:40:23 [vite] ✓ built in 19ms
+08:40:23 [build] Rearranging server assets...
+
+ generating static routes 
+08:40:23   ├─ /interactive/index.html (+11ms) 
+08:40:23   ├─ /large/index.html (+19ms) 
+08:40:23   ├─ /index.html (+2ms) 
+08:40:23 ✓ Completed in 42ms.
+
+08:40:23 [build] ✓ Completed in 188ms.
+08:40:23 [build] 3 page(s) built in 293ms
+08:40:23 [build] Complete!

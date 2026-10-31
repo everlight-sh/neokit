@@ -1,0 +1,13 @@
+Running 3s test @ http://127.0.0.1:51181/greet?name=Tailwind%20%26%20Axon
+  2 threads and 16 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   444.47us    1.17ms  16.94ms   95.43%
+    Req/Sec    32.98k     6.25k   43.18k    63.33%
+  Latency Distribution
+     50%  204.00us
+     75%  271.00us
+     90%  409.00us
+     99%    6.68ms
+  197259 requests in 3.01s, 335.04MB read
+Requests/sec:  65564.63
+Transfer/sec:    111.36MB

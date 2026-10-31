@@ -1,0 +1,2 @@
+@props(title: text, name: text, stamp: int)
+<div class="rounded-lg bg-slate-50 p-4"><p class="text-lg font-medium break-words text-slate-900">Hello, {{ name }}.</p><small class="mt-1 block text-xs text-slate-500">Fresh HTML from the native server · <span data-server-stamp>{{ stamp }}</span></small><a class="mt-3 inline-block text-sm font-medium text-indigo-600 hover:text-indigo-500" href="/">← Back to home</a></div>

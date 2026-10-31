@@ -1,0 +1,8 @@
+{
+  "sha256": "9e74e49029d27fe57c256e6b7a29e958406ba584a2a2fbe498439da5e2fa5a2c",
+  "bytes": 239664,
+  "readelf_program_headers": "Elf file type is EXEC (Executable file)\nEntry point 0x405830\nThere are 6 program headers, starting at offset 64\n\nProgram Headers:\n  Type           Offset             VirtAddr           PhysAddr\n                 FileSiz            MemSiz              Flags  Align\n  LOAD           0x0000000000000000 0x0000000000400000 0x0000000000400000\n                 0x000000000002cdd0 0x000000000002cdd0  R E    0x10000\n  LOAD           0x000000000002ff78 0x000000000043ff78 0x000000000043ff78\n                 0x0000000000000070 0x0000000000000878  RW     0x10000\n  NOTE           0x0000000000000190 0x0000000000400190 0x0000000000400190\n                 0x0000000000000024 0x0000000000000024  R      0x4\n  GNU_EH_FRAME   0x000000000002a9d0 0x000000000042a9d0 0x000000000042a9d0\n                 0x00000000000007bc 0x00000000000007bc  R      0x4\n  GNU_STACK      0x0000000000000000 0x0000000000000000 0x0000000000000000\n                 0x0000000000000000 0x0000000000000000  RW     0x10\n  GNU_RELRO      0x000000000002ff78 0x000000000043ff78 0x000000000043ff78\n                 0x0000000000000070 0x0000000000000088  R      0x1\n\n Section to Segment mapping:\n  Segment Sections...\n   00     .note.gnu.build-id .text .rodata .eh_frame_hdr .eh_frame \n   01     .data.rel.ro .bss \n   02     .note.gnu.build-id \n   03     .eh_frame_hdr \n   04     \n   05     .data.rel.ro",
+  "readelf_dynamic": "There is no dynamic section in this file.",
+  "undefined_symbols": "",
+  "passed": true
+}

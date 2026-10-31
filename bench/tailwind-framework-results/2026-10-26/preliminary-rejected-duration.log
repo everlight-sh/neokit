@@ -1,0 +1,102 @@
+4e38d0b52dd647c4ae2ccb093e1979794b6403a942a7a3b8c1536366b2ec449e
+bun install v1.3.13 (bf2e2cec)
+
++ @tailwindcss/cli@4.3.3
++ tailwindcss@4.3.3
+
+36 packages installed [409.00ms]
+bun install v1.3.13 (bf2e2cec)
+
++ @astrojs/node@11.1.9
++ @tailwindcss/postcss@4.3.3
++ @tailwindcss/vite@4.3.3
++ astro@7.4.2
++ next@16.4.3
++ postcss@8.5.31
++ react@19.3.1
++ react-dom@19.3.1
++ tailwindcss@4.3.3
+
+245 packages installed [3.91s]
+{
+  "@astrojs/node": "11.1.9",
+  "@tailwindcss/postcss": "4.3.3",
+  "@tailwindcss/vite": "4.3.3",
+  "astro": "7.4.2",
+  "next": "16.4.3",
+  "postcss": "8.5.31",
+  "react": "19.3.1",
+  "react-dom": "19.3.1",
+  "tailwindcss": "4.3.3"
+}
+Prepared native Axon, Astro and Next SSR/static source adapters (no cached results).
+Tailwind 4 fixtures: native CLI / Astro Vite / Next PostCSS; optional visible browser metrics probe
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.001s
+
+OK
+BUILD ssr-1-Astro-cold: 1.034s, 502.0 MiB sampled peak PSS
+BUILD ssr-1-Astro-warm: 0.750s, 458.9 MiB sampled peak PSS
+BUILD ssr-1-Next-cold: 4.512s, 868.2 MiB sampled peak PSS
+BUILD ssr-1-Next-warm: 1.679s, 691.5 MiB sampled peak PSS
+BUILD ssr-1-Axon-cold: 0.829s, 141.6 MiB sampled peak PSS
+BUILD ssr-1-Axon-warm: 0.421s, 98.3 MiB sampled peak PSS
+BUILD static-1-Astro-cold: 0.807s, 445.5 MiB sampled peak PSS
+BUILD static-1-Astro-warm: 0.694s, 385.2 MiB sampled peak PSS
+BUILD static-1-Axon-cold: 0.719s, 139.3 MiB sampled peak PSS
+BUILD static-1-Axon-warm: 0.461s, 85.5 MiB sampled peak PSS
+BUILD static-1-Next-cold: 5.914s, 977.7 MiB sampled peak PSS
+BUILD static-1-Next-warm: 2.155s, 710.7 MiB sampled peak PSS
+BUILD ssr-2-Axon-cold: 1.428s, 142.8 MiB sampled peak PSS
+BUILD ssr-2-Axon-warm: 0.399s, 102.3 MiB sampled peak PSS
+BUILD ssr-2-Astro-cold: 0.856s, 512.8 MiB sampled peak PSS
+BUILD ssr-2-Astro-warm: 0.766s, 460.4 MiB sampled peak PSS
+BUILD ssr-2-Next-cold: 4.657s, 961.0 MiB sampled peak PSS
+BUILD ssr-2-Next-warm: 1.714s, 696.3 MiB sampled peak PSS
+BUILD static-2-Next-cold: 3.800s, 932.9 MiB sampled peak PSS
+BUILD static-2-Next-warm: 1.655s, 728.2 MiB sampled peak PSS
+BUILD static-2-Astro-cold: 0.748s, 449.4 MiB sampled peak PSS
+BUILD static-2-Astro-warm: 1.009s, 386.7 MiB sampled peak PSS
+BUILD static-2-Axon-cold: 0.892s, 140.5 MiB sampled peak PSS
+BUILD static-2-Axon-warm: 0.428s, 98.2 MiB sampled peak PSS
+BUILD ssr-3-Astro-cold: 0.991s, 486.1 MiB sampled peak PSS
+BUILD ssr-3-Astro-warm: 0.927s, 451.7 MiB sampled peak PSS
+BUILD ssr-3-Next-cold: 5.897s, 973.3 MiB sampled peak PSS
+BUILD ssr-3-Next-warm: 1.708s, 693.6 MiB sampled peak PSS
+BUILD ssr-3-Axon-cold: 0.802s, 141.9 MiB sampled peak PSS
+BUILD ssr-3-Axon-warm: 0.416s, 98.0 MiB sampled peak PSS
+BUILD static-3-Astro-cold: 1.100s, 439.9 MiB sampled peak PSS
+BUILD static-3-Astro-warm: 0.753s, 392.4 MiB sampled peak PSS
+BUILD static-3-Next-cold: 4.495s, 784.9 MiB sampled peak PSS
+BUILD static-3-Next-warm: 1.970s, 730.3 MiB sampled peak PSS
+BUILD static-3-Axon-cold: 0.967s, 139.3 MiB sampled peak PSS
+BUILD static-3-Axon-warm: 0.434s, 96.1 MiB sampled peak PSS
+VERIFIED Axon 9 oracle cases + fresh stamps + browser asset URLs; original sources/deps offline
+VERIFIED Astro 9 oracle cases + fresh stamps + browser asset URLs; original sources/deps offline
+VERIFIED Next 9 oracle cases + fresh stamps + browser asset URLs; original sources/deps offline
+Traceback (most recent call last):
+  File "/work/axon-web/bench/frameworks/run_bench.py", line 281, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/work/axon-web/bench/frameworks/run_bench.py", line 272, in main
+    samples.append(trial(engine,deployments[engine],scenario,connections,round_id,args,out))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/axon-web/bench/frameworks/run_bench.py", line 158, in trial
+    result=wrk(port,path,connections,args.duration)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/axon-web/bench/frameworks/run_bench.py", line 135, in wrk
+    result=subprocess.run(argv,capture_output=True,text=True,check=True,env={**os.environ,'LD_PRELOAD':str(BUILD/'wrk-clock.so')})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['taskset', '-c', '1', 'wrk', '-t1', '-c32', '-d3.0s', '--timeout', '10s', '-s', '/work/axon-web/bench/frameworks/report.lua', 'http://127.0.0.1:34465/?n=3&seed=17&token=measured-small-ssr-c32-r1-Astro']' returned non-zero exit status 1.
+axon-web-tailwind-compare-5116368a
+Traceback (most recent call last):
+  File "/Users/marcoschwartz/Documents/code/axon-web/bench/frameworks/run_tailwind_local.py", line 63, in <module>
+    if __name__=='__main__':main()
+                            ~~~~^^
+  File "/Users/marcoschwartz/Documents/code/axon-web/bench/frameworks/run_tailwind_local.py", line 50, in main
+    assert process.returncode==0,process.returncode
+           ^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1

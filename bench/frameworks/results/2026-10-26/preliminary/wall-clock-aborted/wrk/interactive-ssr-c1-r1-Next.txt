@@ -1,0 +1,10 @@
+Running 4s test @ http://127.0.0.1:44443/interactive?n=50&seed=17&token=measured-interactive-ssr-c1-r1-Next
+  1 threads and 1 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     6.39ms    6.60ms  61.02ms   90.58%
+    Req/Sec   195.22     63.92   310.00     57.50%
+  787 requests in 4.05s, 20.51MB read
+Requests/sec:    194.16
+Transfer/sec:      5.06MB
+BENCH {"requests":787,"duration_us":4053290,"bytes":21511071,"p50_us":4046.000,"p95_us":17946.000,"p99_us":37219.000,"max_us":61015.000,"errors":{"connect":0,"read":0,"write":0,"status":0,"timeout":0}}
+

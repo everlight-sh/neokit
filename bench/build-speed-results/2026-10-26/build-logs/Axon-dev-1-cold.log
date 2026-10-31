@@ -1,0 +1,10 @@
+Bundled 3 modules in 2ms
+
+  client-qnxetx3b.js  4.93 KB    (entry point)
+  chunk-mtb2hxg4.js   268 bytes  (chunk)
+  chunk-an9wxp5m.js   379 bytes  (chunk)
+
+axonc: /tmp/axon-astro-builds-isrz3amy/Axon-dev/server  graph 3551599faf2af42b  obligations 8/11 proven, 3 runtime checks, 1 parallel regions, 2 vectorised sums, 0 calls folded, 0 inlined, build miss
+axonc: native libraries hit: 197 prechecked obligations, 18 embedded runtime checks
+Built /tmp/axon-astro-builds-isrz3amy/Axon-dev/server
+Routes: 3; browser JS: 5572 bytes across split modules

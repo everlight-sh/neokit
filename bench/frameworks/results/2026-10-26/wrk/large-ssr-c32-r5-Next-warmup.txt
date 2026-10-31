@@ -1,0 +1,10 @@
+Running 1s test @ http://127.0.0.1:42983/large?n=1000&seed=17&token=measured-large-ssr-c32-r5-Next
+  1 threads and 32 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   706.88ms  140.84ms 958.75ms   80.00%
+    Req/Sec     4.00      1.41     5.00    100.00%
+  5 requests in 1.01s, 1.95MB read
+Requests/sec:      4.95
+Transfer/sec:      1.93MB
+BENCH {"requests":5,"duration_us":1010931,"bytes":2047120,"p50_us":645472.000,"p95_us":958745.000,"p99_us":958745.000,"max_us":958745.000,"errors":{"connect":0,"read":0,"write":0,"status":0,"timeout":0}}
+

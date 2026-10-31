@@ -1,0 +1,169 @@
+import "std:sha256"
+import "std:der"
+
+; Experimental P-256 arithmetic for ECDSA/ECDH protocol libraries. Fixed-size
+; field operations use 16 little-endian 16-bit limbs and mask-based reductions.
+; Independent vectors are required; no security/constant-time audit is claimed.
+type P256Mod = { modulus:Arr i64 _,r2:Arr i64 _,one:Arr i64 _,inverse:i64 }
+type P256Carry = { words:Arr i64 _,carry:i64 }
+type P256WideCarry = { words:Arr i64 _,carry:i64 }
+private fn p256_zero() -> Arr i64 (16) = arr(i in 0..16) 0
+private fn p256_words(bytes:Arr u8 n) -> Arr i64 (16)
+  = check n==32 in arr(i in 0..16) i64(bytes[31-i*2])+i64(bytes[30-i*2])*256
+private fn p256_bytes(words:Arr i64 n) -> Arr u8 _
+  = check n==16 in arr(i in 0..32) u8(bit_and(shift_right(words[(31-i)/2],(31-i)%2*8),255))
+private fn p256_select(a:Arr i64 n,b:Arr i64 m,bit:i64) -> Arr i64 (16)
+  = check n==16 && m==16 in arr(i in 0..16) bit_xor(a[i],bit_and(bit_xor(a[i],b[i]),0-bit))
+private fn p256_is_zero(a:Arr i64 n) -> i64
+  = if loop(i=0,value=0) while i<n next(i+1,check i>=0 && i<n in bit_or(value,a[i])) yield value==0 then 1 else 0
+private fn p256_subtract(a:Arr i64 n,b:Arr i64 m) -> P256Carry
+  = check n==16 && m==16 in
+    loop(i=0,borrow=0,out=p256_zero()) while i<16 next(i+1,
+      check i>=0 && i<16 in let value=a[i]-b[i]-borrow in bit_and(arithmetic_shift_right(value,63),1),
+      check i>=0 && i<16 && len(out)==16 in set(out,i,bit_and(a[i]-b[i]-borrow,65535))) yield P256Carry { words=out,carry=borrow }
+private fn p256_reduce(a:Arr i64 n,carry:i64,modulus:Arr i64 m) -> Arr i64 (16)
+  = let difference=p256_subtract(a,modulus) in p256_select(a,difference.words,bit_or(carry,1-difference.carry))
+private fn p256_add(a:Arr i64 n,b:Arr i64 m,modulus:Arr i64 k) -> Arr i64 (16)
+  = check n==16 && m==16 && k==16 in
+    let result=loop(i=0,carry=0,out=p256_zero()) while i<16 next(i+1,
+      check i>=0 && i<16 in shift_right(a[i]+b[i]+carry,16),
+      check i>=0 && i<16 && len(out)==16 in set(out,i,bit_and(a[i]+b[i]+carry,65535))) yield P256Carry { words=out,carry=carry } in
+    p256_reduce(result.words,result.carry,modulus)
+private fn p256_sub(a:Arr i64 n,b:Arr i64 m,modulus:Arr i64 k) -> Arr i64 (16)
+  = check k==16 in let result=p256_subtract(a,b) in let words=result.words in let mask=0-result.carry in
+    check len(words)==16 in loop(i=0,carry=0,out=p256_zero()) while i<16 next(i+1,
+      check i>=0 && i<16 in shift_right(words[i]+bit_and(modulus[i],mask)+carry,16),
+      check i>=0 && i<16 && len(out)==16 in set(out,i,bit_and(words[i]+bit_and(modulus[i],mask)+carry,65535))) yield out
+private fn p256_wide(a:Arr i64 n,b:Arr i64 m) -> Arr i64 _
+  = check n==16 && m==16 in
+    loop(i=0,out=arr(j in 0..34) 0) while i<16 next(i+1,
+      check i>=0 && i<16 in let word=a[i] in
+      let row=loop(j=0,carry=0,row=out) while j<16 next(j+1,
+        check j>=0 && j<16 && i+j>=0 && i+j<34 && len(row)==34 in shift_right(row[i+j]+word*b[j]+carry,16),
+        check j>=0 && j<16 && i+j>=0 && i+j<34 && len(row)==34 in set(row,i+j,bit_and(row[i+j]+word*b[j]+carry,65535))) yield P256WideCarry { words=row,carry=carry } in
+      check i+16>=0 && i+16<34 && len(row.words)==34 in set(row.words,i+16,row.carry)) yield out
+private fn p256_multiply(a:Arr i64 _,b:Arr i64 _,mod:P256Mod) -> Arr i64 (16)
+  = let p=mod.modulus in check len(p)==16 in
+    let reduced=loop(i=0,words=p256_wide(a,b)) while i<16 next(i+1,
+      check i>=0 && i<16 && len(words)==34 in let factor=bit_and(words[i]*mod.inverse,65535) in
+      let row=loop(j=0,carry=0,row=words) while j<16 next(j+1,
+        check j>=0 && j<16 && i+j>=0 && i+j<34 && len(row)==34 in shift_right(row[i+j]+factor*p[j]+carry,16),
+        check j>=0 && j<16 && i+j>=0 && i+j<34 && len(row)==34 in set(row,i+j,bit_and(row[i+j]+factor*p[j]+carry,65535))) yield P256WideCarry { words=row,carry=carry } in
+      check len(row.words)==34 && i+16>=0 && i+16<34 && i+17>=0 && i+17<34 in
+      let total=row.words[i+16]+row.carry in let next_words=set(row.words,i+16,bit_and(total,65535)) in set(next_words,i+17,next_words[i+17]+shift_right(total,16))) yield words in
+    check len(reduced)==34 in p256_reduce(arr(i in 0..16) reduced[i+16],reduced[32],p)
+private fn p256_normal(value:Arr i64 _,mod:P256Mod) -> Arr i64 (16)
+  = p256_multiply(value,arr(i in 0..16) if i==0 then 1 else 0,mod)
+private fn p256_montgomery(value:Arr i64 _,mod:P256Mod) -> Arr i64 (16) = p256_multiply(value,mod.r2,mod)
+private fn p256_inverse(value:Arr i64 _,mod:P256Mod) -> Arr i64 _
+  = let exponent=p256_subtract(mod.modulus,arr(i in 0..16) if i==0 then 2 else 0).words in
+    loop(i=255,out=mod.one) while i>=0 next(i-1,
+      check i>=0 && i/16<len(exponent) in let square=p256_multiply(out,out,mod) in
+      let product=p256_multiply(square,value,mod) in p256_select(square,product,bit_and(shift_right(exponent[i/16],i%16),1))) yield out
+
+private fn p256_mod(order:bool) -> P256Mod
+  = if order then P256Mod { modulus=p256_words("\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xbc\xe6\xfa\xad\xa7\x17\x9e\x84\xf3\xb9\xca\xc2\xfc\x63\x25\x51"),r2=p256_words("\x66\xe1\x2d\x94\xf3\xd9\x56\x20\x28\x45\xb2\x39\x2b\x6b\xec\x59\x46\x99\x79\x9c\x49\xbd\x6f\xa6\x83\x24\x4c\x95\xbe\x79\xee\xa2"),one=p256_words("\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x43\x19\x05\x52\x58\xe8\x61\x7b\x0c\x46\x35\x3d\x03\x9c\xda\xaf"),inverse=48207 } else
+    P256Mod { modulus=p256_words("\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"),r2=p256_words("\x00\x00\x00\x04\xff\xff\xff\xfd\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff\xfb\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x03"),one=p256_words("\x00\x00\x00\x00\xff\xff\xff\xfe\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"),inverse=1 }
+
+sealed type P256Point = { x:Arr i64 _,y:Arr i64 _,z:Arr i64 _ }
+private fn p256_infinity(mod:P256Mod) -> P256Point = P256Point { x=p256_zero(),y=mod.one,z=p256_zero() }
+private fn p256_point_select(a:P256Point,b:P256Point,bit:i64) -> P256Point
+  = P256Point { x=p256_select(a.x,b.x,bit),y=p256_select(a.y,b.y,bit),z=p256_select(a.z,b.z,bit) }
+private fn p256_double(a:P256Point,mod:P256Mod) -> P256Point
+  = let p=mod.modulus in
+    let delta=p256_multiply(a.z,a.z,mod) in let gamma=p256_multiply(a.y,a.y,mod) in let beta=p256_multiply(a.x,gamma,mod) in
+    let alpha=p256_multiply(p256_sub(a.x,delta,p),p256_add(a.x,delta,p),mod) in let alpha=p256_add(p256_add(alpha,alpha,p),alpha,p) in
+    let beta2=p256_add(beta,beta,p) in let beta4=p256_add(beta2,beta2,p) in let beta8=p256_add(beta4,beta4,p) in
+    let x=p256_sub(p256_multiply(alpha,alpha,mod),beta8,p) in
+    let yz=p256_add(a.y,a.z,p) in let z=p256_sub(p256_sub(p256_multiply(yz,yz,mod),gamma,p),delta,p) in
+    let gamma2=p256_multiply(gamma,gamma,mod) in let gamma2=p256_add(gamma2,gamma2,p) in let gamma2=p256_add(gamma2,gamma2,p) in let gamma2=p256_add(gamma2,gamma2,p) in
+    let y=p256_sub(p256_multiply(alpha,p256_sub(beta4,x,p),mod),gamma2,p) in P256Point { x=x,y=y,z=z }
+private fn p256_point_add(a:P256Point,b:P256Point,mod:P256Mod) -> P256Point
+  = let p=mod.modulus in let zz1=p256_multiply(a.z,a.z,mod) in let zz2=p256_multiply(b.z,b.z,mod) in
+    let u1=p256_multiply(a.x,zz2,mod) in let u2=p256_multiply(b.x,zz1,mod) in
+    let s1=p256_multiply(p256_multiply(a.y,b.z,mod),zz2,mod) in let s2=p256_multiply(p256_multiply(b.y,a.z,mod),zz1,mod) in
+    let h=p256_sub(u2,u1,p) in let r=p256_sub(s2,s1,p) in let hh=p256_multiply(h,h,mod) in let hhh=p256_multiply(h,hh,mod) in let v=p256_multiply(u1,hh,mod) in
+    let x=p256_sub(p256_sub(p256_multiply(r,r,mod),hhh,p),p256_add(v,v,p),p) in
+    let y=p256_sub(p256_multiply(r,p256_sub(v,x,p),mod),p256_multiply(s1,hhh,mod),p) in let z=p256_multiply(p256_multiply(h,a.z,mod),b.z,mod) in
+    let generic=P256Point { x=x,y=y,z=z } in
+    let combined=p256_point_select(generic,p256_double(a,mod),bit_and(p256_is_zero(h),p256_is_zero(r))) in
+    let combined=p256_point_select(combined,b,p256_is_zero(a.z)) in p256_point_select(combined,a,p256_is_zero(b.z))
+private fn p256_scalar(point:P256Point,scalar:Arr i64 n,mod:P256Mod) -> P256Point
+  = check n==16 in loop(i=255,out=p256_infinity(mod)) while i>=0 next(i-1,
+      check i>=0 && i/16<n in let doubled=p256_double(out,mod) in let added=p256_point_add(doubled,point,mod) in
+      p256_point_select(doubled,added,bit_and(shift_right(scalar[i/16],i%16),1))) yield out
+private fn p256_affine(point:P256Point,mod:P256Mod) -> P256Point
+  = let inverse=p256_inverse(point.z,mod) in let square=p256_multiply(inverse,inverse,mod) in
+    P256Point { x=p256_multiply(point.x,square,mod),y=p256_multiply(p256_multiply(point.y,square,mod),inverse,mod),z=mod.one }
+private fn p256_generator(mod:P256Mod) -> P256Point
+  = P256Point { x=p256_montgomery(p256_words("\x6b\x17\xd1\xf2\xe1\x2c\x42\x47\xf8\xbc\xe6\xe5\x63\xa4\x40\xf2\x77\x03\x7d\x81\x2d\xeb\x33\xa0\xf4\xa1\x39\x45\xd8\x98\xc2\x96"),mod),
+      y=p256_montgomery(p256_words("\x4f\xe3\x42\xe2\xfe\x1a\x7f\x9b\x8e\xe7\xeb\x4a\x7c\x0f\x9e\x16\x2b\xce\x33\x57\x6b\x31\x5e\xce\xcb\xb6\x40\x68\x37\xbf\x51\xf5"),mod),z=mod.one }
+private fn p256_scalar_valid(value:Arr i64 _,mod:P256Mod) -> bool = p256_is_zero(value)==0 && p256_subtract(value,mod.modulus).carry==1
+private fn p256_point_decode(bytes:Arr u8 n,mod:P256Mod) -> P256Point
+  = check n==65 in P256Point { x=p256_montgomery(p256_words(str_slice(bytes,1,33)),mod),y=p256_montgomery(p256_words(str_slice(bytes,33,65)),mod),z=mod.one }
+private fn p256_point_valid(bytes:Arr u8 n,mod:P256Mod) -> bool
+  = if n!=65 || str_byte(bytes,0)!=4 then false else
+    let x=p256_words(str_slice(bytes,1,33)) in let y=p256_words(str_slice(bytes,33,65)) in
+    if p256_subtract(x,mod.modulus).carry!=1 || p256_subtract(y,mod.modulus).carry!=1 then false else
+    let point=p256_point_decode(bytes,mod) in
+    let b=p256_montgomery(p256_words("\x5a\xc6\x35\xd8\xaa\x3a\x93\xe7\xb3\xeb\xbd\x55\x76\x98\x86\xbc\x65\x1d\x06\xb0\xcc\x53\xb0\xf6\x3b\xce\x3c\x3e\x27\xd2\x60\x4b"),mod) in
+    let x3=p256_multiply(p256_multiply(point.x,point.x,mod),point.x,mod) in let triple=p256_add(p256_add(point.x,point.x,mod.modulus),point.x,mod.modulus) in
+    p256_is_zero(p256_sub(p256_multiply(point.y,point.y,mod),p256_add(p256_sub(x3,triple,mod.modulus),b,mod.modulus),mod.modulus))==1
+private fn p256_encode(point:P256Point,mod:P256Mod) -> Arr u8 _
+  = let normal=p256_affine(point,mod) in concat("\x04",p256_bytes(p256_normal(normal.x,mod)),p256_bytes(p256_normal(normal.y,mod)))
+fn p256_public(secret:Arr u8 n) -> BytesResult
+  = if n!=32 then bytes_error(22,"P-256 private key requires 32 bytes",0) else
+    let scalar=p256_words(secret) in if !p256_scalar_valid(scalar,p256_mod(true)) then bytes_error(22,"invalid P-256 private scalar",0) else
+    let mod=p256_mod(false) in bytes_ok(p256_encode(p256_scalar(p256_generator(mod),scalar,mod),mod))
+fn p256_public_valid(public:Arr u8 n) -> bool = p256_point_valid(public,p256_mod(false))
+fn p256_ecdh(secret:Arr u8 n,public:Arr u8 m) -> BytesResult
+  = if n!=32 then bytes_error(22,"P-256 private key requires 32 bytes",0) else
+    let scalar=p256_words(secret) in let mod=p256_mod(false) in
+    if !p256_scalar_valid(scalar,p256_mod(true)) || !p256_point_valid(public,mod) then bytes_error(22,"invalid P-256 ECDH key",0) else
+    let shared=p256_scalar(p256_point_decode(public,mod),scalar,mod) in
+    if p256_is_zero(shared.z)==1 then bytes_error(74,"P-256 ECDH infinity",0) else bytes_ok(p256_bytes(p256_normal(p256_affine(shared,mod).x,mod)))
+
+private fn p256_der_scalar(signature:Arr u8 n,node:DerNode) -> BytesResult
+  = let bytes=der_value(signature,node) in let count=len(bytes) in
+    if !node.ok || node.tag!=2 || count<1 || count>33 || str_byte(bytes,0)>=128 || count>1 && str_byte(bytes,0)==0 && str_byte(bytes,1)<128 || count==33 && str_byte(bytes,0)!=0 then bytes_error(74,"invalid ECDSA DER integer",0) else
+    bytes_ok(arr(i in 0..32) u8(if i+count<32 then 0 else str_byte(bytes,i+count-32)))
+private fn p256_der_encode(value:Arr u8 n) -> Arr u8 _
+  = check n==32 in let first=loop(i=0) while i<31 && str_byte(value,i)==0 next(i+1) yield i in
+    let tail=str_slice(value,first,n) in let positive=if str_byte(tail,0)>=128 then concat("\x00",tail) else tail in
+    concat("\x02",arr(i in 0..1) u8(len(positive)),positive)
+fn ecdsa_p256_verify_sha256(public:Arr u8 n,message:Arr u8 m,signature:Arr u8 k) -> bool
+  = let field=p256_mod(false) in
+    if k<8 || k>72 || !p256_point_valid(public,field) then false else
+    let seq=der_node(signature,0,k) in let first=der_node(signature,seq.body,seq.end) in let second=der_node(signature,first.end,seq.end) in
+    if !seq.ok || seq.tag!=48 || seq.end!=k || !first.ok || !second.ok || second.end!=seq.end then false else
+    let raw_r=p256_der_scalar(signature,first) in let raw_s=p256_der_scalar(signature,second) in
+    if !raw_r.ok || !raw_s.ok then false else
+    let r=p256_words(raw_r.value) in let s=p256_words(raw_s.value) in let order=p256_mod(true) in
+    if !p256_scalar_valid(r,order) || !p256_scalar_valid(s,order) then false else
+    let inverse=p256_inverse(p256_montgomery(s,order),order) in
+    let z=p256_reduce(p256_words(sha256(message)),0,order.modulus) in
+    let u1=p256_normal(p256_multiply(p256_montgomery(z,order),inverse,order),order) in
+    let u2=p256_normal(p256_multiply(p256_montgomery(r,order),inverse,order),order) in
+    let point=p256_point_add(p256_scalar(p256_generator(field),u1,field),p256_scalar(p256_point_decode(public,field),u2,field),field) in
+    if p256_is_zero(point.z)==1 then false else
+    let x=p256_reduce(p256_normal(p256_affine(point,field).x,field),0,order.modulus) in p256_is_zero(p256_subtract(x,r).words)==1
+private fn p256_sign_candidate(secret:Arr i64 _,digest:Arr i64 _,nonce:Arr u8 n,order:P256Mod,field:P256Mod) -> Arr u8 _
+  = check n==32 in let scalar=p256_words(nonce) in if !p256_scalar_valid(scalar,order) then "" else
+    let point=p256_affine(p256_scalar(p256_generator(field),scalar,field),field) in let r=p256_reduce(p256_normal(point.x,field),0,order.modulus) in
+    let mixed=p256_add(p256_montgomery(digest,order),p256_multiply(p256_montgomery(r,order),p256_montgomery(secret,order),order),order.modulus) in
+    let s=p256_normal(p256_multiply(p256_inverse(p256_montgomery(scalar,order),order),mixed,order),order) in
+    if p256_is_zero(r)==1 || p256_is_zero(s)==1 then "" else
+    let integers=concat(p256_der_encode(p256_bytes(r)),p256_der_encode(p256_bytes(s))) in concat("\x30",arr(i in 0..1) u8(len(integers)),integers)
+fn ecdsa_p256_sign_sha256(secret:Arr u8 n,message:Arr u8 m) -> BytesResult
+  = if n!=32 then bytes_error(22,"P-256 private key requires 32 bytes",0) else
+    let scalar=p256_words(secret) in let order=p256_mod(true) in
+    if !p256_scalar_valid(scalar,order) then bytes_error(22,"invalid P-256 private scalar",0) else
+    let digest=p256_reduce(p256_words(sha256(message)),0,order.modulus) in let context=concat(secret,p256_bytes(digest)) in
+    let zeros=arr(i in 0..32) u8(0) in let ones=arr(i in 0..32) u8(1) in
+    let key=hmac_sha256(zeros,concat(ones,"\x00",context)) in let value=hmac_sha256(key,ones) in
+    let key=hmac_sha256(key,concat(value,"\x01",context)) in let value=hmac_sha256(key,value) in let field=p256_mod(false) in
+    let result=loop(i=0,key=key,value=value,signature="") while i<16 && len(signature)==0 next(i+1,
+      hmac_sha256(key,concat(hmac_sha256(key,value),"\x00")),
+      let next_key=hmac_sha256(key,concat(hmac_sha256(key,value),"\x00")) in hmac_sha256(next_key,hmac_sha256(key,value)),
+      p256_sign_candidate(scalar,digest,hmac_sha256(key,value),order,field)) yield signature in
+    if len(result)==0 then bytes_error(74,"P-256 deterministic nonce retry limit",0) else bytes_ok(result)

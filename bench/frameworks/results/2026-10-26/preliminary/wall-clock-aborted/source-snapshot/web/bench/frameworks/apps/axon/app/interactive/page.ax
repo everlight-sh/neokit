@@ -1,0 +1,2 @@
+import "./../../model.ax"
+fn load_interactive(request:WebRequest) -> BenchData = bench_load(request,50,true)

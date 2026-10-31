@@ -1,0 +1,10 @@
+Running 1s test @ http://127.0.0.1:56503/interactive?n=50&seed=17&token=measured-interactive-ssr-c1-r2-Axon
+  1 threads and 1 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    81.28us  121.62us   2.80ms   98.06%
+    Req/Sec    14.25k     1.77k   16.66k    81.82%
+  15576 requests in 1.10s, 94.83MB read
+Requests/sec:  14170.03
+Transfer/sec:     86.27MB
+BENCH {"requests":15576,"duration_us":1099221,"bytes":99437184,"p50_us":63.000,"p95_us":116.000,"p99_us":522.000,"max_us":2799.000,"errors":{"connect":0,"read":0,"write":0,"status":0,"timeout":0}}
+

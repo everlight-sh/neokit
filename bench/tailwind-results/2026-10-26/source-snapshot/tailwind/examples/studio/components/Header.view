@@ -1,0 +1,2 @@
+@props()
+<header class="site-header flex items-center justify-between gap-[30px]"><a class="brand flex items-center gap-3" href="/" data-web-link aria-label="Fieldnotes home"><img src="/mark.svg" width="26" height="26" alt=""><span>fieldnotes<span class="brand-period">.</span></span></a><nav aria-label="Main navigation"><a href="/" data-web-link>Overview</a><a href="/notes/native" data-web-link>Notes</a><a href="/about" data-web-link>About</a></nav><span class="version"><span class="status-dot"></span>AXON WEB / TAILWIND</span></header>

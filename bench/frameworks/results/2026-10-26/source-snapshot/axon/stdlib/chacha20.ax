@@ -1,0 +1,88 @@
+import "std:sha256"
+
+; RFC 8439 primitives. Protocols must enforce unique nonces for each key.
+private fn cc_word(bytes:Arr u8 n,offset:i64) -> i64
+  = loop(i=0,value=0) while i<4 next(i+1,bit_or(value,shift_left(str_byte(bytes,offset+i),i*8))) yield value
+private fn cc_rot(value:i64,bits:i64) -> i64
+  = bit_and(bit_or(shift_left(value,bits),shift_right(value,32-bits)),4294967295)
+private fn cc_quarter(move words:Arr i64 n,a:i64,b:i64,c:i64,d:i64) -> Arr i64 n
+  = check a>=0 && a<n && b>=0 && b<n && c>=0 && c<n && d>=0 && d<n in
+    let av=bit_and(words[a]+words[b],4294967295) in let dv=cc_rot(bit_xor(words[d],av),16) in
+    let cv=bit_and(words[c]+dv,4294967295) in let bv=cc_rot(bit_xor(words[b],cv),12) in
+    let av=bit_and(av+bv,4294967295) in let dv=cc_rot(bit_xor(dv,av),8) in
+    let cv=bit_and(cv+dv,4294967295) in let bv=cc_rot(bit_xor(bv,cv),7) in
+    set(set(set(set(words,a,av),b,bv),c,cv),d,dv)
+fn chacha20_block(key:Arr u8 n,nonce:Arr u8 m,counter:i64) -> Arr u8 _
+  = check n==32 && m==12 && counter>=0 && counter<=4294967295 in
+    let initial=arr(i in 0..16) if i==0 then 1634760805 else if i==1 then 857760878 else if i==2 then 2036477234 else if i==3 then 1797285236 else
+      if i<12 then cc_word(key,(i-4)*4) else if i==12 then counter else cc_word(nonce,(i-13)*4) in
+    let state=loop(i=0,words=initial) while i<10
+      next(i+1,let a=cc_quarter(cc_quarter(cc_quarter(cc_quarter(words,0,4,8,12),1,5,9,13),2,6,10,14),3,7,11,15) in
+        cc_quarter(cc_quarter(cc_quarter(cc_quarter(a,0,5,10,15),1,6,11,12),2,7,8,13),3,4,9,14)) yield words in
+    arr(i in 0..64) let index=i/4 in check index>=0 && index<len(state) && index<len(initial) in
+      u8(shift_right(bit_and(state[index]+initial[index],4294967295),i%4*8))
+private fn cc_apply(move out:Arr u8 n,text:Arr u8 m,block:Arr u8 k,offset:i64) -> Arr u8 n
+  = loop(i=0,out=out) while i<64 && offset+i<m
+      next(i+1,let at=offset+i in check at>=0 && at<n && at<m && i>=0 && i<k in
+        set(out,at,u8(bit_xor(i64(text[at]),i64(block[i]))))) yield out
+fn chacha20_xor(key:Arr u8 n,nonce:Arr u8 m,counter:i64,text:Arr u8 k) -> Arr u8 _
+  = check n==32 && m==12 && k<=1048576 && counter>=0 && counter+(k+63)/64<=4294967296 in
+    loop(at=0,out=arr(i in 0..k) u8(0)) while at<k
+      next(at+64,cc_apply(out,text,chacha20_block(key,nonce,counter+at/64),at)) yield out
+
+type PolyState = { a:i64,b:i64,c:i64,d:i64,e:i64 }
+private fn poly_word(bytes:Arr u8 n,offset:i64,count:i64,start:i64) -> i64
+  = loop(i=0,value=0) while i<4
+      next(i+1,bit_or(value,shift_left(if start+i<count then str_byte(bytes,offset+start+i) else if start+i==count then 1 else 0,i*8))) yield value
+private fn poly_multiply(h:PolyState,r:PolyState) -> PolyState
+  = let a=h.a*r.a+5*(h.b*r.e+h.c*r.d+h.d*r.c+h.e*r.b) in
+    let b=h.a*r.b+h.b*r.a+5*(h.c*r.e+h.d*r.d+h.e*r.c) in
+    let c=h.a*r.c+h.b*r.b+h.c*r.a+5*(h.d*r.e+h.e*r.d) in
+    let d=h.a*r.d+h.b*r.c+h.c*r.b+h.d*r.a+5*h.e*r.e in
+    let e=h.a*r.e+h.b*r.d+h.c*r.c+h.d*r.b+h.e*r.a in
+    let b=b+shift_right(a,26) in let a=bit_and(a,67108863) in
+    let c=c+shift_right(b,26) in let b=bit_and(b,67108863) in
+    let d=d+shift_right(c,26) in let c=bit_and(c,67108863) in
+    let e=e+shift_right(d,26) in let d=bit_and(d,67108863) in
+    let a=a+shift_right(e,26)*5 in let e=bit_and(e,67108863) in
+    PolyState { a=bit_and(a,67108863),b=b+shift_right(a,26),c=c,d=d,e=e }
+private fn poly_block(h:PolyState,r:PolyState,text:Arr u8 n,offset:i64,count:i64) -> PolyState
+  = let a=poly_word(text,offset,count,0) in let b=poly_word(text,offset,count,4) in
+    let c=poly_word(text,offset,count,8) in let d=poly_word(text,offset,count,12) in
+    poly_multiply(PolyState { a=h.a+bit_and(a,67108863),b=h.b+bit_and(bit_or(shift_right(a,26),shift_left(b,6)),67108863),
+      c=h.c+bit_and(bit_or(shift_right(b,20),shift_left(c,12)),67108863),d=h.d+bit_and(bit_or(shift_right(c,14),shift_left(d,18)),67108863),
+      e=h.e+shift_right(d,8)+(if count==16 then 16777216 else 0) },r)
+private fn poly_select(a:i64,b:i64,mask:i64) -> i64 = bit_or(bit_and(a,mask),bit_and(b,bit_xor(mask,-1)))
+private fn poly_finish(h:PolyState,key:Arr u8 n) -> Arr u8 _
+  = let c=h.c+shift_right(h.b,26) in let b=bit_and(h.b,67108863) in
+    let d=h.d+shift_right(c,26) in let c=bit_and(c,67108863) in
+    let e=h.e+shift_right(d,26) in let d=bit_and(d,67108863) in
+    let a=h.a+shift_right(e,26)*5 in let e=bit_and(e,67108863) in
+    let b=b+shift_right(a,26) in let a=bit_and(a,67108863) in
+    let ga=a+5 in let gb=b+shift_right(ga,26) in let gc=c+shift_right(gb,26) in let gd=d+shift_right(gc,26) in
+    let ge=e+shift_right(gd,26)-67108864 in let mask=arithmetic_shift_right(ge,63) in
+    let a=poly_select(a,bit_and(ga,67108863),mask) in let b=poly_select(b,bit_and(gb,67108863),mask) in
+    let c=poly_select(c,bit_and(gc,67108863),mask) in let d=poly_select(d,bit_and(gd,67108863),mask) in let e=poly_select(e,ge,mask) in
+    let w0=bit_and(bit_or(a,shift_left(b,26)),4294967295)+cc_word(key,16) in
+    let w1=bit_and(bit_or(shift_right(b,6),shift_left(c,20)),4294967295)+cc_word(key,20)+shift_right(w0,32) in
+    let w2=bit_and(bit_or(shift_right(c,12),shift_left(d,14)),4294967295)+cc_word(key,24)+shift_right(w1,32) in
+    let w3=bit_and(bit_or(shift_right(d,18),shift_left(e,8)),4294967295)+cc_word(key,28)+shift_right(w2,32) in
+    arr(i in 0..16) u8(shift_right(if i<4 then w0 else if i<8 then w1 else if i<12 then w2 else w3,i%4*8))
+fn poly1305(key:Arr u8 n,text:Arr u8 m) -> Arr u8 _
+  = check n==32 && m<=1048576 in
+    let r=PolyState { a=bit_and(cc_word(key,0),67108863),b=bit_and(shift_right(cc_word(key,3),2),67108611),
+      c=bit_and(shift_right(cc_word(key,6),4),67092735),d=bit_and(shift_right(cc_word(key,9),6),66076671),e=bit_and(shift_right(cc_word(key,12),8),1048575) } in
+    let h=loop(at=0,state=PolyState { a=0,b=0,c=0,d=0,e=0 }) while at<m
+      next(at+16,poly_block(state,r,text,at,if m-at<16 then m-at else 16)) yield state in poly_finish(h,key)
+private fn cc_mac_data(aad:Arr u8 n,ciphertext:Arr u8 m) -> Arr u8 _
+  = concat(aad,arr(i in 0..((16-n%16)%16)) u8(0),ciphertext,arr(i in 0..((16-m%16)%16)) u8(0),
+      arr(i in 0..8) u8(shift_right(n,i*8)),arr(i in 0..8) u8(shift_right(m,i*8)))
+fn chacha20_poly1305_seal(key:Arr u8 n,nonce:Arr u8 m,aad:Arr u8 k,plaintext:Arr u8 q) -> Arr u8 _
+  = check n==32 && m==12 && k<=16384 && q<=65536 in
+    let ciphertext=chacha20_xor(key,nonce,1,plaintext) in let polykey=str_slice(chacha20_block(key,nonce,0),0,32) in
+    concat(ciphertext,poly1305(polykey,cc_mac_data(aad,ciphertext)))
+fn chacha20_poly1305_open(key:Arr u8 n,nonce:Arr u8 m,aad:Arr u8 k,ciphertext:Arr u8 q) -> BytesResult
+  = if n!=32 || m!=12 || k>16384 || q<16 || q>65552 then bytes_error(22,"invalid AEAD lengths",0) else
+    let message=str_slice(ciphertext,0,q-16) in let received=str_slice(ciphertext,q-16,q) in
+    let polykey=str_slice(chacha20_block(key,nonce,0),0,32) in let expected=poly1305(polykey,cc_mac_data(aad,message)) in
+    if !crypto_equal(received,expected) then bytes_error(74,"AEAD authentication failed",0) else bytes_ok(chacha20_xor(key,nonce,1,message))

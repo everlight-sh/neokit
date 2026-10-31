@@ -1,0 +1,61 @@
+import "std:sha256"
+
+; Public signature verification only: 2048..4096-bit RSA, exponent 65537.
+; No private RSA operations or legacy digest algorithms are implemented.
+sealed type RsaKey = { valid:bool,modulus:Arr u8 _,bits:i64 }
+type RsaSum = { words:Arr i64 _,carry:i64 }
+fn rsa_public(modulus:Arr u8 n,exponent:i64) -> RsaKey
+  = let high=str_byte(modulus,0) in let leading=loop(value=high,bits=0) while value>0 next(value/2,bits+1) yield bits in
+    let bits=if n<1 then 0 else (n-1)*8+leading in
+    RsaKey { valid=n>=256 && n<=512 && high>0 && bits>=2048 && bits<=4096 && exponent==65537 && str_byte(modulus,n-1)%2==1,
+      modulus=modulus,bits=bits }
+private fn rsa_words(bytes:Arr u8 n) -> Arr i64 _
+  = arr(i in 0..((n+1)/2)) str_byte(bytes,n-1-i*2)+256*(if n-2-i*2>=0 then str_byte(bytes,n-2-i*2) else 0)
+private fn rsa_at_least(a:Arr i64 n,b:Arr i64 m) -> bool
+  = check n==m in loop(i=n-1,comparison=0) while i>=0 && comparison==0
+      next(i-1,check i>=0 && i<n in if a[i]>b[i] then 1 else if a[i]<b[i] then -1 else 0) yield comparison>=0
+private fn rsa_subtract(move a:Arr i64 n,b:Arr i64 m) -> Arr i64 _
+  = check n==m in loop(i=0,borrow=0,words=a) while i<n
+      next(i+1,check i>=0 && i<n && len(words)==n in if words[i]-b[i]-borrow<0 then 1 else 0,
+        check i>=0 && i<n && len(words)==n in set(words,i,bit_and(words[i]-b[i]-borrow,65535))) yield words
+private fn rsa_add(a:Arr i64 n,b:Arr i64 m,modulus:Arr i64 k) -> Arr i64 _
+  = check n==m && n==k in
+    let result=loop(i=0,carry=0,words=arr(j in 0..n) 0) while i<n
+      next(i+1,check i>=0 && i<n in shift_right(a[i]+b[i]+carry,16),
+        check i>=0 && i<n && len(words)==n in set(words,i,bit_and(a[i]+b[i]+carry,65535))) yield RsaSum { words=words,carry=carry } in
+    if result.carry!=0 || rsa_at_least(result.words,modulus) then rsa_subtract(result.words,modulus) else result.words
+private fn rsa_multiply(a:Arr i64 n,b:Arr i64 m,modulus:Arr i64 k) -> Arr i64 _
+  = check n==m && n==k && n>=128 && n<=256 in
+    loop(i=n*16-1,value=arr(j in 0..n) 0) while i>=0
+      next(i-1,check i>=0 && i/16<n in let doubled=rsa_add(value,value,modulus) in
+        if bit_and(shift_right(b[i/16],i%16),1)==0 then doubled else rsa_add(doubled,a,modulus)) yield value
+private fn rsa_recover(key:RsaKey,signature:Arr u8 n) -> BytesResult
+  = if !key.valid || n!=len(key.modulus) then bytes_error(22,"unsupported RSA key or signature length",0) else
+    let modulus=rsa_words(key.modulus) in let encoded=rsa_words(signature) in
+    if rsa_at_least(encoded,modulus) then bytes_error(74,"noncanonical RSA signature",0) else
+      let powered=loop(i=0,word=encoded) while i<16 next(i+1,rsa_multiply(word,word,modulus)) yield word in
+      let value=rsa_multiply(powered,encoded,modulus) in
+      bytes_ok(arr(i in 0..n) let index=(n-1-i)/2 in check index>=0 && index<len(value) in u8(shift_right(value[index],(n-1-i)%2*8)))
+fn rsa_verify_sha256(key:RsaKey,message:Arr u8 n,signature:Arr u8 m) -> bool
+  = let decoded=rsa_recover(key,signature) in if !decoded.ok then false else
+    let digest=concat("\x30\x31\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01\x05\x00\x04\x20",sha256(message)) in
+    let size=len(decoded.value) in let separator=size-len(digest)-1 in
+    separator>=10 && crypto_equal(decoded.value,arr(i in 0..size)
+      if i==0 then u8(0) else if i==1 then u8(1) else if i<separator then u8(255) else if i==separator then u8(0) else
+        let at=i-separator-1 in check at>=0 && at<len(digest) in digest[at])
+private fn rsa_mgf1(seed:Arr u8 n,count:i64) -> Arr u8 _
+  = check count>=0 && count<=512 in
+    let out=loop(i=0,out="") while len(out)<count
+      next(i+1,concat(out,sha256(concat(seed,arr(j in 0..4) u8(shift_right(i,(3-j)*8)))))) yield out in str_slice(out,0,count)
+fn rsa_verify_pss_sha256(key:RsaKey,message:Arr u8 n,signature:Arr u8 m) -> bool
+  = let decoded=rsa_recover(key,signature) in if !decoded.ok then false else
+    let size=(key.bits-1+7)/8 in let skip=len(decoded.value)-size in
+    if skip<0 || skip>1 || skip==1 && str_byte(decoded.value,0)!=0 || size<66 then false else
+      let em=str_slice(decoded.value,skip,len(decoded.value)) in let unused=size*8-(key.bits-1) in
+      let mask=shift_right(255,unused) in
+      if str_byte(em,size-1)!=188 || bit_and(str_byte(em,0),bit_xor(mask,255))!=0 then false else
+        let hash=str_slice(em,size-33,size-1) in let dbmask=rsa_mgf1(hash,size-33) in
+        let db=arr(i in 0..(size-33)) let value=bit_xor(str_byte(em,i),str_byte(dbmask,i)) in u8(if i==0 then bit_and(value,mask) else value) in
+        let separator=len(db)-33 in
+        let zeros=loop(i=0,word=0) while i<separator next(i+1,bit_or(word,str_byte(db,i))) yield word==0 in
+        zeros && str_byte(db,separator)==1 && crypto_equal(hash,sha256(concat(arr(i in 0..8) u8(0),sha256(message),str_slice(db,len(db)-32,len(db)))))

@@ -1,0 +1,9 @@
+@props(title: text, content: html, client: bool, mode: text)
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="An experimental studio for native Axon SSR and small browser interactions."><title>{{ title }} · Fieldnotes</title><link rel="icon" href="/mark.svg" type="image/svg+xml"><link rel="stylesheet" href="@asset(site.css)"></head>
+<body data-render-mode="{{ mode }}">
+{% include Header %}
+<main id="web-page" tabindex="-1">{{ content }}</main>
+<footer class="site-footer flex justify-between gap-5 max-[760px]:flex-wrap"><span>FIELDNOTES / AXON WEB + TAILWIND</span><span class="render-label">Rendered with {{ mode }}</span><a href="/about" data-web-link>Under the hood ↗</a></footer>
+{% if client %}<script type="module" src="@asset(client.js)"></script>{% endif %}
+</body></html>

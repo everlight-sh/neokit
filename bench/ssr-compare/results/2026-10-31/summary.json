@@ -1,0 +1,122 @@
+[
+  {
+    "scenario": "small-ssr",
+    "server": "VifKit",
+    "bytes": 962,
+    "rps": 78455.65,
+    "p50_us": 234.0,
+    "p99_us": 709.0,
+    "cpu_us": 11.685338811729759,
+    "peak_mib": 0.60546875
+  },
+  {
+    "scenario": "small-ssr",
+    "server": "Bun",
+    "bytes": 962,
+    "rps": 47953.12,
+    "p50_us": 611.0,
+    "p99_us": 1410.0,
+    "cpu_us": 20.76691638397111,
+    "peak_mib": 53.25
+  },
+  {
+    "scenario": "small-ssr",
+    "server": "Go",
+    "bytes": 962,
+    "rps": 45799.12,
+    "p50_us": 705.0,
+    "p99_us": 1700.0,
+    "cpu_us": 21.744540941302837,
+    "peak_mib": 12.45703125
+  },
+  {
+    "scenario": "small-ssr",
+    "server": "Rust",
+    "bytes": 962,
+    "rps": 73717.05,
+    "p50_us": 287.0,
+    "p99_us": 784.0,
+    "cpu_us": 12.906241060648588,
+    "peak_mib": 3.4453125
+  },
+  {
+    "scenario": "large-ssr",
+    "server": "VifKit",
+    "bytes": 104960,
+    "rps": 12122.57,
+    "p50_us": 2090.0,
+    "p99_us": 5380.0,
+    "cpu_us": 81.90028454781641,
+    "peak_mib": 4.18359375
+  },
+  {
+    "scenario": "large-ssr",
+    "server": "Bun",
+    "bytes": 104960,
+    "rps": 2354.53,
+    "p50_us": 12570.0,
+    "p99_us": 24130.0,
+    "cpu_us": 424.66451503312385,
+    "peak_mib": 132.203125
+  },
+  {
+    "scenario": "large-ssr",
+    "server": "Go",
+    "bytes": 104960,
+    "rps": 6760.67,
+    "p50_us": 4500.0,
+    "p99_us": 25480.0,
+    "cpu_us": 147.90273915872922,
+    "peak_mib": 12.5625
+  },
+  {
+    "scenario": "large-ssr",
+    "server": "Rust",
+    "bytes": 104960,
+    "rps": 5902.87,
+    "p50_us": 5630.0,
+    "p99_us": 8750.0,
+    "cpu_us": 168.83138875247658,
+    "peak_mib": 3.5078125
+  },
+  {
+    "scenario": "interactive-ssr",
+    "server": "VifKit",
+    "bytes": 6046,
+    "rps": 68149.35,
+    "p50_us": 369.0,
+    "p99_us": 950.0,
+    "cpu_us": 14.039277703367812,
+    "peak_mib": 0.87890625
+  },
+  {
+    "scenario": "interactive-ssr",
+    "server": "Bun",
+    "bytes": 6046,
+    "rps": 21975.15,
+    "p50_us": 1320.0,
+    "p99_us": 2700.0,
+    "cpu_us": 45.27254527254527,
+    "peak_mib": 64.9453125
+  },
+  {
+    "scenario": "interactive-ssr",
+    "server": "Go",
+    "bytes": 6046,
+    "rps": 23891.88,
+    "p50_us": 1360.0,
+    "p99_us": 3460.0,
+    "cpu_us": 41.43074161027483,
+    "peak_mib": 12.4453125
+  },
+  {
+    "scenario": "interactive-ssr",
+    "server": "Rust",
+    "bytes": 6046,
+    "rps": 44464.92,
+    "p50_us": 690.0,
+    "p99_us": 1150.0,
+    "cpu_us": 22.28523754803919,
+    "peak_mib": 3.52734375
+  }
+]

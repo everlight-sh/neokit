@@ -1,0 +1,28 @@
+{
+  "build_trials": 36,
+  "accepted_ssr_trials": 27,
+  "browser_navigation_trials": 27,
+  "independent_html_queries_per_framework": 9,
+  "fresh_timestamps_checked": true,
+  "original_apps_and_dependencies_offline_for_ssr": true,
+  "static_exports_verified": true,
+  "counter_increment_reset_trials": 9,
+  "all_counter_trials_passed": true,
+  "application_resource_cache_hits": 0,
+  "all_browser_application_resource_sizes_nonzero": true,
+  "missing_favicon_fallbacks_excluded_from_application_payloads": true,
+  "same_tailwind_version": "4.3.3",
+  "tailwind_integrations": {
+    "Axon": "native CLI build pipeline",
+    "Astro": "official Vite plugin",
+    "Next": "official PostCSS plugin"
+  },
+  "browser_viewports": {
+    "[1280, 720]": 5,
+    "[1452, 1024]": 22
+  },
+  "browser_timing_control": "exploratory: unthrottled, varying viewport, short samples",
+  "native_static_dependency_audit_passed": true,
+  "frozen_source_snapshot_hashes_verified": true,
+  "excluded_run": "preliminary-rejected-duration.log: load runner rejected 3.0s duration string; no samples from that run are in accepted results"
+}

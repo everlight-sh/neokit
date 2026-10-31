@@ -1,0 +1,11 @@
+import "../../../../src/lib.ax"
+
+type StressProps = { title: Arr u8 _, count: i64, rows: WebHtml, server: bool, stamp: i64 }
+fn stress_row(i:i64) -> Arr u8 _
+  = let id=int_text(i) in concat("<tr data-row-id=\"",id,"\" class=\"border-b border-slate-100\"><td class=\"px-4 py-3 font-mono text-xs text-slate-500\">",id,"</td><td class=\"px-4 py-3 font-medium\" data-label>Item ",id,"</td><td class=\"px-4 py-3 tabular-nums\" data-value>",int_text((i*17)%1000),"</td><td class=\"px-4 py-3\"><input data-note aria-label=\"Note for item ",id,"\" placeholder=\"Type here while updating\" class=\"w-52 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-2 focus:outline-indigo-500\"></td><td class=\"px-4 py-3\"><button type=\"button\" data-select aria-pressed=\"false\" class=\"cursor-pointer rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium aria-pressed:border-indigo-600 aria-pressed:bg-indigo-50 aria-pressed:text-indigo-700\">Select</button></td><td class=\"px-4 py-3\"><button type=\"button\" data-bump aria-label=\"Increment item ",id,"\" class=\"cursor-pointer rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium hover:bg-slate-200\">+1</button></td></tr>")
+fn stress_rows(start:i64,count:i64) -> Arr u8 _
+  = if count<=0 then "" else if count==1 then stress_row(start) else let half=count/2 in concat(stress_rows(start,half),stress_rows(start+half,count-half))
+fn stress_load(request:WebRequest) -> StressProps
+  = let query=web_query_get(request.query,"n") in let parsed=int_parse(query.value) in
+    let count=if parsed.ok && parsed.value>=1 && parsed.value<=10000 then parsed.value else 1000 in
+    StressProps { title="Interactive list stress test",count=count,rows=web_html(stress_rows(1,count)),server=request.server,stamp=request.stamp }

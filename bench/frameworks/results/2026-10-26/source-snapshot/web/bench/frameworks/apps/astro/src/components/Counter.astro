@@ -1,0 +1,5 @@
+<section class="counter" data-web-widget="counter"><output data-count aria-label="Counter value" aria-live="polite">0</output><button type="button" data-increment>Add one +</button><button type="button" data-reset>Reset</button></section>
+<script>
+  import { mount } from "../../../../shared/counter.js";
+  document.querySelectorAll('[data-web-widget="counter"]').forEach(mount);
+</script>

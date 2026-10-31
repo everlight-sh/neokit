@@ -1,0 +1,10 @@
+Running 4s test @ http://127.0.0.1:37359/interactive?n=50&seed=17&token=measured-interactive-ssr-c32-r5-Axon
+  1 threads and 32 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     2.15ms    5.01ms  60.05ms   95.40%
+    Req/Sec    26.32k     8.76k   32.93k    82.50%
+  104887 requests in 4.09s, 638.68MB read
+Requests/sec:  25664.28
+Transfer/sec:    156.28MB
+BENCH {"requests":104887,"duration_us":4086887,"bytes":669703495,"p50_us":977.000,"p95_us":6242.000,"p99_us":30120.000,"max_us":60053.000,"errors":{"connect":0,"read":0,"write":0,"status":0,"timeout":0}}
+

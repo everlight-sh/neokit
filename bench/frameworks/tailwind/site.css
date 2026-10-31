@@ -1,0 +1,16 @@
+@import "tailwindcss" source(none);
+@source "../apps/axon/app";
+@source "../apps/astro/src";
+@source "../apps/next/app";
+@source "../apps/next/components";
+@source "../apps/next/static-app/app";
+@layer components {
+  th, td { @apply border-b border-[#d8dbcf] p-[9px] text-left text-xs; }
+  th { @apply bg-[#e9eddf]; }
+  tfoot { @apply font-semibold; }
+  .counter { @apply my-5 flex items-center gap-[18px] bg-[#e9eddf] p-[18px]; }
+  .counter output { @apply min-w-[45px] font-serif text-[40px] text-[#245b40]; }
+  button { @apply cursor-pointer border-0 bg-[#252b25] px-5 py-2.5 text-white; }
+  .request { @apply break-words font-mono text-[11px]; }
+  .stamp { @apply mb-5 block font-mono text-[10px] text-[#74786c]; }
+}

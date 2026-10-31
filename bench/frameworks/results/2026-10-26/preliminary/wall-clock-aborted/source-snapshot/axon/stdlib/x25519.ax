@@ -1,0 +1,63 @@
+import "std:sha256"
+
+; Sixteen signed limbs; all secret-dependent choices use bit masks. Loop
+; counts and memory addresses in the ladder do not depend on scalar bits.
+type CurveLadder = { a:Arr i64 _,b:Arr i64 _,c:Arr i64 _,d:Arr i64 _ }
+private fn xp_small(value:i64) -> Arr i64 _ = arr(i in 0..16) if i==0 then value else 0
+private fn xp_car(move values:Arr i64 n) -> Arr i64 n
+  = check n==16 in loop(i=0,values=values) while i<16
+      next(i+1,check i>=0 && i<n in let value=values[i]+65536 in let carry=arithmetic_shift_right(value,16) in
+        let target=if i<15 then i+1 else 0 in check target>=0 && target<n in
+        let remainder=set(values,i,value-carry*65536) in
+        set(remainder,target,remainder[target]+(carry-1)*(if i<15 then 1 else 38))) yield values
+private fn xp_add(a:Arr i64 n,b:Arr i64 m) -> Arr i64 _
+  = check n==16 && m==16 in arr(i in 0..16) a[i]+b[i]
+private fn xp_sub(a:Arr i64 n,b:Arr i64 m) -> Arr i64 _
+  = check n==16 && m==16 in arr(i in 0..16) a[i]-b[i]
+private fn xp_mul(a:Arr i64 n,b:Arr i64 m) -> Arr i64 _
+  = check n==16 && m==16 in
+    let product=arr(i in 0..31) sum(j in 0..16) if i-j>=0 && i-j<16 then a[j]*b[i-j] else 0 in
+    let folded=arr(i in 0..16) product[i]+(if i<15 then product[i+16]*38 else 0) in xp_car(xp_car(folded))
+private fn xp_select(a:Arr i64 n,b:Arr i64 m,bit:i64) -> Arr i64 _
+  = check n==16 && m==16 in arr(i in 0..16) bit_xor(a[i],bit_and(bit_xor(a[i],b[i]),0-bit))
+private fn xp_reduce(move values:Arr i64 n) -> Arr i64 _
+  = check n==16 in
+    let difference=set(arr(i in 0..16) 0,0,values[0]-65517) in
+    let difference=loop(i=1,words=difference) while i<15
+      next(i+1,check i>0 && i<15 && i<n && len(words)==16 in
+        let value=values[i]-65535-bit_and(arithmetic_shift_right(words[i-1],16),1) in
+        set(set(words,i-1,bit_and(words[i-1],65535)),i,value)) yield words in
+    check len(difference)==16 in
+    let last=values[15]-32767-bit_and(arithmetic_shift_right(difference[14],16),1) in
+    let difference=set(set(difference,14,bit_and(difference[14],65535)),15,last) in
+    xp_select(values,difference,1-bit_and(arithmetic_shift_right(last,16),1))
+private fn xp_pack(values:Arr i64 n) -> Arr u8 _
+  = let bounded=xp_reduce(xp_reduce(xp_car(xp_car(xp_car(values))))) in
+    arr(i in 0..32) check i/2>=0 && i/2<len(bounded) in u8(shift_right(bounded[i/2],i%2*8))
+private fn xp_inverse(values:Arr i64 n) -> Arr i64 _
+  = loop(i=253,answer=values) while i>=0
+      next(i-1,let square=xp_mul(answer,answer) in if i==2 || i==4 then square else xp_mul(square,values)) yield answer
+private fn xp_ladder(move state:CurveLadder,x:Arr i64 n,bit:i64) -> CurveLadder
+  = let a=xp_select(state.a,state.b,bit) in let b=xp_select(state.b,state.a,bit) in
+    let c=xp_select(state.c,state.d,bit) in let d=xp_select(state.d,state.c,bit) in
+    let e=xp_add(a,c) in let a=xp_sub(a,c) in let c=xp_add(b,d) in let b=xp_sub(b,d) in
+    let d=xp_mul(e,e) in let f=xp_mul(a,a) in let a=xp_mul(c,a) in let c=xp_mul(b,e) in
+    let e=xp_add(a,c) in let a=xp_sub(a,c) in let b=xp_mul(a,a) in let c=xp_sub(d,f) in
+    let a=xp_mul(c,xp_small(121665)) in let a=xp_add(a,d) in let c=xp_mul(c,a) in
+    let a=xp_mul(d,f) in let d=xp_mul(b,x) in let b=xp_mul(e,e) in
+    CurveLadder { a=xp_select(a,b,bit),b=xp_select(b,a,bit),c=xp_select(c,d,bit),d=xp_select(d,c,bit) }
+private fn xp_scalar(key:Arr u8 n,point:Arr u8 m) -> Arr u8 _
+  = check n==32 && m==32 in
+    let scalar=arr(i in 0..32) if i==0 then u8(bit_and(i64(key[i]),248)) else if i==31 then u8(bit_or(bit_and(i64(key[i]),127),64)) else key[i] in
+    let x=arr(i in 0..16) i64(point[i*2])+256*(if i==15 then bit_and(i64(point[i*2+1]),127) else i64(point[i*2+1])) in
+    let initial=CurveLadder { a=xp_small(1),b=x,c=xp_small(0),d=xp_small(1) } in
+    let result=loop(i=254,state=initial) while i>=0
+      next(i-1,check i>=0 && i/8<len(scalar) in xp_ladder(state,x,bit_and(shift_right(i64(scalar[i/8]),i%8),1))) yield state in
+    xp_pack(xp_mul(result.a,xp_inverse(result.c)))
+fn x25519(key:Arr u8 n,point:Arr u8 m) -> BytesResult
+  = if n!=32 || m!=32 then bytes_error(22,"X25519 keys require 32 bytes",0) else
+    let result=xp_scalar(key,point) in
+    let nonzero=loop(i=0,word=0) while i<len(result) next(i+1,check i>=0 && i<len(result) in bit_or(word,i64(result[i]))) yield word!=0 in
+    if !nonzero then bytes_error(74,"X25519 low-order point",0) else bytes_ok(result)
+fn x25519_public(key:Arr u8 n) -> BytesResult
+  = x25519(key,arr(i in 0..32) u8(if i==0 then 9 else 0))

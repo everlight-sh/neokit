@@ -1,0 +1,10 @@
+@props(title: text, content: html, client: bool, mode: text)
+<!doctype html>
+<html lang="en" class="scroll-smooth motion-reduce:scroll-auto"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="A simple Axon Web starter with Tailwind CSS, server-rendered pages, and interactive examples."><title>{{ title }} · Axon Web</title><link rel="icon" href="/mark.svg" type="image/svg+xml"><link rel="stylesheet" href="@asset(site.css)"></head>
+<body class="bg-white font-sans text-slate-900 antialiased" data-render-mode="{{ mode }}">
+<a class="sr-only rounded-md bg-indigo-600 px-4 py-2 text-white focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50" href="#web-page">Skip to content</a>
+{% include Header %}
+<main id="web-page" tabindex="-1" class="focus:outline-none">{{ content }}</main>
+<footer class="border-t border-slate-200 bg-white"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-8 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between"><p>Axon Web starter · Built with Tailwind CSS</p><div class="flex flex-wrap items-center gap-5"><span>Rendered with {{ mode }}</span><a class="font-medium text-slate-600 hover:text-indigo-600" href="/about" data-web-link>About this starter</a></div></div></footer>
+{% if client %}<script type="module" src="@asset(client.js)"></script>{% endif %}
+</body></html>

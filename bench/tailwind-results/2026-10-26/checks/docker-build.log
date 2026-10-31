@@ -1,0 +1,109 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.00kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 0.3s
+
+#3 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#3 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e done
+#3 CACHED
+
+#4 [context axon] load .dockerignore
+#4 transferring axon: 199B done
+#4 DONE 0.0s
+
+#5 [internal] load metadata for docker.io/oven/bun:1.3.13
+#5 DONE 0.2s
+
+#6 [internal] load metadata for docker.io/library/ubuntu:24.04
+#6 DONE 0.2s
+
+#7 [internal] load .dockerignore
+#7 transferring context: 172B done
+#7 DONE 0.0s
+
+#8 [build  1/10] FROM docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac
+#8 resolve docker.io/library/ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac 0.0s done
+#8 DONE 0.0s
+
+#9 [bun-tools 1/1] FROM docker.io/oven/bun:1.3.13@sha256:87416c977a612a204eb54ab9f3927023c2a3c971f4f345a01da08ea6262ae30e
+#9 resolve docker.io/oven/bun:1.3.13@sha256:87416c977a612a204eb54ab9f3927023c2a3c971f4f345a01da08ea6262ae30e 0.0s done
+#9 DONE 0.0s
+
+#10 [context axon] load from client
+#10 DONE 0.0s
+
+#11 [build  2/10] RUN apt-get update && apt-get install -y --no-install-recommends python3 clang lld binutils && rm -rf /var/lib/apt/lists/*
+#11 CACHED
+
+#12 [context axon] load from client
+#12 transferring axon: 70.67kB done
+#12 DONE 0.0s
+
+#13 [context axon] load from client
+#13 transferring axon: 402.83kB 0.0s done
+#13 DONE 0.0s
+
+#14 [build  3/10] COPY --from=bun-tools /usr/local/bin/bun /usr/local/bin/bun
+#14 CACHED
+
+#15 [internal] load build context
+#15 transferring context: 6.60MB 0.2s done
+#15 DONE 0.2s
+
+#16 [build  4/10] COPY --from=axon /axonc /toolchain/axon/axonc
+#16 DONE 0.1s
+
+#17 [build  5/10] COPY --from=axon /runtime /toolchain/axon/runtime
+#17 DONE 0.1s
+
+#18 [build  6/10] COPY --from=axon /stdlib /toolchain/axon/stdlib
+#18 DONE 0.1s
+
+#19 [build  7/10] WORKDIR /web
+#19 DONE 0.0s
+
+#20 [build  8/10] COPY . .
+#20 DONE 0.2s
+
+#21 [build  9/10] RUN bun install --frozen-lockfile
+#21 0.146 bun install v1.3.13 (bf2e2cec)
+#21 0.579 
+#21 0.579 + @tailwindcss/cli@4.3.3
+#21 0.579 + tailwindcss@4.3.3
+#21 0.579 
+#21 0.579 36 packages installed [442.00ms]
+#21 DONE 0.7s
+
+#22 [build 10/10] RUN ./web build && test -z "$(nm -u build/studio/server)" && ! readelf -l build/studio/server | grep -q INTERP && ! readelf -d build/studio/server | grep -q NEEDED
+#22 0.190 Bundled 4 modules in 4ms
+#22 0.190 
+#22 0.190   client-h7aftsb6.js  4.97 KB    (entry point)
+#22 0.190   chunk-mtb2hxg4.js   268 bytes  (chunk)
+#22 0.190   chunk-twgddws2.js   0.53 KB    (chunk)
+#22 0.190   chunk-2brfeqve.js   477 bytes  (chunk)
+#22 0.190 
+#22 0.353 Tailwind 4.3.3: site.css, 15739 bytes, 163ms
+#22 3.215 axonc: /web/build/studio/render  graph 05b8d0c658e44727  obligations 179/197 proven, 18 runtime checks, 10 parallel regions, 0 vectorised sums, 0 calls folded, 0 inlined, build miss
+#22 3.662 axonc: /web/build/studio/server  graph 91d932982a975770  obligations 0/2 proven, 2 runtime checks, 0 parallel regions, 0 vectorised sums, 0 calls folded, 0 inlined, build miss
+#22 3.662 axonc: native libraries hit: 197 prechecked obligations, 18 embedded runtime checks
+#22 3.663 Built /web/build/studio/server
+#22 3.663 Routes: 4; browser JS: 6241 bytes across split modules
+#22 DONE 3.7s
+
+#23 exporting to image
+#23 exporting layers
+#23 exporting layers 0.9s done
+#23 exporting manifest sha256:d8dceb92506473c2f29c75a6357d6ebd6417a8c1d7294afc2278d318df506c0e done
+#23 exporting config sha256:dbd811339cce2fd05c55a80f8d1f9617aae2f1f82d2bf1d14be72302374c7701 done
+#23 exporting attestation manifest sha256:c069b9fd95cb50afc749c04f55c62f2abbe6ca2547b701e415e7deb26627d6db done
+#23 exporting manifest list sha256:14ae246da89605ccc477edca3a1af86a8be2be3cea01edef09abb89e4e4312f5 done
+#23 naming to docker.io/library/axon-web-tailwind-tests:latest done
+#23 unpacking to docker.io/library/axon-web-tailwind-tests:latest
+#23 unpacking to docker.io/library/axon-web-tailwind-tests:latest 0.5s done
+#23 DONE 1.5s
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/w1qagt9qndbxbl42y0cea3ns4

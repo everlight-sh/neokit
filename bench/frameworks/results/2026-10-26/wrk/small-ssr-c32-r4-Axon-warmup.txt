@@ -1,0 +1,10 @@
+Running 1s test @ http://127.0.0.1:52517/?n=3&seed=17&token=measured-small-ssr-c32-r4-Axon
+  1 threads and 32 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   506.65us  382.62us   6.23ms   94.17%
+    Req/Sec    66.70k     4.13k   72.45k    63.64%
+  72833 requests in 1.10s, 89.88MB read
+Requests/sec:  66219.76
+Transfer/sec:     81.72MB
+BENCH {"requests":72833,"duration_us":1099868,"bytes":94245902,"p50_us":437.000,"p95_us":894.000,"p99_us":1958.000,"max_us":6231.000,"errors":{"connect":0,"read":0,"write":0,"status":0,"timeout":0}}
+

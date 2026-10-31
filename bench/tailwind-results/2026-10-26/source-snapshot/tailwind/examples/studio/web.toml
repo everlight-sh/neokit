@@ -1,0 +1,5 @@
+[site]
+name = "Fieldnotes"
+
+[css]
+tailwind = ["site.css"]

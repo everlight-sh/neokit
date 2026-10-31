@@ -1,0 +1,4 @@
+loader = "home_load"
+mode = "ssr"
+client = true
+export = true

@@ -1,0 +1,118 @@
+{
+  "Axon": {
+    "app": {
+      "files": 1,
+      "bytes": 285672
+    },
+    "runtime_bytes": 0,
+    "static": {
+      "files": 9,
+      "bytes": 119670,
+      "client_js_bytes": 5572,
+      "html_bytes": 111938,
+      "pages": {
+        "/": {
+          "html_bytes": 952,
+          "inline_script_bytes": 0,
+          "external_script_urls": []
+        },
+        "/large": {
+          "html_bytes": 104950,
+          "inline_script_bytes": 0,
+          "external_script_urls": []
+        },
+        "/interactive": {
+          "html_bytes": 6036,
+          "inline_script_bytes": 0,
+          "external_script_urls": [
+            "/_web/client-qnxetx3b.js"
+          ]
+        }
+      }
+    }
+  },
+  "Astro": {
+    "app": {
+      "files": 386,
+      "bytes": 41346062
+    },
+    "runtime_bytes": 123377224,
+    "static": {
+      "files": 3,
+      "bytes": 114447,
+      "client_js_bytes": 0,
+      "html_bytes": 114447,
+      "pages": {
+        "/": {
+          "html_bytes": 1735,
+          "inline_script_bytes": 0,
+          "external_script_urls": []
+        },
+        "/large": {
+          "html_bytes": 105534,
+          "inline_script_bytes": 0,
+          "external_script_urls": []
+        },
+        "/interactive": {
+          "html_bytes": 7178,
+          "inline_script_bytes": 399,
+          "external_script_urls": []
+        }
+      }
+    }
+  },
+  "Next": {
+    "app": {
+      "files": 1250,
+      "bytes": 55956553
+    },
+    "runtime_bytes": 123377224,
+    "static": {
+      "files": 33,
+      "bytes": 1861232,
+      "client_js_bytes": 570111,
+      "html_bytes": 466109,
+      "pages": {
+        "/": {
+          "html_bytes": 7523,
+          "inline_script_bytes": 5820,
+          "external_script_urls": [
+            "/_next/static/chunks/08xcn3jnivpa8.js",
+            "/_next/static/chunks/0cz1d0mv5g_q7.js",
+            "/_next/static/chunks/0h-9-f0-y194u.js",
+            "/_next/static/chunks/0umf92h1sb77c.js",
+            "/_next/static/chunks/3cfn99dbrcvvp.js",
+            "/_next/static/chunks/3wbm-994r45kr.js",
+            "/_next/static/chunks/turbopack-3-ry682tkyiqk.js"
+          ]
+        },
+        "/large": {
+          "html_bytes": 409138,
+          "inline_script_bytes": 303386,
+          "external_script_urls": [
+            "/_next/static/chunks/08xcn3jnivpa8.js",
+            "/_next/static/chunks/0cz1d0mv5g_q7.js",
+            "/_next/static/chunks/0h-9-f0-y194u.js",
+            "/_next/static/chunks/0umf92h1sb77c.js",
+            "/_next/static/chunks/3cfn99dbrcvvp.js",
+            "/_next/static/chunks/3wbm-994r45kr.js",
+            "/_next/static/chunks/turbopack-3-ry682tkyiqk.js"
+          ]
+        },
+        "/interactive": {
+          "html_bytes": 26909,
+          "inline_script_bytes": 20175,
+          "external_script_urls": [
+            "/_next/static/chunks/08xcn3jnivpa8.js",
+            "/_next/static/chunks/0cz1d0mv5g_q7.js",
+            "/_next/static/chunks/0h-9-f0-y194u.js",
+            "/_next/static/chunks/0umf92h1sb77c.js",
+            "/_next/static/chunks/3cfn99dbrcvvp.js",
+            "/_next/static/chunks/3wbm-994r45kr.js",
+            "/_next/static/chunks/turbopack-3-ry682tkyiqk.js"
+          ]
+        }
+      }
+    }
+  }
+}

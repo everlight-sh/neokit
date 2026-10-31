@@ -1,0 +1,10 @@
+Running 3s test @ http://127.0.0.1:44145/interactive?n=50&seed=17&token=compile-benchmark
+  1 threads and 32 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     1.00ms    0.86ms  20.76ms   97.04%
+    Req/Sec    34.91k     4.77k   41.80k    83.33%
+  103976 requests in 3.00s, 631.25MB read
+Requests/sec:  34643.97
+Transfer/sec:    210.33MB
+BENCH {"requests":103976,"duration_us":3001273,"bytes":661911216,"p50_us":851.000,"p95_us":1623.000,"p99_us":4244.000,"max_us":20764.000,"errors":{"connect":0,"read":0,"write":0,"status":0,"timeout":0}}
+
