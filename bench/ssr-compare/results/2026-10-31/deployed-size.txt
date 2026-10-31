@@ -1,0 +1,8 @@
+Deployed size, measured 31 October 2026 on a Vultr voc-c-2c-4gb-50s-amd instance (Ubuntu 24.04.5):
+
+    159528  build/catalog/server                               static, no libc; CSS and browser modules embedded
+                                                               (verified: run alone from an empty directory, serves both)
+    936016  bench/ssr-compare/rust/target/release/catalog-ssr  rustc 1.99.1; loads libc, libgcc_s, libm
+   8127311  bench/ssr-compare/go/catalog-ssr                   go 1.25.1; loads libc
+ 101814712  bun 1.3.13 runtime                                 loads libc, libpthread, libdl, libm
+      3109  bench/ssr-compare/bun/server.ts
