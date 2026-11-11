@@ -29,8 +29,16 @@ services:
       timeout: 3s
       retries: 3
     restart: unless-stopped
+    mem_limit: ${NEOKIT_MEMORY_LIMIT:-1g}
+    pids_limit: 512
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
   proxy:
-    image: caddy:2
+    image: ${NEOKIT_CADDY_IMAGE:-caddy:2.11.3}
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
     depends_on:
       app:
         condition: service_healthy

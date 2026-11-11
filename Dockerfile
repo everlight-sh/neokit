@@ -2,7 +2,8 @@
 # docker build --build-context neo="$NEO_HOME" --build-context neo-libs=../axon-libs -t neokit .
 FROM oven/bun:1.3.13 AS bun-tools
 FROM ubuntu:24.04 AS toolchain
-RUN apt-get update && apt-get install -y --no-install-recommends python3 clang lld binutils ca-certificates && rm -rf /var/lib/apt/lists/*
+# Pillow resizes [images]; brotli adds .br variants of embedded assets.
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-pil python3-brotli clang lld binutils ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=bun-tools /usr/local/bin/bun /usr/local/bin/bun
 FROM toolchain AS build
 COPY --from=neo /neo /toolchain/neo/neo
@@ -19,8 +20,10 @@ COPY --from=neo-libs /oauth2 /axon-libs/oauth2
 COPY --from=neo-libs /jwt /axon-libs/jwt
 ENV NEO_HOME=/toolchain/neo NEO_THREADS=1
 WORKDIR /web
-COPY . .
+# Install packages before copying sources so code edits reuse this layer.
+COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
+COPY . .
 ARG APP=examples/studio
 RUN ./neokit build --app "$APP" --out build/release && test -z "$(nm -u build/release/server)" && ! readelf -l build/release/server | grep -q INTERP && ! readelf -d build/release/server | grep -q NEEDED
 RUN "$NEO_HOME/neo" build tools/healthcheck.neo -o build/release/healthcheck
@@ -42,5 +45,6 @@ COPY --chown=65532:65532 --from=build /runtime-cache /cache
 ENV NEO_THREADS=1
 USER 65532:65532
 EXPOSE 8094
+HEALTHCHECK --interval=10s --timeout=3s --retries=3 CMD ["/healthcheck", "8094"]
 ENTRYPOINT ["/server"]
 CMD ["8094"]
