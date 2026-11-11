@@ -28,8 +28,47 @@ class Templates(unittest.TestCase):
         with self.assertRaises(BuildError):self.compile('@props()\n<script src="@asset(missing.js)"></script>')
 
     def test_unknown_and_invalid_props_rejected(self):
-        for source in ('@props()\n{{ missing }}','@props(x: string)\nhello','@props(x:text,x:int)\nhello','hello', '@props(x:text)\n{% if x %}yes{% endif %}'):
+        for source in ('@props()\n{{ missing }}','@props(x: string)\nhello','@props(x:text,x:int)\nhello','hello', '@props(x:int)\n{% if x %}yes{% endif %}',
+                       '@props(x:text)\n{% if x > 3 %}yes{% endif %}','@props(x:int)\n{% if x == "a" %}yes{% endif %}','@props(x:int,y:text)\n{% if x == y %}yes{% endif %}',
+                       '@props(x:bool)\n{% if !x == 1 %}yes{% endif %}','@props(x:int)\n{% if x + 1 > 2 %}yes{% endif %}'):
             with self.subTest(source=source),self.assertRaises(BuildError):self.compile(source)
+
+    def test_truthiness_comparisons_and_elif(self):
+        code=self.compile('@props(name:text, tags:text[], count:int, mode:text)\n'
+                          '{% if name %}named{% endif %}{% if !tags %}untagged{% endif %}'
+                          '{% if count >= -2 %}a{% elif mode == "dark" %}b{% elif mode != name %}c{% else %}d{% endif %}')
+        self.assertIn('len(p_name)>0',code)
+        self.assertIn('!(len(p_tags)>0)',code)
+        self.assertIn('(p_count>=(0-2))',code)
+        self.assertIn('str_equal(p_mode,"dark")',code)
+        self.assertIn('!str_equal(p_mode,p_name)',code)
+
+    def test_loop_index_and_records(self):
+        template=parse('Test','@props(people:Person[], title:text)\n@type Person(name:text, age:int)\n'
+                              '<h1>{{ title }}</h1>{% for person, at in people %}<p data-i="{{ at }}">{{ person.name }} {{ person.age }}</p>{% endfor %}')
+        self.assertEqual(template.types['Person'],{'name':'text','age':'int'})
+        code=compile_template(template,{},{})[0]
+        self.assertIn('let idx_at=at in',code)
+        self.assertIn('html_escape(item_person.name)',code)
+        self.assertIn('int_text(item_person.age)',code)
+        self.assertIn('Arr Person _',code)
+        for body in ('{{ people }}','{% for person in people %}{{ person }}{% endfor %}','{% for person in people %}{{ person.missing }}{% endfor %}'):
+            with self.subTest(body=body),self.assertRaises(BuildError):
+                compile_template(parse('Test','@props(people:Person[])\n@type Person(name:text)\n'+body),{},{})
+        for header in ('@type person(name:text)','@type Person(name:Person)','@type Person(name:text)\n@type Person(age:int)'):
+            with self.subTest(header=header),self.assertRaises(BuildError):parse('Test','@props()\n'+header+'\nhi')
+
+    def test_layout_substitution_never_rewrites_literals(self):
+        from compiler.templates import substitute
+        expression='concat("<p>p_title and p_content.bytes</p>",html_escape(p_title),p_content.bytes,p_titles)'
+        result=substitute(expression,{'p_title':'props.title','p_content.bytes':'body()','p_content':'web_html(body())'})
+        self.assertEqual(result,'concat("<p>p_title and p_content.bytes</p>",html_escape(props.title),body(),p_titles)')
+
+    def test_url_attributes_and_meta_refresh(self):
+        for body in ('<object data="{{ value }}"></object>','<video poster="{{ value }}"></video>','<svg><a xlink:href="javascript:alert(1)">x</a></svg>',
+                     '<meta http-equiv="refresh" content="0;url=javascript:alert(1)">','<meta http-equiv="refresh" content="{{ value }}">'):
+            with self.subTest(body=body),self.assertRaises(BuildError):self.compile('@props(value:text)\n'+body)
+        self.assertIn('p_link.value',self.compile('@props(link:url)\n<video poster="{{ link }}"></video>'))
 
     def test_executable_contexts_rejected(self):
         for body in ('<script>{{ value }}</script>', '<style>{{ value }}</style>', '<div onclick="{{ value }}">x</div>', '<a href="{{ value }}">x</a>', '<input value={{ value }}>', '<iframe srcdoc="{{ value }}"></iframe>', '<div style="{{ value }}">x</div>', '<!-- {{ value }} -->', '<a href="javascript:alert(1)">x</a>', '<{{ value }}>x</{{ value }}>', '<input {{ value }}="x">', '<div {% if value %}hidden{% endif %}>x</div>'):
