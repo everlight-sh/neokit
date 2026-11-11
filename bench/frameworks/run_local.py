@@ -7,7 +7,7 @@ IGNORED={'.git','node_modules','__pycache__','build','.next','.astro','dist-ssr'
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--neo-home','--axon-home',dest='axon_home',type=Path,default=Path(os.environ.get('NEO_HOME',ROOT.parent/'axon')))
+    p.add_argument('--neo-home','--axon-home',dest='axon_home',type=Path,default=Path(os.environ.get('NEO_HOME',ROOT.parent/'neo')))
     p.add_argument('--context',default='desktop-linux');p.add_argument('--image',default='axon-web-framework-bench-tools:latest')
     p.add_argument('--skip-image-build',action='store_true');p.add_argument('--out',type=Path,required=True)
     p.add_argument('--build-speed',action='store_true',help='compare clean/warm Axon and Astro builds, including library preparation')

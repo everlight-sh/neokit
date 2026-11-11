@@ -4,7 +4,7 @@ NeoKit builds native Neo servers and static sites. This alpha includes a source 
 
 ## Install and create an app
 
-Use Python 3.11 or newer, Bun 1.3.13, and Clang/LLVM with a platform linker. Linux builds use LLD. The SDK contains the native Neo 0.2.0 compiler binaries for macOS ARM64 and Linux ARM64/x86-64, Neo’s compiler stack fix in the launcher, runtime sources, exact local libraries, and browser assets. Python runs the NeoKit framework CLI. The Neo compiler and deployed app execute natively. Verify the published SHA-256 of the archive before unpacking it.
+Use Python 3.11 or newer, Bun 1.3.13, and Clang/LLVM with a platform linker. Linux builds use LLD. The SDK contains the native Neo 0.2.2 compiler binaries for macOS ARM64 and Linux ARM64/x86-64, runtime sources, exact local libraries, and browser assets. Python runs the NeoKit framework CLI. The Neo compiler and deployed app execute natively. Verify the published SHA-256 of the archive before unpacking it.
 
 ```sh
 tar -xzf neokit-0.1.0-alpha.1.tar.gz

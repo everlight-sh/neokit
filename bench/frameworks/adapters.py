@@ -21,7 +21,7 @@ def framework_cli(package,name):
 def build_spec(engine,mode):
     if engine=='Axon':
         target=BUILD/('axon-'+mode)
-        cmd=[str(ROOT/'web'),'export' if mode=='static' else 'build','--app',str(HERE/'apps/axon'),'--out',str(target)]
+        cmd=[str(ROOT/'neokit'),'export' if mode=='static' else 'build','--app',str(HERE/'apps/axon'),'--out',str(target)]
         if mode=='static':cmd+=['--dest',str(BUILD/'axon-export')]
         return cmd,ROOT,[target]+([BUILD/'axon-export'] if mode=='static' else []),ENV
     if engine=='Astro':

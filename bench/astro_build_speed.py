@@ -47,8 +47,8 @@ def main():
   # Three truly first-use builds, each with both project AND library caches empty.
   for repeat in range(3):
    target=work/('first-use-'+str(repeat));first_env={**ENV,'NEOKIT_LIBRARY_CACHE':str(work/('fresh-library-'+str(repeat)))}
-   run_build('Axon-first-use',[ROOT/'web','build','--app',ROOT/'bench/frameworks/apps/axon','--out',target],ROOT,first_env,repeat,'first-use',target)
-  run_build('Axon-toolchain-prepare',[ROOT/'web','prepare'],ROOT,env,0,'prepare')
+   run_build('Axon-first-use',[ROOT/'neokit','build','--app',ROOT/'bench/frameworks/apps/axon','--out',target],ROOT,first_env,repeat,'first-use',target)
+  run_build('Axon-toolchain-prepare',[ROOT/'neokit','prepare'],ROOT,env,0,'prepare')
   artifacts=[]
   for manifest in cache.glob('*/manifest.json'):
    data=json.loads(manifest.read_text());assert all('/bench/frameworks/apps/' not in f for f in data['sources'])
@@ -62,7 +62,7 @@ def main():
    order=list(cases);rng.shuffle(order)
    for case,engine,mode,profile in order:
     if engine=='Axon':
-     target=work/case;dest=work/(case+'-export');argv=[ROOT/'web','export' if mode=='static' else 'build','--app',ROOT/'bench/frameworks/apps/axon','--out',target,'--profile',profile]
+     target=work/case;dest=work/(case+'-export');argv=[ROOT/'neokit','export' if mode=='static' else 'build','--app',ROOT/'bench/frameworks/apps/axon','--out',target,'--profile',profile]
      if mode=='static':argv+=['--dest',dest]
      cwd=ROOT;clean=[target,dest];build_env=env
     else:argv,cwd,clean,build_env=build_spec(engine,mode);target=None

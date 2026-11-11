@@ -8,7 +8,7 @@ IGNORED={'.git','node_modules','__pycache__','build','.next','.astro','dist-ssr'
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--out',type=Path,required=True);p.add_argument('--neo-home','--axon-home',dest='axon_home',type=Path,default=ROOT.parent/'axon')
+    p.add_argument('--out',type=Path,required=True);p.add_argument('--neo-home','--axon-home',dest='axon_home',type=Path,default=ROOT.parent/'neo')
     p.add_argument('--context',default='desktop-linux');p.add_argument('--image',default='axon-web-framework-bench-tools:latest')
     p.add_argument('--keep-container',action='store_true');p.add_argument('--rounds',type=int,default=3);p.add_argument('--build-rounds',type=int,default=3)
     a=p.parse_args();out=a.out.resolve();out.mkdir(parents=True,exist_ok=False)

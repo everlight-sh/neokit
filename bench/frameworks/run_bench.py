@@ -40,7 +40,7 @@ def sources():
                 rel=path.relative_to(base)
                 if path.is_file() and not any(p in ignored for p in rel.parts) and (path.suffix in suffixes or path.name=='Dockerfile'):
                     paths[prefix+'/'+rel.as_posix()]=path
-    for path in [ROOT/'web',ROOT/'neo.toml',ROOT/'package.json',ROOT/'bun.lock',HERE/'bun.lock']:
+    for path in [ROOT/'neokit',ROOT/'neo.toml',ROOT/'package.json',ROOT/'bun.lock',HERE/'bun.lock']:
         paths['web/'+path.relative_to(ROOT).as_posix()]=path
     return paths
 

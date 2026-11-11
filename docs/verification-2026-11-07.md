@@ -1,7 +1,12 @@
 # NeoKit expansion verification — 2026-11-07
 
-The local framework is `/Users/marcoschwartz/Documents/code/neokit`.
-The language checkout remains named `axon`; reusable source packages are in
+> Historical record of the 2026-11-07 verification against the `../axon`
+> checkout of Neo 0.2.0. The toolchain is now the Neo 0.2.2 release
+> installed at `../neo`; the [README](../README.md) describes current behavior,
+> including features and limits added after this record.
+
+The framework was verified from a local NeoKit checkout.
+The language checkout was then named `axon`; reusable source packages are in
 `axon-libs`. No production Apteva component was changed or deployed.
 
 ## Implemented and exercised

@@ -80,7 +80,7 @@ def main():
     a=p.parse_args();assert a.build_rounds>=3 and a.runtime_rounds>=3
     out=a.out.resolve();out.mkdir(parents=True,exist_ok=False);(out/'logs').mkdir()
     roots={'Before':a.before_root.resolve(),'Tailwind':ROOT}
-    compiler=Path(os.environ.get('NEO_HOME',ROOT.parent/'axon')).resolve()
+    compiler=Path(os.environ.get('NEO_HOME',ROOT.parent/'neo')).resolve()
     env={**os.environ,'NEO_HOME':str(compiler),'NEO_THREADS':'1'}
     builds=[];runtime=[];outputs={label:out/('build-'+label.lower()) for label in roots}
     hashes={label:snapshot(root,out/'source-snapshot'/label.lower()) for label,root in roots.items()}

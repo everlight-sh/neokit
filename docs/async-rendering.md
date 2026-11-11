@@ -6,7 +6,7 @@ send a shell immediately, then replace loading sections as independent loaders
 finish. They can be used together or separately.
 
 The reusable executor, socket suspension, cancellation and HTTP backpressure are
-in [Neo's standard library](../../axon/docs/async-rendering.md). Existing native
+in [Neo's standard library](../../neo/docs/async-rendering.md). Existing native
 HTTP(S), DNS and shared PostgreSQL clients suspend at their ordinary socket
 waits; NeoKit does not maintain private async protocol implementations.
 
