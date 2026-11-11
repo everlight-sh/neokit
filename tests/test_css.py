@@ -46,7 +46,7 @@ class CSS(unittest.TestCase):
             assets2, files2=bundle_assets(app, Path(temporary)/'output2')
             self.assertNotEqual(assets['site.css'], assets2['site.css'])
             self.assertIn(b'.text-fuchsia-900{', files2[assets2['site.css']])
-            self.assertFalse(any('node_modules' in name for name, _ in fingerprint(app)))
+            self.assertFalse(any('node_modules' in name for name in fingerprint(app)))
 
 
 if __name__ == '__main__':
