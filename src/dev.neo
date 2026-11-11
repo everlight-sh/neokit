@@ -1,0 +1,35 @@
+import "std:http_server"
+import "std:io"
+
+; Development builds read assets and public files from disk on each request,
+; so editing CSS, browser modules or public files leaves the compiled program
+; unchanged. Release builds embed every file in the executable instead.
+fn neokit_ends(text:Arr u8 n,suffix:Arr u8 m) -> bool
+  = m<=n && str_equal(str_slice(text,n-m,n),suffix)
+fn neokit_safe_relative(path:Arr u8 n) -> bool
+  = n>=1 && n<=512 && str_byte(path,0)!=47 && !str_find(path,"..").present && !str_find(path,"//").present &&
+    loop(i=0,ok=true) while ok && i<n next(i+1,let c=str_byte(path,i) in c>=65 && c<=90 || c>=97 && c<=122 || c>=48 && c<=57 || c==45 || c==95 || c==46 || c==47) yield ok
+fn neokit_mime(path:Arr u8 n) -> Arr u8 _
+  = if neokit_ends(path,".js") || neokit_ends(path,".mjs") then "text/javascript; charset=utf-8"
+    else if neokit_ends(path,".css") then "text/css; charset=utf-8"
+    else if neokit_ends(path,".html") then "text/html; charset=utf-8"
+    else if neokit_ends(path,".json") || neokit_ends(path,".map") then "application/json; charset=utf-8"
+    else if neokit_ends(path,".svg") then "image/svg+xml"
+    else if neokit_ends(path,".png") then "image/png"
+    else if neokit_ends(path,".jpg") || neokit_ends(path,".jpeg") then "image/jpeg"
+    else if neokit_ends(path,".webp") then "image/webp"
+    else if neokit_ends(path,".avif") then "image/avif"
+    else if neokit_ends(path,".gif") then "image/gif"
+    else if neokit_ends(path,".ico") then "image/x-icon"
+    else if neokit_ends(path,".txt") then "text/plain; charset=utf-8"
+    else if neokit_ends(path,".xml") then "application/xml"
+    else if neokit_ends(path,".woff2") then "font/woff2"
+    else if neokit_ends(path,".woff") then "font/woff"
+    else "application/octet-stream"
+; Status zero (web_continue) means no such file, so dispatch can go on.
+effect fn neokit_dev_read(root:Arr u8 n,relative:Arr u8 m) -> WebResponse
+  = if !neokit_safe_relative(relative) then web_continue() else
+    let data=fs_read(concat(root,"/",relative)) in if !data.ok then web_continue() else
+    web_with_header(web_reply(200,data.value,neokit_mime(relative)),"Cache-Control","no-store")
+effect fn neokit_dev_asset(root:Arr u8 n,relative:Arr u8 m) -> WebResponse
+  = let found=neokit_dev_read(root,relative) in if found.status!=0 then found else web_reply(404,"Not Found","text/plain; charset=utf-8")

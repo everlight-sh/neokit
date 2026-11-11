@@ -72,7 +72,7 @@ def request(port,path='/',method='GET',headers=None):
     try:
         connection.request(method,path,headers=headers or {})
         response=connection.getresponse();body=response.read()
-        if method!='HEAD':assert int(response.getheader('Content-Length'))==len(body)
+        if method!='HEAD' and response.status not in (204,304):assert int(response.getheader('Content-Length'))==len(body)
         return response.status,dict(response.getheaders()),body
     finally:connection.close()
 
@@ -128,11 +128,26 @@ def main():
             for url,info in manifest['files'].items():
                 status,asset_headers,data=request(port,url)
                 assert status==200 and len(data)==info['bytes'] and hashlib.sha256(data).hexdigest()==info['sha256']
-                if url == '/_web/neokit-client.js':
-                    assert asset_headers['Cache-Control']=='no-store'
-                elif url.startswith('/_web/'):
+                if url == '/_web/neokit-client.js' or not url.startswith('/_web/'):
+                    assert asset_headers['Cache-Control']=='public, no-cache',(url,asset_headers)
+                else:
                     assert 'immutable' in asset_headers['Cache-Control']
                 if url.endswith('.js'):assert asset_headers['Content-Type'].startswith('text/javascript')
+                # Conditional GET: weak comparison, 304 keeps the validators and cache policy.
+                etag=asset_headers['ETag']
+                for supplied in (etag,etag[2:],'"other", '+etag,'*'):
+                    status,revalidated,data=request(port,url,headers={'If-None-Match':supplied})
+                    assert status==304 and data==b'' and revalidated['ETag']==etag and revalidated['Cache-Control']==asset_headers['Cache-Control'],(url,supplied,status)
+                assert request(port,url,headers={'If-None-Match':'"other"'})[0]==200
+            client=max((url for url in manifest['files'] if url.endswith('.js')),key=lambda url:manifest['files'][url]['bytes'])
+            _,plain,_=request(port,client,headers={'Accept-Encoding':'gzip;q=0, identity'})
+            assert 'Content-Encoding' not in plain,plain
+            _,packed,gzipped=request(port,client,headers={'Accept-Encoding':'gzip'})
+            assert packed.get('Content-Encoding')=='gzip' and packed['Vary']=='Accept-Encoding' and gzipped[:2]==b'\x1f\x8b'
+            _,anything,_=request(port,client,headers={'Accept-Encoding':'*'})
+            assert anything.get('Content-Encoding') in ('gzip','br'),anything
+            about_headers=request(port,'/about')[1]
+            assert about_headers['Cache-Control']=='public, no-cache' and about_headers['ETag'].startswith('W/"')
             for count in (1,100,1000,10000):
                 status,_,stress=request(port,'/stress?n='+str(count))
                 assert status==200 and stress.count(b'<tr data-row-id=')==min(count,32)

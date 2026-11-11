@@ -1,0 +1,27 @@
+import "std:http_server"
+
+; Conditional GET against one generated W/"hash" tag. If-None-Match uses weak
+; comparison, so a strong or weak copy of the quoted hash matches, as does *.
+fn neokit_not_modified(request:WebRequest,etag:Arr u8 n) -> bool
+  = let supplied=str_trim(web_request_header(request,"if-none-match")) in
+    len(supplied)>0 && n>2 && (str_equal(supplied,"*") || str_find(supplied,str_slice(etag,2,n)).present)
+
+private fn neokit_coding_field(value:Arr u8 n,at:i64) -> Arr u8 _
+  = let rest=str_slice(value,at,n) in let comma=str_find(rest,",") in
+    http_lower(str_trim(if comma.present then str_slice(rest,0,comma.value) else rest))
+private fn neokit_coding_name(field:Arr u8 n) -> Arr u8 _
+  = let semi=str_find(field,";") in str_trim(if semi.present then str_slice(field,0,semi.value) else field)
+private fn neokit_coding_allowed(field:Arr u8 n) -> bool
+  = let mark=str_find(field,"q=") in if !mark.present then true else
+    let value=str_trim(str_slice(field,mark.value+2,n)) in
+    !(str_equal(value,"0") || str_equal(value,"0.") || str_equal(value,"0.0") || str_equal(value,"0.00") || str_equal(value,"0.000"))
+
+; Accept-Encoding negotiation for one content coding. An explicit entry for
+; the coding wins over *; q=0 refuses it.
+fn neokit_accepts(value:Arr u8 n,coding:Arr u8 m) -> bool
+  = loop(at=0,seen=false,accepted=false,wildcard=false) while at<n
+      next(let comma=str_find(str_slice(value,at,n),",") in if comma.present then at+comma.value+1 else n,
+        seen || str_equal(neokit_coding_name(neokit_coding_field(value,at)),coding),
+        let field=neokit_coding_field(value,at) in if str_equal(neokit_coding_name(field),coding) then neokit_coding_allowed(field) else accepted,
+        let field=neokit_coding_field(value,at) in if str_equal(neokit_coding_name(field),"*") then neokit_coding_allowed(field) else wildcard)
+      yield if seen then accepted else wildcard

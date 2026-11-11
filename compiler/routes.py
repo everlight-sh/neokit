@@ -2,15 +2,24 @@
 import re
 from .templates import BuildError
 
-SEGMENT = re.compile(r'[A-Za-z0-9_-]+|\[([A-Za-z_][A-Za-z0-9_]*)\]|\[\.\.\.([A-Za-z_][A-Za-z0-9_]*)\]|\[\[\.\.\.([A-Za-z_][A-Za-z0-9_]*)\]\]')
+SEGMENT = re.compile(r'[A-Za-z0-9_.-]+|\[([A-Za-z_][A-Za-z0-9_]*)\]|\[\.\.\.([A-Za-z_][A-Za-z0-9_]*)\]|\[\[\.\.\.([A-Za-z_][A-Za-z0-9_]*)\]\]')
+# (group) folders organise files and share layouts without appearing in URLs.
+GROUP = re.compile(r'\([A-Za-z0-9_-]+\)')
+CANONICAL = re.compile(r'/[A-Za-z0-9_./-]*')
 METHODS = {'GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS'}
 
+
+def canonical_path(path):
+    return (isinstance(path, str) and bool(CANONICAL.fullmatch(path)) and '//' not in path and
+            (path == '/' or not path.endswith('/')) and not any(part in ('.', '..') for part in path.split('/')))
+
+
 def route_path(folder, base):
-    parts = folder.relative_to(base).parts
+    parts = [part for part in folder.relative_to(base).parts if not GROUP.fullmatch(part)]
     names = []
     for i, part in enumerate(parts):
         match = SEGMENT.fullmatch(part)
-        if not match:
+        if not match or part in ('.', '..'):
             raise BuildError(f'Unsupported route segment: {part}')
         names.extend(name for name in match.groups() if name)
         if part.startswith(('[...', '[[...')) and i != len(parts)-1:
@@ -20,7 +29,7 @@ def route_path(folder, base):
     return '/'+'/'.join(parts)
 
 def matches(pattern, path):
-    if not re.fullmatch(r'/[A-Za-z0-9_/-]*', path) or '//' in path or path!='/' and path.endswith('/'):
+    if not canonical_path(path):
         return False
     parts = []
     for part in pattern.strip('/').split('/'):

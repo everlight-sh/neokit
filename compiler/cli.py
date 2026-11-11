@@ -12,23 +12,35 @@ import subprocess
 import sys
 import time
 
-from .build import ROOT, DEFAULT_APP, build, prepare, compiler_env, compiler_command, native_build, build_migration
+from .build import ROOT, DEFAULT_APP, build, prepare, compiler_env, compiler_command, native_build, build_migration, refresh_assets
 from .templates import BuildError
 
-
-def server(binary, port):
-    return subprocess.Popen([str(binary),str(port)], start_new_session=True,
-                            env={**os.environ,'NEO_THREADS':os.environ.get('NEO_THREADS','1')})
+# Suites that need extra tools, long runs or prebuilt showcase apps.
+EXTENDED_SUITES = ('dev_css_smoke', 'large_responses', 'async_rendering', 'realtime', 'showcase_smoke')
 
 
-def stop(process):
-    if process.poll() is None:
+def server(binary, port, threads=None):
+    env = dict(os.environ)
+    if threads is not None:
+        env.setdefault('NEO_THREADS', str(threads))
+    return subprocess.Popen([str(binary),str(port)], start_new_session=True, env=env)
+
+
+def stop(process, grace=5):
+    if process is None or process.poll() is not None:
+        return
+    try:
         os.killpg(process.pid, signal.SIGTERM)
-        process.wait(timeout=10)
+        process.wait(timeout=grace)
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.wait()
+    except ProcessLookupError:
+        process.wait()
 
 
 def fingerprint(app):
-    paths = []
+    stamps = {}
     # Tailwind may scan any text source; watch application files, including
     # imported CSS, without descending into installed dependency trees.
     for base in (app, ROOT/'src', ROOT/'compiler', ROOT/'client'):
@@ -36,9 +48,78 @@ def fingerprint(app):
             folders[:] = [name for name in folders if name not in
                           ('node_modules', '.git', '.neo-build', '.axon-build', '.neokit', '__pycache__')
                           and Path(directory)/name != app/'vendor/neokit-sdk']
-            paths.extend(Path(directory)/name for name in files)
-    paths.extend(p for p in (ROOT/'package.json', ROOT/'bun.lock') if p.is_file())
-    return [(str(p),p.stat().st_mtime_ns) for p in sorted(paths)]
+            for name in files:
+                path = Path(directory)/name
+                try:
+                    stamps[str(path)] = path.stat().st_mtime_ns
+                except FileNotFoundError:
+                    pass
+    for path in (ROOT/'package.json', ROOT/'bun.lock'):
+        if path.is_file():
+            stamps[str(path)] = path.stat().st_mtime_ns
+    return stamps
+
+
+def change_kind(app, changed):
+    """'css' or 'client' when only browser sources changed, else 'reload'."""
+    styles, client = app/'styles', (app/'client', ROOT/'client')
+    paths = [Path(path) for path in changed]
+    if not paths or any(path.name == 'dev.js' and path.parent == ROOT/'client' for path in paths):
+        return 'reload'
+    if all(path.is_relative_to(styles) for path in paths):
+        return 'css'
+    if all(path.is_relative_to(styles) or any(path.is_relative_to(folder) for folder in client) for path in paths):
+        return 'client'
+    return 'reload'
+
+
+def write_status(out, **status):
+    target = out/'dev-status.json'
+    staged = target.with_name(target.name+'.next')
+    staged.write_text(json.dumps({'revision':time.time_ns(),'error':None,**status}))
+    os.replace(staged, target)
+
+
+def develop(app, out, port, profile):
+    os.environ['NEOKIT_DEV_STATUS'] = str(out/'dev-status.json')
+    write_status(out)
+    process = server(out/'server', port, threads=1)
+    print(f'Native Neo SSR: http://127.0.0.1:{port}',flush=True)
+    reported = False
+    try:
+        previous = fingerprint(app)
+        print('Watching sources; successful builds refresh connected development browsers.',flush=True)
+        while True:
+            time.sleep(.25)
+            if process is not None and process.poll() is not None and not reported:
+                print(f'neokit: the development server exited with status {process.returncode}; '
+                      'fix the problem and save a file to restart it.', file=sys.stderr, flush=True)
+                reported = True
+            current = fingerprint(app)
+            if current == previous:
+                continue
+            changed = {path for path in current.keys() | previous.keys() if current.get(path) != previous.get(path)}
+            previous = current
+            kind = change_kind(app, changed)
+            try:
+                if kind != 'reload' and process is not None and process.poll() is None:
+                    # The development server reads out/assets per request.
+                    refresh_assets(app, out)
+                else:
+                    kind = 'reload'
+                    build(app,out,target='server',profile=profile)
+            except (BuildError,subprocess.CalledProcessError) as error:
+                write_status(out, revision=0, error=str(error))
+                print(error,file=sys.stderr,flush=True)
+                continue
+            manifest = json.loads((out/'manifest.json').read_text())
+            if kind == 'reload':
+                stop(process, grace=2)
+                process = server(out/'server', port, threads=1)
+                reported = False
+            write_status(out, kind=kind, entry=manifest['assets'].get('client.js'))
+    finally:
+        stop(process, grace=2)
 
 
 def main():
@@ -61,17 +142,17 @@ def main():
         if name == 'export':
             p.add_argument('--dest',type=Path,default=export_output)
             p.add_argument('--strict',action='store_true',help='Reject an export that omits server-only routes')
-    sub.add_parser('test')
+    p=sub.add_parser('test');p.add_argument('--extended',action='store_true',help='also run the long, browser-free integration suites')
     p=sub.add_parser('init');p.add_argument('path',type=Path)
     p.add_argument('--standalone',action='store_true',help='include a relocatable NeoKit SDK in the application')
     p=sub.add_parser('release',help='create a checksummed NeoKit SDK archive')
     p.add_argument('--out',type=Path,required=True)
-    p.add_argument('--neo-archive',type=Path,help='Neo 0.2.0 multi-platform native release archive')
+    p.add_argument('--neo-archive',type=Path,help='Neo 0.2.2 multi-platform native release archive')
     p.add_argument('--neo-sha256',help='expected SHA-256 of the Neo archive')
     sub.add_parser('doctor')
-    p=sub.add_parser('revalidate');p.add_argument('--app',type=Path,default=DEFAULT_APP);p.add_argument('--out',type=Path,default=ROOT/'build/revalidation')
+    p=sub.add_parser('revalidate');p.add_argument('--app',type=Path,default=project);p.add_argument('--out',type=Path,default=output.with_name(output.name+'-revalidation'))
     sub.add_parser('password',help='hash a password using the shared native security library')
-    p=sub.add_parser('migrate');p.add_argument('--app',type=Path,default=DEFAULT_APP);p.add_argument('--out',type=Path,default=ROOT/'build/migrations');p.add_argument('--build-only',action='store_true')
+    p=sub.add_parser('migrate');p.add_argument('--app',type=Path,default=project);p.add_argument('--out',type=Path,default=output.with_name(output.name+'-migrations'));p.add_argument('--build-only',action='store_true')
     p = sub.add_parser('preview')
     p.add_argument('--dir',type=Path,default=export_output)
     p.add_argument('--port',type=int,default=8095)
@@ -127,6 +208,12 @@ def main():
             for app in ('features','dashboard'):
                 build(ROOT/'examples'/app,ROOT/'build'/app,target='server')
                 subprocess.run([sys.executable,'-m','tests.'+app+'_smoke'],cwd=ROOT,check=True)
+            if args.extended:
+                for suite in EXTENDED_SUITES:
+                    if suite == 'showcase_smoke':
+                        for showcase in ('ssr-site','blog','saas'):
+                            build(ROOT/'examples'/showcase,ROOT/'build/showcase'/showcase,target='server')
+                    subprocess.run([sys.executable,'-m','tests.'+suite],cwd=ROOT,check=True)
             return
         if args.command == 'preview':
             directory = args.dir.resolve()
@@ -154,13 +241,20 @@ def main():
             previous_export = any((dest/name).is_file() for name in ('.neokit-export', '.axon-web-export'))
             if dest.exists() and any(dest.iterdir()) and not previous_export:
                 raise BuildError('Export destination must be empty or a previous NeoKit export')
-            dest.mkdir(parents=True,exist_ok=True)
-            if previous_export:
-                shutil.rmtree(dest)
-            shutil.copytree(out/'snapshots',dest,dirs_exist_ok=True)
-            (dest/'.neokit-export').write_text('neokit v0.1\n')
-            public_manifest = {key:value for key,value in manifest.items() if key != 'app'}
-            (dest/'export-manifest.json').write_text(json.dumps(public_manifest,indent=2)+'\n')
+            # Copy beside the destination, then swap, so a failed copy keeps the previous export.
+            dest.parent.mkdir(parents=True,exist_ok=True)
+            staged = Path(tempfile.mkdtemp(prefix='.'+dest.name+'-',dir=dest.parent))
+            try:
+                shutil.copytree(out/'snapshots',staged,dirs_exist_ok=True)
+                (staged/'.neokit-export').write_text('neokit v0.1\n')
+                public_manifest = {key:value for key,value in manifest.items() if key != 'app'}
+                (staged/'export-manifest.json').write_text(json.dumps(public_manifest,indent=2)+'\n')
+                if dest.exists():
+                    shutil.rmtree(dest)
+                os.replace(staged,dest)
+            finally:
+                if staged.exists():
+                    shutil.rmtree(staged)
             print(f'Exported {len(manifest["exported_paths"])} pages to {dest}; local widgets work without a server.')
             if manifest['omitted_server_routes']:
                 print('Server-only routes omitted: '+', '.join(manifest['omitted_server_routes']))
@@ -169,35 +263,10 @@ def main():
                 raise BuildError('Port must be 1..65535')
             if args.command=='serve':
                 binary = str(out/'server')
-                env = {**os.environ,'NEO_THREADS':os.environ.get('NEO_THREADS','1')}
+                # Production serving uses every CPU unless NEO_THREADS says otherwise.
                 print(f'Native Neo SSR: http://127.0.0.1:{args.port}',flush=True)
-                os.execve(binary,[binary,str(args.port)],env)
-            os.environ['NEOKIT_DEV_STATUS']=str(out/'dev-status.json')
-            (out/'dev-status.json').write_text(json.dumps({'revision':time.time_ns(),'error':None}))
-            process = server(out/'server',args.port)
-            print(f'Native Neo SSR: http://127.0.0.1:{args.port}',flush=True)
-            try:
-                previous = fingerprint(app)
-                print('Watching sources; successful builds refresh connected development browsers.',flush=True)
-                while process.poll() is None:
-                    time.sleep(.5)
-                    current = fingerprint(app)
-                    if current != previous:
-                        changed={path for path,stamp in current if dict(previous).get(path)!=stamp}
-                        previous = current
-                        try:
-                            build(app,out,target='server',profile=args.profile)
-                        except (BuildError,subprocess.CalledProcessError) as error:
-                            (out/'dev-status.json').write_text(json.dumps({'revision':0,'error':str(error)}))
-                            print(error,file=sys.stderr)
-                            continue
-                        manifest=json.loads((out/'manifest.json').read_text())
-                        kind='client' if changed and all('/client/' in path for path in changed) else 'reload'
-                        (out/'dev-status.json').write_text(json.dumps({'revision':time.time_ns(),'error':None,'kind':kind,'entry':manifest['assets'].get('client.js')}))
-                        stop(process)
-                        process = server(out/'server',args.port)
-            finally:
-                stop(process)
+                os.execve(binary,[binary,str(args.port)],dict(os.environ))
+            develop(app, out, args.port, args.profile)
     except KeyboardInterrupt:
         pass
     except (BuildError,subprocess.CalledProcessError,OSError) as error:

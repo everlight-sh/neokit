@@ -81,7 +81,8 @@ def main(out=None):
             assert call(port,'/actions/typed','POST',value,{'Content-Type':'application/json'})[0] in (400,422)
         first=call(port,'/cached');assert first[1]['X-NeoKit-Cache']=='MISS'
         time.sleep(.02);second=call(port,'/cached');assert second[1]['X-NeoKit-Cache']=='HIT' and first[2]==second[2]
-        assert 'public' in second[1]['Cache-Control']
+        assert second[1]['Cache-Control']=='public, max-age=1, stale-while-revalidate=10' and second[1]['Vary']=='X-Web-Fragment'
+        assert call(port,'/cached?anything=1')[1].get('X-NeoKit-Cache') is None
         private=call(port,'/cached',headers={'Cookie':'session=anything'})
         assert 'X-NeoKit-Cache' not in private[1] and private[1]['Cache-Control']=='no-store'
         assert call(port,'/invalidate','POST')[0]==200
@@ -105,8 +106,11 @@ def main(out=None):
         manifest=json.loads((out/'manifest.json').read_text())
         script=manifest['assets']['client.js']
         normal=call(port,script)
-        packed=call(port,script,headers={'Accept-Encoding':'br, gzip;q=0.5'})
+        packed=call(port,script,headers={'Accept-Encoding':'gzip'})
         assert packed[1]['Content-Encoding']=='gzip' and gzip.decompress(packed[2])==normal[2]
+        # Brotli variants exist when the build environment has the brotli module.
+        assert call(port,script,headers={'Accept-Encoding':'br, gzip;q=0.5'})[1]['Content-Encoding'] in ('br','gzip')
+        assert call(port,script,headers={'Accept-Encoding':'br;q=0, gzip'})[1]['Content-Encoding']=='gzip'
         assert 'Content-Encoding' not in call(port,script,headers={'Accept-Encoding':'gzip;q=0'})[1]
         assert call(port,script,headers={'If-None-Match':normal[1]['ETag']})[0]==304
         assert json.loads(call(port,'/healthz')[2])=={'ok':True}

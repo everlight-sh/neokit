@@ -23,13 +23,25 @@ async function tick() {
       overlay.textContent=status.error;
     } else {overlay?.remove();overlay=null;}
     if(revision!==undefined && revision!==status.revision && !status.error){
+      // Development assets keep stable URLs, so a query string busts the browser's copy.
+      if(status.kind==='css' || status.kind==='client'){
+        for(const link of document.querySelectorAll('link[rel="stylesheet"]')){
+          const url=new URL(link.href,location.href);
+          if(url.origin!==location.origin || !url.pathname.startsWith('/_web/'))continue;
+          url.searchParams.set('dev',status.revision);
+          const next=link.cloneNode();next.href=url.href;
+          next.addEventListener('load',()=>link.remove(),{once:true});
+          next.addEventListener('error',()=>next.remove(),{once:true});
+          link.after(next);
+        }
+      }
       if(status.kind==='client' && status.entry){
         document.documentElement.dataset.webEntry=new URL(status.entry,location.href).href;
         globalThis.__NEOKIT_DISPOSE__?.();
         await import(status.entry+'?dev='+encodeURIComponent(status.revision));
-      } else {snapshot();location.reload();}
+      } else if(status.kind!=='css'){snapshot();location.reload();}
     }
     revision=status.revision;
   } catch {} finally {polling=false;}
 }
-setInterval(tick,700);tick();
+setInterval(tick,300);tick();

@@ -4,3 +4,9 @@ import "std:http_server"
 effect(env) fn neokit_cache() -> WebCache = web_cache_new(env_get("NEOKIT_CACHE_DIR").value)
 fn neokit_cacheable(request:WebRequest) -> bool
   = request.server && (str_equal(request.method,"GET") || str_equal(request.method,"HEAD")) && len(web_request_header(request,"cookie"))==0 && len(web_request_header(request,"authorization"))==0
+
+; Shared-cache headers for a page served from or written to the page cache.
+; Fragment and document responses share a URL, so shared caches must key on
+; the X-Web-Fragment request header as well.
+fn neokit_cached(response:WebResponse,control:Arr u8 n,state:Arr u8 m) -> WebResponse
+  = web_with_header(web_with_header(web_with_header(response,"Cache-Control",control),"X-NeoKit-Cache",state),"Vary","X-Web-Fragment")

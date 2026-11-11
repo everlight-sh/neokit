@@ -1,0 +1,7 @@
+import "std:http_server"
+
+; JSON placed in a <script type="application/ld+json"> data block. Escaping
+; every < keeps </script> and <!-- out of the block; JSON readers decode <.
+fn neokit_json_script(text:Arr u8 n) -> Arr u8 _
+  = if !str_find(text,"<").present then text else
+    str_concat_parts(arr(i in 0..n) if str_byte(text,i)==60 then str_slice("\\u003c",0,6) else str_slice(text,i,i+1))

@@ -43,25 +43,28 @@ def main():
                     raise AssertionError(log_path.read_text())
                 def page_css():
                     status,_,body=request(port);assert status==200
-                    url=re.search(rb'href="(/_web/site-[^"]+\.css)"',body)[1].decode()
+                    url=re.search(rb'href="(/_web/site[^"]*\.css)"',body)[1].decode()
                     status,_,sheet=request(port,url);assert status==200
                     return body,url,sheet
                 wait_for(lambda:b'.p-4{' in page_css()[2])
-                before=page_css()[1]
+                # Development keeps stable asset URLs and serves them from disk
+                # with no-store, so CSS-only edits never recompile the server.
+                body,url,sheet=page_css()
+                assert url=='/_web/site.css',url
+                assert request(port,url)[1].get('Cache-Control')=='no-store'
                 view.write_text('@props(title:text)\n<h1 class="grid grid-cols-3">{{ title }}</h1>')
                 wait_for(lambda:b'class="grid grid-cols-3"' in page_css()[0] and b'.grid-cols-3{' in page_css()[2])
-                assert page_css()[1]!=before
                 imported.write_text('.import-test { color: #654321; }')
                 wait_for(lambda:b'#654321' in page_css()[2])
                 js.write_text('document.documentElement.classList.add("opacity-60");')
                 wait_for(lambda:b'.opacity-60{' in page_css()[2] and b'.opacity-50{' not in page_css()[2])
-                stable=page_css()[1]
+                stable=page_css()[2]
                 css.write_text('@import "./missing.css";')
                 wait_for(lambda:'Tailwind failed' in log_path.read_text())
-                assert page_css()[1]==stable
+                assert page_css()[2]==stable
                 css.write_text('@import "tailwindcss" source(none);\n@import "./detail.css";\n@source "../app";\n@source "../client";\n@source inline("underline");\n')
-                wait_for(lambda:b'.underline{' in page_css()[2] and page_css()[1]!=stable)
-                print('PASS dev watcher: template utilities, imported CSS, browser-only classes, new asset hashes, failed build keeps previous server, repair restarts successfully')
+                wait_for(lambda:b'.underline{' in page_css()[2])
+                print('PASS dev watcher: template utilities, imported CSS, browser-only classes, disk-served assets, failed build keeps previous assets, repair refreshes them')
             finally:
                 if process.poll() is None:
                     process.send_signal(signal.SIGINT)
