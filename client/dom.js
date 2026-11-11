@@ -24,7 +24,8 @@ export function replaceContent(current,next) {
   current.replaceChildren(...next.childNodes);
 }
 export function syncMetadata(document,page) {
-  const managed='meta[name="description"],meta[name="robots"],meta[property^="og:"],meta[name^="twitter:"],link[rel="canonical"]';
+  // JSON-LD is a data block: a script inserted through the DOM with this type never runs.
+  const managed='meta[name="description"],meta[name="robots"],meta[property^="og:"],meta[name^="twitter:"],link[rel="canonical"],script[type="application/ld+json"]';
   for (const node of document.head.querySelectorAll(managed)) node.remove();
   for (const source of page.head.querySelectorAll(managed)) {
     const copy=document.importNode(source,true);copy.dataset.webHead='';document.head.append(copy);

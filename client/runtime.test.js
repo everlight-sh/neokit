@@ -1,5 +1,30 @@
 import { describe, expect, test } from "bun:test";
-import { formURL, navigationURL } from "./runtime.js";
+import { formURL, navigationURL, message } from "./runtime.js";
+import { safeFragment } from "./stream.js";
+import { Window } from "happy-dom";
+
+describe("form status text", () => {
+  test("form data attributes override neutral defaults", () => {
+    const form = { dataset: { webPending: "Asking…", webSuccess: "" } };
+    expect(message(form, "pending", "Loading…")).toBe("Asking…");
+    expect(message(form, "success", "Saved.")).toBe("");
+    expect(message(form, "failure", "Something went wrong.")).toBe("Something went wrong.");
+  });
+});
+
+describe("fragment sanitizer", () => {
+  test("rejects executable markup and URLs in every URL attribute", () => {
+    const window = new Window();
+    for (const key of ["Error", "SyntaxError", "TypeError", "RangeError", "RegExp"]) if (!window[key]) window[key] = globalThis[key];
+    const parse = html => { const template = window.document.createElement("template"); template.innerHTML = html; return template.content; };
+    expect(safeFragment(parse('<p><a href="/ok">ok</a><img src="/x.png"></p>'))).toBe(true);
+    for (const html of ['<script>x</script>', '<a href=" javascript:alert(1)">x</a>', '<object data="javascript:alert(1)"></object>',
+                        '<video poster="javascript:x"></video>', '<div onclick="x"></div>', '<meta http-equiv="refresh" content="0">']) {
+      expect(safeFragment(parse(html))).toBe(false);
+    }
+    window.happyDOM.abort();
+  });
+});
 
 describe("browser navigation boundaries", () => {
   test("keeps query and same-origin paths", () => {

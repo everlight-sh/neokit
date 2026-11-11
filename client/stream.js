@@ -9,7 +9,7 @@ export function safeFragment(fragment) {
     for (const attribute of element.attributes) {
       const name = attribute.name.toLowerCase();
       if (name.startsWith('on') || name === 'srcdoc') return false;
-      if (/^(href|src|action|formaction|xlink:href)$/.test(name) &&
+      if (/^(href|src|action|formaction|xlink:href|data|poster|cite|background|ping)$/.test(name) &&
           /^(javascript|vbscript|data):/i.test(attribute.value.replace(/[\u0000-\u0020]/g, ''))) return false;
     }
   }

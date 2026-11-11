@@ -1,4 +1,4 @@
-import { startStreaming } from "./stream.js";
+import { startStreaming, safeFragment } from "./stream.js";
 import { state, createAction } from "./state.js";
 import { replaceContent, syncMetadata } from "./dom.js";
 import { subscribe } from "./realtime.js";
@@ -22,6 +22,19 @@ export function formURL(action, entries, base) {
   return url;
 }
 
+// Status text for data-web-form: data-web-pending, data-web-success and
+// data-web-failure on the form override the neutral defaults.
+export function message(form, kind, fallback) {
+  const value = form.dataset["web" + kind[0].toUpperCase() + kind.slice(1)];
+  return value === undefined ? fallback : value;
+}
+
+function withoutHash(url) {
+  const copy = new URL(url);
+  copy.hash = "";
+  return String(copy);
+}
+
 export function start({ widgets = {} } = {}) {
   const mounted = new WeakMap();
   const forms = new WeakMap();
@@ -40,6 +53,22 @@ export function start({ widgets = {} } = {}) {
       if (!load) return;
       const instance = { dispose: null };
       mounted.set(element, instance);
+      // data-web-load="visible" or "idle" defers loading the widget module
+      // without holding up navigation, which awaits eager widgets only.
+      const waiting = lazy(element);
+      if (waiting) {
+        waiting.then(() => {
+          if (stopped || !element.isConnected || mounted.get(element) !== instance) return;
+          instance.dispose = null;
+          return activate(element, instance, load);
+        });
+        return;
+      }
+      await activate(element, instance, load);
+    }));
+  }
+
+  async function activate(element, instance, load) {
       try {
         const module = await load();
         if (stopped || !element.isConnected || mounted.get(element) !== instance) return;
@@ -57,7 +86,6 @@ export function start({ widgets = {} } = {}) {
         element.dataset.webError = "true";
         console.error("NeoKit widget failed", error);
       }
-    }));
   }
 
   function unmount(root) {
@@ -68,13 +96,43 @@ export function start({ widgets = {} } = {}) {
     for (const form of nodes(root, "form[data-web-form]")) forms.get(form)?.abort();
   }
 
+  // A nav link is current on an exact path match. data-web-match="prefix"
+  // also marks it for pages below it; data-web-match="/section" names the
+  // prefix explicitly when the link points at one page inside the section.
   function markNavigation() {
     const current = location.pathname.replace(/\/$/, "") || "/";
     for (const link of document.querySelectorAll("nav a[data-web-link]")) {
-      const path = new URL(link.href).pathname;
-      if (path === current || path === "/notes/native" && current.startsWith("/notes/")) link.setAttribute("aria-current", "page");
+      const path = new URL(link.href).pathname.replace(/\/$/, "") || "/";
+      const match = link.dataset.webMatch;
+      const prefix = match === "prefix" ? path : match?.startsWith("/") ? match.replace(/\/$/, "") : null;
+      const active = path === current || prefix !== null && prefix !== "" && (current === prefix || current.startsWith(prefix + "/"));
+      if (active) link.setAttribute("aria-current", "page");
       else link.removeAttribute("aria-current");
     }
+  }
+
+  function scrollToHash(url) {
+    const id = decodeURIComponent(url.hash.slice(1));
+    const target = id && (document.getElementById(id) || document.getElementsByName(id)[0]);
+    if (target) { target.scrollIntoView(); return true; }
+    return false;
+  }
+
+  function lazy(element) {
+    const mode = element.dataset.webLoad;
+    if (mode === "visible" && typeof IntersectionObserver === "function") {
+      return new Promise(resolve => {
+        const observer = new IntersectionObserver(entries => {
+          if (entries.some(entry => entry.isIntersecting)) { observer.disconnect(); resolve(); }
+        }, { rootMargin: "200px" });
+        observer.observe(element);
+        mounted.get(element).dispose = () => observer.disconnect();
+      });
+    }
+    if (mode === "idle") {
+      return new Promise(resolve => typeof requestIdleCallback === "function" ? requestIdleCallback(() => resolve(), { timeout: 2000 }) : setTimeout(resolve, 200));
+    }
+    return null;
   }
 
   async function navigate(url, history = true) {
@@ -83,9 +141,17 @@ export function start({ widgets = {} } = {}) {
     navigation = controller;
     document.documentElement.dataset.webNavigating = "true";
     try {
-      const cached=prefetched.get(String(url));
-      const response=cached && cached.expires>Date.now()?new Response(cached.text,{headers:{'content-type':'text/html'}}):await fetch(url, { signal: controller.signal, headers: { Accept: "text/html" } });
+      const cached=prefetched.get(withoutHash(url));
+      const fresh=cached && cached.text!==null && cached.expires>Date.now();
+      const response=fresh?new Response(cached.text,{headers:{'content-type':'text/html'}}):await fetch(url, { signal: controller.signal, headers: { Accept: "text/html" } });
       if (!response.ok || !response.headers.get("content-type")?.includes("text/html")) throw new Error("Full navigation required");
+      // Follow server redirects in the address bar, keeping the requested fragment.
+      if (!fresh && response.redirected && response.url) {
+        const final = navigationURL(response.url, location.href);
+        if (!final) throw new Error("Cross-origin redirect");
+        if (!final.hash) final.hash = url.hash;
+        url = final;
+      }
       const page = new DOMParser().parseFromString(await response.text(), "text/html");
       // Streaming needs the browser's incremental parser. The buffered router
       // would otherwise drop fragment templates outside #web-page.
@@ -97,15 +163,25 @@ export function start({ widgets = {} } = {}) {
       if (controller.signal.aborted) return;
       const oldWidgets=nodes(current,'[data-web-widget]');
       const oldForms=nodes(current,'form[data-web-form]');
-      replaceContent(current,next);
+      const swap = () => {
+        replaceContent(current,next);
+        syncMetadata(document,page);
+        document.title = page.title;
+        document.body.dataset.renderMode = page.body.dataset.renderMode || "";
+        // Elements outside #web-page marked data-web-sync="key" take their
+        // text from the matching element of the next page.
+        for (const element of document.querySelectorAll("[data-web-sync]")) {
+          if (current.contains(element)) continue;
+          const source = [...page.querySelectorAll("[data-web-sync]")].find(node => node.dataset.webSync === element.dataset.webSync);
+          if (source) element.textContent = source.textContent;
+        }
+      };
+      // Opt in with <html data-web-transitions> where the View Transitions API exists.
+      if (document.documentElement.hasAttribute("data-web-transitions") && typeof document.startViewTransition === "function") {
+        await document.startViewTransition(swap).updateCallbackDone;
+      } else swap();
       for (const element of oldWidgets) if (!element.isConnected) {mounted.get(element)?.dispose?.();mounted.delete(element);}
       for (const form of oldForms) if (!form.isConnected) forms.get(form)?.abort();
-      syncMetadata(document,page);
-      document.title = page.title;
-      document.body.dataset.renderMode = page.body.dataset.renderMode || "";
-      const label = document.querySelector(".render-label");
-      const nextLabel = page.querySelector(".render-label");
-      if (label && nextLabel) label.textContent = nextLabel.textContent;
       if (history) {
         window.history.replaceState({...window.history.state,webScroll:[scrollX,scrollY]},'',location.href);
         window.history.pushState({}, "", url);
@@ -113,8 +189,10 @@ export function start({ widgets = {} } = {}) {
       markNavigation();
       await mount(current);
       current.focus({ preventScroll: true });
-      const scroll=history?[0,0]:window.history.state?.webScroll||[0,0];
-      window.scrollTo(...scroll);
+      if (!(history && url.hash && scrollToHash(url))) {
+        const scroll=history?[0,0]:window.history.state?.webScroll||[0,0];
+        window.scrollTo(...scroll);
+      }
       document.dispatchEvent(new CustomEvent("web:navigated", { detail: { url: String(url) } }));
     } catch (error) {
       if (error.name !== "AbortError") location.assign(url);
@@ -142,16 +220,22 @@ export function start({ widgets = {} } = {}) {
       if (forms.has(form)) return;
       const controller=new AbortController();forms.set(form,controller);form.setAttribute('aria-busy','true');
       const status=form.querySelector('[data-web-status]');
-      if(status)status.textContent='Saving…';
+      const say=(kind,fallback)=>{if(status)status.textContent=message(form,kind,fallback);};
+      say('pending','Saving…');
       try {
         const entries=new FormData(form,event.submitter);
         const files=[...entries.values()].some(value=>typeof value!=='string');
         const response=await fetch(form.action,{method:'POST',body:files?entries:new URLSearchParams(entries),credentials:'same-origin',signal:controller.signal});
-        if(!response.ok)throw new Error(await response.text());
+        if(!response.ok){
+          // Short plain-text errors are written for people; anything else is not shown.
+          const plain=response.headers.get('content-type')?.startsWith('text/plain');
+          const text=plain?(await response.text()).trim():'';
+          throw Object.assign(new Error(text),{shown:plain && text.length>0 && text.length<=200});
+        }
         document.dispatchEvent(new CustomEvent('web:mutation'));
         if(response.redirected)await navigate(new URL(response.url));
-        else if(status)status.textContent='Saved.';
-      } catch(error) {if(error.name!=='AbortError' && status)status.textContent=error.message;}
+        else say('success','Saved.');
+      } catch(error) {if(error.name!=='AbortError' && status)status.textContent=error.shown?error.message:message(form,'failure','Something went wrong. Please try again.');}
       finally {forms.delete(form);form.removeAttribute('aria-busy');}
       return;
     }
@@ -167,46 +251,50 @@ export function start({ widgets = {} } = {}) {
     forms.set(form, controller);
     form.setAttribute("aria-busy", "true");
     const status = form.querySelector("[data-web-status]");
-    if (status) status.textContent = "Asking the server…";
+    if (status) status.textContent = message(form, "pending", "Loading…");
     try {
       const response = await fetch(url, { signal: controller.signal, headers: { "X-Web-Fragment": "1", Accept: "text/html" } });
       if (!response.ok || !response.headers.get("content-type")?.includes("text/html")) throw new Error("The server could not render this response.");
       const template = document.createElement("template");
       template.innerHTML = await response.text();
-      if (template.content.querySelector("script, iframe, object, embed, base, style, link")) throw new Error("Unexpected executable fragment.");
-      for (const element of template.content.querySelectorAll("*")) {
-        for (const attribute of element.attributes) {
-          if (/^on/i.test(attribute.name) || attribute.name === "srcdoc" || /^(href|src|action|formaction)$/i.test(attribute.name) && /^\s*(javascript|vbscript|data):/i.test(attribute.value)) throw new Error("Unexpected executable fragment attribute.");
-        }
-      }
+      if (!safeFragment(template.content)) throw new Error("Unexpected executable fragment.");
       if (controller.signal.aborted || forms.get(form) !== controller || !target.isConnected) return;
       unmount(target);
       target.replaceChildren(template.content);
       await mount(target);
-      if (status) status.textContent = "Fresh HTML, rendered by Neo.";
+      if (status) status.textContent = message(form, "success", "");
       document.dispatchEvent(new CustomEvent("web:updated", { detail: { target } }));
     } catch (error) {
-      if (error.name !== "AbortError" && status) status.textContent = "Couldn't reach the server. Please try again.";
+      if (error.name !== "AbortError" && status) status.textContent = message(form, "failure", "Something went wrong. Please try again.");
     } finally {
       if (forms.get(form) === controller) form.removeAttribute("aria-busy");
     }
   }
 
+  // Prefetch keeps only pages the server marks publicly cacheable. Pages it
+  // cannot keep are remembered briefly so hovering again does not refetch.
   const prefetched=new Map();
-  let prefetchController;
+  const prefetchControllers=new Set();
   async function prefetch(link) {
     const url=navigationURL(link.href,location.href);
-    if(!url || prefetched.has(String(url)) || link.hasAttribute('data-web-no-prefetch'))return;
-    prefetchController=new AbortController();
+    if(!url || link.hasAttribute('data-web-no-prefetch'))return;
+    const key=withoutHash(url);
+    const known=prefetched.get(key);
+    if(known && (known.text===null && !known.settled || known.expires>Date.now()))return;
+    if(prefetched.size>=20)prefetched.delete(prefetched.keys().next().value);
+    const entry={text:null,settled:false,expires:Date.now()+30000};
+    prefetched.set(key,entry);
+    const controller=new AbortController();prefetchControllers.add(controller);
     try {
-      const response=await fetch(url,{signal:prefetchController.signal,credentials:'same-origin'});
+      const response=await fetch(url,{signal:controller.signal,credentials:'same-origin',headers:{Accept:'text/html'}});
       const control=response.headers.get('cache-control')||'';
       const age=Number(/max-age=(\d+)/.exec(control)?.[1]||0);
-      if(response.ok && control.includes('public') && age>0 && response.headers.get('content-type')?.includes('text/html')) {
-        if(prefetched.size>=20)prefetched.delete(prefetched.keys().next().value);
-        prefetched.set(String(url),{text:await response.text(),expires:Date.now()+Math.min(age*1000,30000)});
-      }
-    } catch {}
+      if(response.ok && !response.redirected && /(^|,)\s*public\b/.test(control) && age>0 && response.headers.get('content-type')?.includes('text/html')) {
+        entry.text=await response.text();
+        entry.expires=Date.now()+Math.min(age*1000,30000);
+      } else entry.expires=Date.now()+10000;
+    } catch { prefetched.delete(key); }
+    finally { entry.settled=true; prefetchControllers.delete(controller); }
   }
   const onHover=event=>{const link=event.target.closest?.('a[data-web-link][data-web-prefetch]');if(link)prefetch(link);};
   const invalidate=()=>prefetched.clear();
@@ -222,7 +310,7 @@ export function start({ widgets = {} } = {}) {
   mount(document);
   const dispose = () => {
     stopped = true;
-    navigation?.abort();prefetchController?.abort();stopStreaming();
+    navigation?.abort();for(const controller of prefetchControllers)controller.abort();stopStreaming();
     document.removeEventListener('pointerover',onHover);document.removeEventListener('web:mutation',invalidate);
     unmount(document);
     document.removeEventListener("click", onClick);
