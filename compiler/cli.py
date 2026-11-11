@@ -15,8 +15,14 @@ import time
 from .build import ROOT, DEFAULT_APP, build, prepare, compiler_env, compiler_command, native_build, build_migration, refresh_assets
 from .templates import BuildError
 
-# Suites that need extra tools, long runs or prebuilt showcase apps.
-EXTENDED_SUITES = ('dev_css_smoke', 'large_responses', 'async_rendering', 'realtime', 'showcase_smoke')
+# Longer suites and the applications each one serves from build/.
+# tests.async_rendering also needs a PostgreSQL server; run it directly.
+EXTENDED_SUITES = {
+    'dev_css_smoke': (),
+    'large_responses': (('bench/frameworks/apps/axon', 'build/catalog'),),
+    'realtime': (('tests/realtime_fixture', 'build/realtime/fixture'),),
+    'showcase_smoke': tuple(('examples/'+name, 'build/showcase/'+name) for name in ('ssr-site', 'blog', 'saas')),
+}
 
 
 def server(binary, port, threads=None):
@@ -205,14 +211,14 @@ def main():
             subprocess.run([sys.executable,'-m','tests.http_smoke'],cwd=ROOT,check=True)
             subprocess.run([sys.executable,'-m','tests.consumer_smoke'],cwd=ROOT,check=True)
             subprocess.run([sys.executable,'-m','tests.scaffold_smoke'],cwd=ROOT,check=True)
+            subprocess.run([sys.executable,'-m','tests.audit_features_smoke'],cwd=ROOT,check=True)
             for app in ('features','dashboard'):
                 build(ROOT/'examples'/app,ROOT/'build'/app,target='server')
                 subprocess.run([sys.executable,'-m','tests.'+app+'_smoke'],cwd=ROOT,check=True)
             if args.extended:
-                for suite in EXTENDED_SUITES:
-                    if suite == 'showcase_smoke':
-                        for showcase in ('ssr-site','blog','saas'):
-                            build(ROOT/'examples'/showcase,ROOT/'build/showcase'/showcase,target='server')
+                for suite,apps in EXTENDED_SUITES.items():
+                    for source,destination in apps:
+                        build(ROOT/source,ROOT/destination,target='server')
                     subprocess.run([sys.executable,'-m','tests.'+suite],cwd=ROOT,check=True)
             return
         if args.command == 'preview':

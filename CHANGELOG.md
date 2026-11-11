@@ -12,6 +12,7 @@
 - Metadata from loader props, including JSON-LD, through a `head:html` layout prop.
 - Browser runtime: redirect-aware navigation, hash scrolling, generic `aria-current` and `data-web-sync`, configurable form status text, deduplicated prefetch, lazy widgets and optional view transitions. Studio-specific strings were removed.
 - CLI: `serve` uses every CPU, dev reports server crashes and detects deleted files, `stop` escalates to SIGKILL, `migrate` and `revalidate` default to the current app, and `test --extended`.
+- Tests: `tests.audit_features_smoke` compiles one app that uses every routing, template, caching and metadata option above, then checks its server and export. `./neokit test` runs it.
 - Deploy: pinned Caddy, compression and security headers, HSTS for public domains, log rotation, memory limits, a Docker healthcheck, Pillow and Brotli in the image, and a CI unit-test workflow.
 
 ## 0.1.0-alpha.1
