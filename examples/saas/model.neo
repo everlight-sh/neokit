@@ -1,0 +1,65 @@
+import "../../src/lib.neo"
+import "../../src/charts.neo"
+import "std:vec"
+import "std:datetime"
+import "std:json"
+import "std:url"
+fn saas_records(request:WebRequest)->i64 {result>=1000,result<=10000}=if str_equal(web_query_get(request.query,"records").value,"10000") then 10000 else 1000
+fn saas_days(request:WebRequest)->i64 {result>=7,result<=90}=let value=web_query_get(request.query,"range").value in if str_equal(value,"7") then 7 else if str_equal(value,"90") then 90 else 30
+fn saas_pad(value:i64)->Arr u8 _=concat(if value<10 then "00" else if value<100 then "0" else "",int_text(value))
+fn saas_group(value:i64)->Arr u8 _=if value<1000 then int_text(value) else concat(saas_group(value/1000),",",saas_pad(value%1000))
+fn saas_money(value:i64)->Arr u8 _=concat("$",saas_group(value))
+fn saas_company(index:i64)->Arr u8 _
+  = concat(if index%12==0 then "Acme Labs" else if index%12==1 then "Orbit Finance" else if index%12==2 then "Layers Studio" else if index%12==3 then "Capsule Health" else if index%12==4 then "Northstar" else if index%12==5 then "Sora Design" else if index%12==6 then "Arc Supply" else if index%12==7 then "Vertex AI" else if index%12==8 then "Pine & Co" else if index%12==9 then "Mono Works" else if index%12==10 then "Kindred" else "Beacon", " ",saas_pad(index+1))
+fn saas_initials(index:i64)->Arr u8 _=if index%12==0 then "AC" else if index%12==1 then "OF" else if index%12==2 then "LS" else if index%12==3 then "CH" else if index%12==4 then "NS" else if index%12==5 then "SD" else if index%12==6 then "AR" else if index%12==7 then "VX" else if index%12==8 then "PC" else if index%12==9 then "MW" else if index%12==10 then "KI" else "BE"
+fn saas_plan(index:i64)->Arr u8 _=if index%9<5 then "Growth" else if index%9<8 then "Pro" else "Enterprise"
+fn saas_price(index:i64)->i64=if index%9<5 then 29 else if index%9<8 then 79 else 299
+fn saas_status(index:i64)->Arr u8 _=if index%19==0 then "Past due" else if index%7==0 then "Trial" else "Active"
+fn saas_status_class(index:i64)->Arr u8 _=if index%19==0 then "past-due" else if index%7==0 then "trial" else "active"
+fn saas_joined(index:i64)->Arr u8 _=str_slice(rfc3339_format(1767225600000+(index%280)*86400000).value,0,10)
+fn saas_row(index:i64)->WebHtml
+  = web_html(concat("<tr data-customer-id=\"",int_text(index+1),"\"><td><div class=\"company\"><span class=\"company-icon tone-",int_text(index%6),"\">",saas_initials(index),"</span><span><strong>",html_escape(saas_company(index)),"</strong><small>team",int_text(index+1),"@workspace.example</small></span></div></td><td><span class=\"plan\">",saas_plan(index),"</span></td><td><span class=\"status ",saas_status_class(index),"\"><i></i>",saas_status(index),"</span></td><td class=\"numeric\">",saas_money(saas_price(index)),"<small>/mo</small></td><td class=\"joined\">",saas_joined(index),"</td></tr>"))
+type SaasTotals={active:i64,mrr:i64,trials:i64}
+fn saas_totals(count:i64)->SaasTotals
+  = loop(i=0,active=0,mrr=0,trials=0) while i<count next(i+1,active+(if str_equal(saas_status(i),"Active") then 1 else 0),mrr+(if !str_equal(saas_status(i),"Trial") then saas_price(i) else 0),trials+(if str_equal(saas_status(i),"Trial") then 1 else 0)) yield SaasTotals {active=active,mrr=mrr,trials=trials}
+fn saas_revenue(index:i64,days:i64,count:i64)->i64=(1400+index*31+(index*79+days*17)%600)*(count/1000)
+fn saas_labels(request:WebRequest,days:i64{days>=2,days<=90})->Arr Arr u8 _ _
+  = let base=if request.server && request.stamp>0 then request.stamp else 1794139200000 in
+    arr(i in 0..days) str_slice(rfc3339_format(base-(days-1-i)*86400000).value,5,10)
+type SaasOverview={title:Arr u8 _,server:bool,records:i64,record_count:Arr u8 _,range:i64,week:bool,month:bool,quarter:bool,large:bool,revenue:Arr u8 _,change:Arr u8 _,mrr:Arr u8 _,active:Arr u8 _,trials:Arr u8 _,total:Arr u8 _,caption:Arr u8 _,chart:WebHtml,sources:WebHtml,customers:Arr WebHtml _,csv:WebURL,customers_url:WebURL}
+fn saas_overview(request:WebRequest)->SaasOverview
+  = let count=saas_records(request) in let days=saas_days(request) in let totals=saas_totals(count) in
+    let values=arr(i in 0..days) saas_revenue(i,days,count) in let previous=arr(i in 0..days) saas_revenue(i,days,count)*86/100 in let labels=saas_labels(request,days) in
+    let revenue=sum(i in 0..days) check i>=0 && i<days in values[i] in
+    let old=sum(i in 0..days) check i>=0 && i<days in previous[i] in let growth=(revenue-old)*1000/(if old>0 then old else 1) in
+    check days>=2 && days<=90 && len(labels)==days in
+    SaasOverview {title="Overview",server=request.server,records=count,record_count=saas_group(count),range=days,week=days==7,month=days==30,quarter=days==90,large=count==10000,
+      revenue=saas_money(revenue),change=concat(int_text(growth/10),".",int_text(growth%10),"%"),mrr=saas_money(totals.mrr),active=saas_group(totals.active),trials=saas_group(totals.trials),total=saas_group(count),
+      caption=concat(labels[0]," — ",labels[days-1]),chart=web_line_chart("Revenue over time",labels,values,previous),
+      sources=web_percentage_bars("Customer acquisition sources",arr(i in 0..4) if i==0 then "Direct" else if i==1 then "Organic search" else if i==2 then "Referrals" else "Social",arr(i in 0..4) if i==0 then 42 else if i==1 then 28 else if i==2 then 18 else 12),
+      customers=arr(i in 0..8) saas_row(i+1),csv=web_url(concat("/api/export-customers?records=",int_text(count))),customers_url=web_url(concat("/customers?records=",int_text(count)))}
+fn saas_query(request:WebRequest)->Arr u8 _=let value=web_query_get(request.query,"q").value in if len(value)<=80 then value else ""
+fn saas_filter(request:WebRequest)->Arr u8 _=let value=web_query_get(request.query,"plan").value in if str_equal(value,"Growth") || str_equal(value,"Pro") || str_equal(value,"Enterprise") then value else "all"
+fn saas_matches(index:i64,query:Arr u8 _,plan:Arr u8 _)->bool=(str_equal(plan,"all") || str_equal(saas_plan(index),plan)) && (len(query)==0 || str_find(http_lower(saas_company(index)),http_lower(query)).present)
+type SaasCustomers={title:Arr u8 _,server:bool,records:i64,total:Arr u8 _,query:Arr u8 _,all:bool,growth:bool,pro:bool,enterprise:bool,large:bool,rows:Arr WebHtml _,found:Arr u8 _,page:i64,pages:i64,has_previous:bool,has_next:bool,previous:WebURL,next_url:WebURL,csv:WebURL,empty:bool,range_label:Arr u8 _}
+fn saas_customers(request:WebRequest)->SaasCustomers
+  = let count=saas_records(request) in let q=saas_query(request) in let plan=saas_filter(request) in
+    let ids=loop(i=0,out=vec_empty::<i64>()) while i<count next(i+1,if saas_matches(i,q,plan) then vec_push(out,i) else out) yield out in
+    let found=vec_len(ids) in let pages=if found==0 then 1 else (found+24)/25 in let asked=int_parse(web_query_get(request.query,"page").value) in
+    let page=if !asked.ok || asked.value<1 then 1 else if asked.value>pages then pages else asked.value in
+    let offset=(page-1)*25 in let visible=if found-offset>25 then 25 else found-offset in check visible>=0 in
+    let suffix=concat("&records=",int_text(count),"&plan=",url_encode(plan,true),"&q=",url_encode(q,true)) in
+    SaasCustomers {title="Customers",server=request.server,records=count,total=saas_group(count),query=q,all=str_equal(plan,"all"),growth=str_equal(plan,"Growth"),pro=str_equal(plan,"Pro"),enterprise=str_equal(plan,"Enterprise"),large=count==10000,
+      rows=arr(i in 0..visible) match vec_get(ids,offset+i) {None=>web_html(""),Some(index)=>saas_row(index)},found=saas_group(found),page=page,pages=pages,
+      has_previous=page>1,has_next=page<pages,previous=web_url(concat("/customers?page=",int_text(page-1),suffix)),next_url=web_url(concat("/customers?page=",int_text(page+1),suffix)),
+      csv=web_url(concat("/api/export-customers?",str_slice(suffix,1,len(suffix)))),empty=found==0,range_label=concat(int_text(if found==0 then 0 else offset+1),"–",int_text(offset+visible))}
+type SaasActivity={title:Arr u8 _,events:Arr WebHtml _}
+fn saas_activity(request:WebRequest)->SaasActivity
+  = SaasActivity {title="Activity",events=arr(i in 0..18) web_html(concat("<article class=\"event\"><span class=\"company-icon tone-",int_text(i%6),"\">",saas_initials(i+1),"</span><div><h3>",if i%3==0 then "Subscription started" else if i%3==1 then "Plan upgraded" else "Invoice paid","</h3><p><strong>",html_escape(saas_company(i+1)),"</strong> · ",saas_plan(i+1)," plan · ",saas_money(saas_price(i+1))," per month</p></div><time>",int_text(3+i*8)," min ago</time></article>"))}
+effect fn saas_csv(request:WebRequest)->WebResponse
+  = let count=saas_records(request) in let q=saas_query(request) in let plan=saas_filter(request) in
+    let rows=arr(i in 0..count) if !saas_matches(i,q,plan) then "" else concat(int_text(i+1),",",saas_company(i),",",saas_plan(i),",",saas_status(i),",",int_text(saas_price(i)),",",saas_joined(i),"\r\n") in
+    web_with_header(web_reply(200,concat("id,company,plan,status,mrr_usd,joined\r\n",str_concat_parts(rows)),"text/csv; charset=utf-8"),"Content-Disposition","attachment; filename=meridian-customers.csv")
+effect fn saas_metrics(request:WebRequest)->WebResponse
+  = let count=saas_records(request) in let days=saas_days(request) in let totals=saas_totals(count) in
+    web_json(concat("{\"demo\":true,\"records\":",int_text(count),",\"period_days\":",int_text(days),",\"active\":",int_text(totals.active),",\"mrr_usd\":",int_text(totals.mrr),",\"generated_at\":",int_text(request.stamp),",\"revenue\":[",str_concat_parts(arr(i in 0..days) concat(if i==0 then "" else ",",int_text(saas_revenue(i,days,count)))),"]}"))

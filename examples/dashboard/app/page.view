@@ -1,0 +1,2 @@
+@props(title:text)
+<h1>{{ title }}</h1><p>Authenticated tasks, stored by native Neo.</p><a href="/login">Sign in</a>

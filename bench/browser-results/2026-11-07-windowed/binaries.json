@@ -1,0 +1,22 @@
+{
+  "studio": {
+    "sha256": "0f6082bf1fb42d39280f03c10a58cfef0b677061fcffdbee7082eb166510b274",
+    "bytes": 495064
+  },
+  "dashboard": {
+    "sha256": "7854708099f430a7bb0f671b229c8027c3b26008c732fdda1156d0ba1a6faa61",
+    "bytes": 3197128
+  },
+  "catalog": {
+    "sha256": "b3fb25eaf6aa5c3ce66b2ad73b2e1eedd84a6616007cec337b7be1f459276275",
+    "bytes": 373960
+  },
+  "cached-dashboard": {
+    "sha256": "6e0881be707400057563e0c69a9930f907b346623a603544b2696b61f784215f",
+    "bytes": 2285784
+  },
+  "saved-stress-baseline": {
+    "sha256": "d7462ba274a73fdf777f2da369a87590386f4f051983ac790c0f6e36a8475358",
+    "bytes": 434216
+  }
+}

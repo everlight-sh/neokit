@@ -1,0 +1,29 @@
+{
+  "profile": "release prepared libraries, final browser patch",
+  "boundaries": [
+    {
+      "id": "database",
+      "ms": 4136.4000000003725,
+      "state": "ready"
+    },
+    {
+      "id": "network",
+      "ms": 1316.0999999996277,
+      "state": "ready"
+    },
+    {
+      "id": "slow",
+      "ms": 6113.299999998882,
+      "state": "ready"
+    },
+    {
+      "id": "timeout",
+      "ms": 363.0999999996274,
+      "state": "error"
+    }
+  ],
+  "counterValue": "2",
+  "staticExportCounter": "2",
+  "staticExportReset": "0",
+  "logs": []
+}

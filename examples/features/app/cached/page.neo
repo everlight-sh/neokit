@@ -1,0 +1,3 @@
+import "../../../../src/lib.neo"
+type CachedProps={title:Arr u8 _,stamp:i64}
+fn feature_cached(request:WebRequest) -> CachedProps = CachedProps {title="Cached",stamp=request.stamp}

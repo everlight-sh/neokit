@@ -1,0 +1,85 @@
+{
+  "ssr-site": {
+    "total_js_bytes": 706,
+    "files": {
+      "/_web/client-mdw7azs3.js": {
+        "bytes": 675,
+        "sha256": "06bc9fa8e7467fcc288ad2d5f85810771d42553cc526ab5c19e06f64e6f1c555"
+      },
+      "/_web/neokit-client.js": {
+        "bytes": 31,
+        "sha256": "14f10ae31add4512cb3d466fefa86cb6a97882ff1ef84c570f94abd60b6ba22a"
+      },
+      "/_web/site-1d0d876e6744.css": {
+        "bytes": 5117,
+        "sha256": "1d0d876e6744b92a626a3cf6243ffb9838ee8fe5c690b3fcad96b4160b89300b"
+      },
+      "/courtyard.svg": {
+        "bytes": 1342,
+        "sha256": "2086fdcf4994ee21dd1e9b1ae1429c250e2e6e8949033c96b2213ca082c7dbda"
+      },
+      "/favicon.svg": {
+        "bytes": 198,
+        "sha256": "8c7afc6da036163bbdc88ad41fbbaab4f0398111be1cd01e570f2fb4dbd0cb04"
+      },
+      "/hillside.svg": {
+        "bytes": 1343,
+        "sha256": "a08496ea11883c8766946069cf2741c4ec465c5662f8d9756a0b562e8f86379f"
+      }
+    }
+  },
+  "blog": {
+    "total_js_bytes": 1209,
+    "files": {
+      "/_web/client-5n3v9g57.js": {
+        "bytes": 1178,
+        "sha256": "c8000840fc9c7ed93450c39376292d8da15f6b5621d7d1995505d7b4fc6e2cfe"
+      },
+      "/_web/neokit-client.js": {
+        "bytes": 31,
+        "sha256": "c88ce5b69b77874047cbb1af7f212409683d8c3ba8fa5ff22f1ed72a13511a0a"
+      },
+      "/_web/site-4802314a2632.css": {
+        "bytes": 6897,
+        "sha256": "4802314a26325adeacb6253717782a208f85ab159af050cfe3013cafd62f480e"
+      },
+      "/cover-0.svg": {
+        "bytes": 775,
+        "sha256": "c0f5a69708ef2c1b9ba237d201c7760affc2b65ee160282f8ae8b72bf49289a8"
+      },
+      "/cover-1.svg": {
+        "bytes": 775,
+        "sha256": "ef5b74e0721755c6644b04ee135e3611ab9f8ec875c2f85fe469f508296384f4"
+      },
+      "/cover-2.svg": {
+        "bytes": 775,
+        "sha256": "0507cd59d03a10da340ffd6a4a5f9debc63e99b1d77ec9c0c19e8b520a828588"
+      },
+      "/favicon.svg": {
+        "bytes": 198,
+        "sha256": "da87f29b5e0a36c4996b14ffc09b797dac3e12755ea4bdf148f5a57b765437c3"
+      }
+    }
+  },
+  "saas": {
+    "total_js_bytes": 1396,
+    "files": {
+      "/_web/client-nha1dae1.js": {
+        "bytes": 1365,
+        "sha256": "b8be057a8c73da3932fc0fe5279a8d232885b0a324c9f6582b3ba0213e52d232"
+      },
+      "/_web/neokit-client.js": {
+        "bytes": 31,
+        "sha256": "6f73821fb382f422d6d36f65d3ac467a8569b2125baf300d1e42e471734ec065"
+      },
+      "/_web/site-91281a4dfb94.css": {
+        "bytes": 18245,
+        "sha256": "91281a4dfb940abc141c5b46d2153fcc0f23f6b21b46a2dbd73a87b0a9bc248b"
+      },
+      "/favicon.svg": {
+        "bytes": 217,
+        "sha256": "8e5bc5adea22fa9eb328d741d7af4fa51974021a76eb93de9440a77848806947"
+      }
+    }
+  }
+}

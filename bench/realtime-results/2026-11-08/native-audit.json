@@ -1,0 +1,59 @@
+{
+  "ssr-site": {
+    "sha256": "96863c937f623039664bbcf1dafabe9e200b036a6dbf51af333741788eef9dca",
+    "undefined_symbols": [],
+    "load_commands": "/Users/marcoschwartz/Documents/code/neokit/build/realtime/ssr-site/server:\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1359.40.3)\n"
+  },
+  "blog": {
+    "sha256": "bafccf9cd5e9436a4d2f115e4bd282388ba5d5503a0d4248f060f7b8dcd3f4f6",
+    "undefined_symbols": [],
+    "load_commands": "/Users/marcoschwartz/Documents/code/neokit/build/realtime/blog/server:\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1359.40.3)\n"
+  },
+  "saas": {
+    "sha256": "fd163c9c37d102eaabf38eb854a269b172202d997316e3f95c05273d486197d2",
+    "undefined_symbols": [],
+    "load_commands": "/Users/marcoschwartz/Documents/code/neokit/build/realtime/saas/server:\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1359.40.3)\n"
+  },
+  "fixture": {
+    "sha256": "71e0a0b1cc08ad3f78bca507458be7654d43e893e7ffe0950cdb3e5ff849bbe5",
+    "undefined_symbols": [],
+    "load_commands": "/Users/marcoschwartz/Documents/code/neokit/build/realtime/fixture/server:\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1359.40.3)\n"
+  },
+  "consumer/consumer": {
+    "sha256": "fea1a93b7151b6282874b166f7c3a8aa335afd7db4186c392bf5d9680ff6b287",
+    "undefined_symbols": [],
+    "load_commands": "/Users/marcoschwartz/Documents/code/neokit/build/realtime/consumer/consumer:\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1359.40.3)\n"
+  },
+  "foundations-linux": {
+    "sha256": "e01a643159ab21e4af22d9bef275d33af9b23020499b1ff481d16016e292a514",
+    "elf_program_types": [
+      6,
+      1,
+      1,
+      1,
+      1685382480,
+      1685382481,
+      4
+    ],
+    "interpreter": false,
+    "dynamic": false,
+    "undefined_symbols": [],
+    "scope": "Linux core SSE artifact before the dispatch-order-only follow-up"
+  },
+  "fixture-linux": {
+    "sha256": "844f0400baba86f5ee656be3e87e8d25153fd4888c6d34f668a4fda4f0a3aaf6",
+    "elf_program_types": [
+      6,
+      1,
+      1,
+      1,
+      1685382480,
+      1685382481,
+      4
+    ],
+    "interpreter": false,
+    "dynamic": false,
+    "undefined_symbols": [],
+    "scope": "Linux core SSE artifact before the dispatch-order-only follow-up"
+  }
+}

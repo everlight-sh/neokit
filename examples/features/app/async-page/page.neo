@@ -1,0 +1,7 @@
+import "../../../../src/lib.neo"
+import "std:http_client"
+type AsyncPage={title:Arr u8 _,body:Arr u8 _}
+effect fn feature_async_page(request:WebRequest)->AsyncPage
+  = let port=int_parse(env_get("NEOKIT_ASYNC_HTTP_PORT").value) in
+    let result=http_request("127.0.0.1",port.value,"GET","/slow","",5000,1048576) in
+    AsyncPage {title="Async page",body=if result.ok then result.body else "Upstream unavailable"}

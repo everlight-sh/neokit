@@ -1,0 +1,42 @@
+{
+  "desktop": {
+    "bodyWidth": 1265,
+    "count": "56",
+    "cursor": "Event 51976600367583.56",
+    "path": "M0.0 130.0 L10.9 10.0 L21.8 110.6 L32.7 130.0 L43.6 77.0 L54.5 60.3 L65.5 130.0 L76.4 26.8 L87.3 10.0 L98.2 130.0 L109.1 93.8 L120.0 130.0 L130.9 77.0 L141.8 60.3 L152.7 130.0 L163.6 26.8 L174.5 10.0 L185.5 130.0 L196.4 93.8 L207.3 77.0 L218.2 130.0 L229.1 43.5 L240.0 26.8 L250.9 130.0 L261.8 110.6 L272.7 93.8 L283.6 130.0 L294.5 60.3 L305.5 43.5 L316.4 130.0 L327.3 10.0 L338.2 110.6 L349.1 130.0 L360.0 77.0 L370.9 60.3 L381.8 130.0 L392.7 26.8 L403.6 10.0 L414.5 130.0 L425.5 93.8 L436.4 77.0 L447.3 130.0 L458.2 43.5 L469.1 26.8 L480.0 130.0 L490.9 110.6 L501.8 93.8 L512.7 130.0 L523.6 60.3 L534.5 43.5 L545.5 130.0 L556.4 10.0 L567.3 110.6 L578.2 130.0 L589.1 77.0 L600.0 60.3",
+    "revenue": "$3,873",
+    "rows": 12,
+    "status": "Live",
+    "width": 1280
+  },
+  "peer": {
+    "cursor": "Event 51976600367583.56",
+    "revenue": "$3,873",
+    "status": "Live"
+  },
+  "pausedCountStayedUnchanged": true,
+  "staticExportHasNoLivePanel": true,
+  "staticExportErrors": [],
+  "passed": [
+    "Real server events update revenue/signups, rolling SVG chart and activity without navigation",
+    "Pause stops updates and Resume reconnects with cursor",
+    "Two independent tabs show identical current event ID and shared revenue",
+    "Feed retains only 12 DOM rows",
+    "Connection remains live across more than one 60-second renewal",
+    "Static export remains a labeled snapshot with no subscription controls",
+    "390 px mobile: native chart, live cards and controls fit the document width"
+  ],
+  "console": [],
+  "mobile": {
+    "bodyWidth": 390,
+    "count": "7",
+    "status": "Live",
+    "width": 390
+  },
+  "finalLocal": {
+    "url": "http://127.0.0.1:8113/",
+    "status": "Live",
+    "count": "7",
+    "errors": []
+  }
+}

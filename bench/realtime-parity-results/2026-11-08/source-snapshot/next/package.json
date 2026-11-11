@@ -1,0 +1,1 @@
+{"name": "sse-parity-next", "private": true, "type": "module", "scripts": {"build": "next build --webpack"}}

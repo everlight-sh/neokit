@@ -1,0 +1,98 @@
+{
+  "../axon/runtime/http_async.neo": {
+    "sha256": "fd573510df154607ce0a63ddc80897413840b6361843520021c3e114b81e887c",
+    "snapshot": "sources/neo/runtime/http_async.neo"
+  },
+  "../axon/runtime/frame_cache.neo": {
+    "sha256": "1c1dbc9dceb4a01af4ee77d5603dc6dda10e78207da97de8025086519e011b87",
+    "snapshot": "sources/neo/runtime/frame_cache.neo"
+  },
+  "../axon/stdlib/http_async.neo": {
+    "sha256": "96d76172ba0d7b17c6d2e3fe90b6237a0aede0e5bb118e74598ed0930eaf5891",
+    "snapshot": "sources/neo/stdlib/http_async.neo"
+  },
+  "../axon/stdlib/events.neo": {
+    "sha256": "4d925f53cd02fb375edb743386f5b92ccd4c5b24abc2b47110e91717eebcd51c",
+    "snapshot": "sources/neo/stdlib/events.neo"
+  },
+  "../axon/stdlib/event_stream.neo": {
+    "sha256": "58b56a0ab36d2f4b2663c8fcacc973e8909d44439f11e32303d2c36fc1ff6515",
+    "snapshot": "sources/neo/stdlib/event_stream.neo"
+  },
+  "../axon/neoc/cli.py": {
+    "sha256": "b98ad0d4151b5435bfd20a9f4963cfb0b99f6fa8967e16a6c888ca91c62bd22b",
+    "snapshot": "sources/neo/neoc/cli.py"
+  },
+  "src/realtime.neo": {
+    "sha256": "7a52149e12c59b629b59e9e23c41d0252d368d5d692bd0e5cb41a0b558f14faf",
+    "snapshot": "sources/src/realtime.neo"
+  },
+  "../axon/tests/fixtures/prepared_frames.neo": {
+    "sha256": "87d6873696e159bdd49e28eea5ed60e950f5ed6c0435eaf6ebba6b91b5c76308",
+    "snapshot": "sources/neo/tests/fixtures/prepared_frames.neo"
+  },
+  "../axon/tests/fixtures/async_frames.neo": {
+    "sha256": "ffb1ee6d89a75bd5db3c790abe52243712e08306393f1386f400b2a9b836634a",
+    "snapshot": "sources/neo/tests/fixtures/async_frames.neo"
+  },
+  "../axon/tests/prepared_frames.py": {
+    "sha256": "cff516a48d8b34d462d4919706646d19ede0f36760678289a9c6dd65cc23399b",
+    "snapshot": "sources/neo/tests/prepared_frames.py"
+  },
+  "tests/realtime.py": {
+    "sha256": "e5afe26693623a48af591c32c104ea9950357ee75b7a529365907c861a0d2b78",
+    "snapshot": "sources/tests/realtime.py"
+  },
+  "tests/realtime_boundaries.py": {
+    "sha256": "d48de63bbc0f9005a89602d9d2d5da3b5459bf909619d1011e0ea5093df957f8",
+    "snapshot": "sources/tests/realtime_boundaries.py"
+  },
+  "bench/realtime_parity.py": {
+    "sha256": "e3ffea1bbcdb394e22011f1bb8c2bedda543e78446591d6e7c72fde2785d22c9",
+    "snapshot": "sources/bench/realtime_parity.py"
+  },
+  "bench/regression_performance.py": {
+    "sha256": "e39f24a0868aa4abeba96556e33f97066a6a5315037dca4eb669d60811d93331",
+    "snapshot": "sources/bench/regression_performance.py"
+  },
+  "bench/prepared_stats.py": {
+    "sha256": "f07f9c2dcd737948e2f08b8ec01de0fc48f9830117c0a52c41c0614c68abef2e",
+    "snapshot": "sources/bench/prepared_stats.py"
+  },
+  "bench/realtime_apps/hub.mjs": {
+    "sha256": "fb3f105dc1ed67fe7c40f3c525823ab4fa0548fd2fc03b5919d1bf89e58effd0",
+    "snapshot": "sources/bench/realtime_apps/hub.mjs"
+  },
+  "build/realtime-opt-final/fixture/server": {
+    "sha256": "f2f78a15fcff4085403ec55683dddd40edd478f5d7466cf731b1c88c7e3da74f",
+    "bytes": 561192
+  },
+  "build/realtime-opt-final/ssr-site/server": {
+    "sha256": "39c79cafda1a1e4d5ea09ce685ded281133b3de61e3882109d70948269c2b5fe",
+    "bytes": 322408
+  },
+  "build/realtime-opt-final/blog/server": {
+    "sha256": "c997f7e3eda8ad425c224a9cef531dd27de85bd04be0a1aa497ed1359043c93d",
+    "bytes": 487208
+  },
+  "build/realtime-opt-final/saas/server": {
+    "sha256": "d650740ad852e0065a6e7474443709c177086bec3bb563a3bf183266ac240f03",
+    "bytes": 906984
+  },
+  "build/realtime-opt-final/features/server": {
+    "sha256": "b18887323a0088d4f3f256659fb3ee39fdb21fc4c9f1c2ca451067baa815b99c",
+    "bytes": 1381400
+  },
+  "build/realtime-opt-final/dashboard/server": {
+    "sha256": "5fc8d46ebb995e10831935c3ede9c1c5a3d812e85dd1ab0c9f6e42842346911c",
+    "bytes": 3292456
+  },
+  "build/realtime-opt-final/dashboard-monolithic/server": {
+    "sha256": "f46951094b38c854a9edf55c32da08c43d99686e6dd63d7149e06007d3ecdfac",
+    "bytes": 3233192
+  },
+  "build/realtime-opt-final/limits/server": {
+    "sha256": "75d0f3e65adae2d2b65ac335812e699b23be5b68de2af06f21ff7855c3d848d2",
+    "bytes": 445000
+  }
+}

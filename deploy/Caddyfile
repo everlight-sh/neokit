@@ -1,0 +1,10 @@
+{
+  grace_period 30s
+}
+{$DOMAIN} {
+  encode zstd gzip
+  request_body {
+    max_size 16MB
+  }
+  reverse_proxy app:8094
+}

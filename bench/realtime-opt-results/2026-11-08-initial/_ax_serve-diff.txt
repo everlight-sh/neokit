@@ -1,0 +1,72 @@
+--- before _ax_serve
+
++++ after _ax_serve
+
+@@ -1,5 +1,5 @@
+
+ mov	x2, x30
+-bl	_OUTLINED_FUNCTION_353
++bl	_OUTLINED_FUNCTION_355
+ mov	x30, x2
+ stp	x29, x30, [sp, #ADDR]
+ add	x29, sp, #ADDR
+@@ -15,7 +15,7 @@
+
+ cbnz	x0, ADDR
+ bl	_ax_rt_ncpu__seq
+ b	ADDR
+-bl	_OUTLINED_FUNCTION_278
++bl	_OUTLINED_FUNCTION_279
+ cmp	x0, #ADDR
+ csinc	x8, x0, xzr, gt
+ mov	w9, #ADDR
+@@ -198,7 +198,7 @@
+
+ mov	x0, x22
+ bl	_ax_rt_http_worker_signals__seq
+ mov	x24, x0
+-bl	_OUTLINED_FUNCTION_380
++bl	_OUTLINED_FUNCTION_382
+ cbnz	x8, ADDR
+ cbz	x0, ADDR
+ ldrb	w8, [x0]
+@@ -206,11 +206,11 @@
+
+ b.ne	ADDR
+ bl	_OUTLINED_FUNCTION_162
+ mov	x3, #ADDR
+-bl	_OUTLINED_FUNCTION_340
++bl	_OUTLINED_FUNCTION_343
+ b	ADDR
+ bl	_OUTLINED_FUNCTION_162
+ mov	x3, #ADDR
+-bl	_OUTLINED_FUNCTION_339
++bl	_OUTLINED_FUNCTION_342
+ ldr	x8, [x22, #ADDR]
+ cmp	x8, #ADDR
+ b.lt	ADDR
+@@ -227,7 +227,7 @@
+
+ b	ADDR
+ mov	x0, x22
+ bl	_ax_rt_http_worker_signals__seq
+-bl	_OUTLINED_FUNCTION_380
++bl	_OUTLINED_FUNCTION_382
+ cbnz	x8, ADDR
+ cbz	x0, ADDR
+ ldrb	w8, [x0]
+@@ -235,11 +235,11 @@
+
+ b.ne	ADDR
+ bl	_OUTLINED_FUNCTION_162
+ mov	x3, x24
+-bl	_OUTLINED_FUNCTION_340
++bl	_OUTLINED_FUNCTION_343
+ b	ADDR
+ bl	_OUTLINED_FUNCTION_162
+ mov	x3, x24
+-bl	_OUTLINED_FUNCTION_339
++bl	_OUTLINED_FUNCTION_342
+ mov	x2, #ADDR
+ bl	_OUTLINED_FUNCTION_141
+ mov	w16, #ADDR

@@ -1,0 +1,583 @@
+--- before _ax_rt_async_tick__seq
+
++++ after _ax_rt_async_tick__seq
+
+@@ -1,5 +1,4 @@
+
+-sub	sp, sp, #ADDR
+-stp	x28, x27, [sp, #ADDR]
++stp	x28, x27, [sp, #-ADDR]!
+ stp	x26, x25, [sp, #ADDR]
+ stp	x24, x23, [sp, #ADDR]
+ stp	x22, x21, [sp, #ADDR]
+@@ -77,523 +76,62 @@
+
+ movk	x22, #ADDR, lsl #32
+ adrp	x8, 25 
+ add	x8, x8, #ADDR
+-ldr	x25, [x8, #ADDR]
++ldr	x23, [x8, #ADDR]
+ str	xzr, [x8, #ADDR]
+-ldr	x8, [x8]
+-cmp	x8, #ADDR
+-b.lt	ADDR
+-mov	x26, #ADDR
+-isb
+-mrs	x9, CNTVCT_EL0
+-mrs	x8, CNTFRQ_EL0
+-tbnz	x9, #ADDR, ADDR
+-add	x10, x22, #ADDR
+-add	x11, x8, x22
+-cmp	x11, x10
+-b.lo	ADDR
+-udiv	x10, x9, x8
+-mov	w11, #ADDR
+-movk	w11, #ADDR, lsl #16
+-msub	x9, x10, x8, x9
+-mul	x9, x9, x11
+-udiv	x8, x9, x8
+-madd	x8, x10, x11, x8
+-mov	x9, #ADDR
+-movk	x9, #ADDR, lsl #16
+-movk	x9, #ADDR, lsl #32
+-movk	x9, #ADDR, lsl #48
+-smulh	x8, x8, x9
+-asr	x9, x8, #18
+-add	x26, x9, x8, lsr #63
+-mov	x27, #ADDR
+-adrp	x8, 25 
+-ldr	x28, [x8, #ADDR]
+-lsl	x21, x19, #6
+-mov	w23, #ADDR
+-adrp	x22, 25 
+-add	x22, x22, #ADDR
+-str	x21, [sp, #ADDR]
+-b	ADDR
+-add	x9, x22, x12
+-ldr	x10, [x9, x8, lsl #3]
+-str	x10, [x0]
+-str	x0, [x9, x8, lsl #3]
+-mov	x8, #-ADDR
+-str	x8, [x24]
+-str	xzr, [x24, #ADDR]
+-str	xzr, [x24, #ADDR]
+-adrp	x9, 25 
+-ldr	x8, [x9, #ADDR]
+-sub	x8, x8, #ADDR
+-str	x8, [x9, #ADDR]
+-add	x27, x27, #ADDR
+-cmp	x27, #ADDR
+-b.eq	ADDR
+-madd	x24, x27, x23, x28
+-ldr	x10, [x24]
+-tbnz	x10, #ADDR, ADDR
+-cbz	x25, ADDR
+-ldr	x8, [x24, #ADDR]
+-cbz	x8, ADDR
+-ldapr	x8, [x8]
+-ldr	x9, [x24, #ADDR]
+-cmp	x8, x9
+-cset	w8, ne
+-ldr	x9, [x24, #ADDR]
+-cmp	x9, x26
+-b.gt	ADDR
+-b	ADDR
+-tbnz	x10, #ADDR, ADDR
+-mov	w8, #ADDR
+-ldr	x9, [x24, #ADDR]
+-cmp	x9, x26
+-b.le	ADDR
+-ldr	x11, [x24, #ADDR]
+-cmp	x11, x26
+-b.le	ADDR
+-ldr	x11, [x24, #ADDR]
+-cmp	x11, #ADDR
+-cset	w11, ne
+-orr	w11, w11, w8
+-tbz	w11, #ADDR, ADDR
+-ldr	x0, [x24, #ADDR]
+-cbz	x0, ADDR
+-sub	x11, x0, x20
+-tbnz	x11, #ADDR, ADDR
+-and	x12, x11, #ADDR
+-cmp	x11, x21
+-ccmp	x12, #ADDR, #ADDR, lt
+-b.ne	ADDR
+-ldr	x11, [x0]
+-cmp	x11, x10
+-b.eq	ADDR
+-cmp	x19, #ADDR
+-b.lt	ADDR
+-mov	x11, #ADDR
+-mov	x12, x20
+-ldr	x13, [x12], #ADDR
+-cmp	x13, x10
+-b.eq	ADDR
+-add	x11, x11, #ADDR
+-cmp	x19, x11
+-b.ne	ADDR
+-b	ADDR
+-mov	x11, #ADDR
+-cmp	x11, x19
+-b.eq	ADDR
+-add	x0, x20, x11, lsl #6
+-cbz	x0, ADDR
+-str	x0, [x24, #ADDR]
+-ldr	x10, [x24, #ADDR]
+-cmp	x26, x10
+-b.ge	ADDR
+-cmp	w8, #ADDR
+-mov	w8, #ADDR
+-csel	x8, x8, xzr, ne
+-cmp	x9, x26
+-ldr	x9, [x24, #ADDR]
+-cinc	x8, x8, le
+-orr	x8, x8, x9
+-mov	x22, x0
+-ldr	x9, [x22, #ADDR]!
++ldr	x9, [x8]
+ cmp	x9, #ADDR
+ b.lt	ADDR
+-str	x8, [x24, #ADDR]
+-adrp	x22, 25 
+-add	x22, x22, #ADDR
+-ldr	x21, [sp, #ADDR]
++mov	x21, #ADDR
++isb
++mrs	x10, CNTVCT_EL0
++mrs	x9, CNTFRQ_EL0
++tbnz	x10, #ADDR, ADDR
++add	x11, x22, #ADDR
++add	x12, x9, x22
++cmp	x12, x11
++b.lo	ADDR
++udiv	x11, x10, x9
++mov	w12, #ADDR
++movk	w12, #ADDR, lsl #16
++msub	x10, x11, x9, x10
++mul	x10, x10, x12
++udiv	x9, x10, x9
++madd	x9, x11, x12, x9
++mov	x10, #ADDR
++movk	x10, #ADDR, lsl #16
++movk	x10, #ADDR, lsl #32
++movk	x10, #ADDR, lsl #48
++smulh	x9, x9, x10
++asr	x10, x9, #18
++add	x21, x10, x9, lsr #63
++ldr	x9, [x8]
++cmp	x9, #ADDR
++b.lt	ADDR
++mov	x24, #ADDR
++ldr	x25, [x8, #ADDR]
++adrp	x26, 25 
+ b	ADDR
+-ldr	x8, [x24]
+-tbnz	x8, #ADDR, ADDR
+-ldr	x0, [x24, #ADDR]
+-cbz	x0, ADDR
+-ldur	x10, [x0, #-ADDR]
+-add	x8, x10, #ADDR
+-cmp	x10, #ADDR
+-csel	x8, x8, x10, lt
+-asr	x8, x8, #2
+-tst	x10, #ADDR
+-mov	w9, #ADDR
+-mov	w11, #ADDR
+-csel	x12, x11, x9, ne
+-mov	w9, #ADDR
+-mov	w11, #ADDR
+-csel	x11, x11, x9, ne
+-mov	w9, #ADDR
+-mov	w13, #ADDR
+-csel	x9, x13, x9, ne
+-tbnz	w10, #ADDR, ADDR
+-cmp	x10, #ADDR
+-b.gt	ADDR
+-mov	w13, #ADDR
+-lsl	x13, x13, x8
+-ldr	x14, [x22, x9]
+-add	x14, x14, x13
+-mov	w15, #ADDR
+-movk	w15, #ADDR, lsl #16
+-cmp	x14, x15
++cmp	x24, x8
+ b.ge	ADDR
+-add	x10, x22, x12
+-ldr	x12, [x10, x8, lsl #3]
+-str	x12, [x0]
+-str	x0, [x10, x8, lsl #3]
+-add	x10, x22, x11
+-ldr	x11, [x10, x8, lsl #3]
+-add	x11, x11, #ADDR
+-str	x11, [x10, x8, lsl #3]
+-ldr	x8, [x22, x9]
+-add	x8, x8, x13
+-str	x8, [x22, x9]
+-b	ADDR
+-bl	_ax_rt_drop__seq
+-b	ADDR
+-str	xzr, [x24, #ADDR]
+-adrp	x21, 25 
+-add	x21, x21, #ADDR
+-str	x24, [x21]
+-str	x8, [x21, #ADDR]
+-ldr	x8, [x21, #ADDR]
+-add	x8, x8, #ADDR
+-str	x8, [x21, #ADDR]
+-ldp	x9, x8, [x24, #ADDR]
+-ldr	x1, [x24, #ADDR]
+-str	x0, [sp, #ADDR]
+-mov	x0, x8
+-mov	x2, #ADDR
+-mov	x3, #ADDR
+-blr	x9
+-stp	x0, x2, [sp, #ADDR]
+-ldr	x0, [sp, #ADDR]
+-str	xzr, [x21]
+-str	xzr, [x21, #ADDR]
+-subs	x8, x1, #ADDR
+-str	x3, [sp, #ADDR]
+-b.lt	ADDR
+-mov	w9, #ADDR
+-movk	w9, #ADDR, lsl #16
+-cmp	x1, x9
+-b.hi	ADDR
+-ldr	x9, [sp, #ADDR]
+-ldrb	w9, [x9]
+-cmp	w9, #ADDR
+-b.ne	ADDR
+-ldr	x9, [sp, #ADDR]
+-ldrb	w9, [x9, #ADDR]
+-cmp	w9, #ADDR
+-b.ne	ADDR
+-ldr	x9, [sp, #ADDR]
+-ldrb	w9, [x9, #ADDR]
+-cmp	w9, #ADDR
+-b.ne	ADDR
+-ldr	x9, [sp, #ADDR]
+-ldrb	w9, [x9, #ADDR]
+-cmp	w9, #ADDR
+-b.ne	ADDR
+-ldr	x9, [sp, #ADDR]
+-ldrb	w9, [x9, #ADDR]
+-cmp	w9, #ADDR
+-b.ne	ADDR
+-ldr	x9, [sp, #ADDR]
+-ldrb	w9, [x9, #ADDR]
+-cmp	w9, #ADDR
+-b.ne	ADDR
+-ldr	x9, [sp, #ADDR]
+-ldrb	w9, [x9, #ADDR]
+-cmp	w9, #ADDR
+-b.ne	ADDR
+-ldr	x9, [sp, #ADDR]
+-ldrb	w9, [x9, #ADDR]
+-cmp	w9, #ADDR
+-b.ne	ADDR
+-ldr	x9, [sp, #ADDR]
+-ldr	x9, [x9, #ADDR]
+-cmp	x9, #ADDR, lsl #12
+-b.hi	ADDR
+-subs	x2, x8, x9
+-b.lo	ADDR
+-ldr	x8, [sp, #ADDR]
+-ldr	x8, [x8, #ADDR]
+-cmp	x8, #ADDR
+-b.hi	ADDR
+-cbz	x8, ADDR
+-ldr	x8, [sp, #ADDR]
+-add	x8, x8, x9
+-add	x1, x8, #ADDR
+-bl	_ax_rt_async_queue__seq
+-ldr	x8, [x24]
+-tbnz	x8, #ADDR, ADDR
+-ldr	x0, [x24, #ADDR]
+-cbz	x0, ADDR
+-ldur	x9, [x0, #-ADDR]
+-add	x8, x9, #ADDR
+-cmp	x9, #ADDR
+-csel	x8, x8, x9, lt
+-asr	x8, x8, #2
+-tst	x9, #ADDR
+-mov	w10, #ADDR
+-mov	w11, #ADDR
+-csel	x11, x11, x10, ne
+-mov	w10, #ADDR
+-mov	w12, #ADDR
+-csel	x12, x12, x10, ne
+-mov	w10, #ADDR
+-mov	w13, #ADDR
+-csel	x10, x13, x10, ne
+-tbnz	w9, #ADDR, ADDR
+-cmp	x9, #ADDR
+-b.gt	ADDR
+-mov	w13, #ADDR
+-lsl	x13, x13, x8
+-adrp	x14, 25 
+-add	x14, x14, #ADDR
+-ldr	x14, [x14, x10]
+-add	x14, x14, x13
+-mov	w15, #ADDR
+-movk	w15, #ADDR, lsl #16
+-cmp	x14, x15
++cmp	x23, #ADDR
++cset	w4, ne
++ldr	x22, [x25, x24, lsl #3]
++mov	x0, x22
++mov	x1, x20
++mov	x2, x19
++mov	x3, x21
++bl	_ax_rt_async_process__seq
++ldr	x8, [x26, #ADDR]
++cmp	x24, x8
+ b.ge	ADDR
+-adrp	x14, 25 
+-add	x14, x14, #ADDR
+-add	x9, x14, x11
+-ldr	x11, [x9, x8, lsl #3]
+-str	x11, [x0]
+-str	x0, [x9, x8, lsl #3]
+-add	x9, x14, x12
+-ldr	x11, [x9, x8, lsl #3]
+-add	x11, x11, #ADDR
+-str	x11, [x9, x8, lsl #3]
+-ldr	x8, [x14, x10]
+-add	x8, x8, x13
+-str	x8, [x14, x10]
+-b	ADDR
+-ubfx	x1, x10, #1, #1
+-bl	_ax_rt_park__seq
+-b	ADDR
+-ldr	x8, [sp, #ADDR]
+-ldr	x21, [x8, #ADDR]
+-cmp	x21, x26
+-b.le	ADDR
+-ldr	x8, [x24, #ADDR]
+-cmp	x21, x8
+-b.gt	ADDR
+-mov	w23, #ADDR
+-stp	x27, x28, [sp, #ADDR]
+-mov	x27, x26
+-mov	x28, x25
+-mov	x25, x9
+-ldr	x8, [sp, #ADDR]
+-add	x8, x8, x9
+-add	x1, x8, #ADDR
+-bl	_ax_rt_async_queue__seq
+-ldr	x0, [x24, #ADDR]
+-cbz	x0, ADDR
+-ldur	x9, [x0, #-ADDR]
+-add	x8, x9, #ADDR
+-cmp	x9, #ADDR
+-csel	x8, x8, x9, lt
+-asr	x8, x8, #2
+-tst	x9, #ADDR
+-mov	w10, #ADDR
+-csel	x11, x23, x10, ne
+-mov	w10, #ADDR
+-mov	w12, #ADDR
+-csel	x12, x12, x10, ne
+-mov	w10, #ADDR
+-mov	w13, #ADDR
+-csel	x10, x10, x13, ne
+-tbnz	w9, #ADDR, ADDR
+-cmp	x9, #ADDR
+-b.gt	ADDR
+-mov	w13, #ADDR
+-lsl	x13, x13, x8
+-adrp	x14, 25 
+-add	x14, x14, #ADDR
+-ldr	x14, [x14, x10]
+-add	x15, x14, x13
+-mov	w14, #ADDR
+-movk	w14, #ADDR, lsl #16
+-cmp	x15, x14
+-b.ge	ADDR
+-adrp	x9, 25 
+-add	x9, x9, #ADDR
+-add	x11, x9, x11
+-ldr	x14, [x11, x8, lsl #3]
+-str	x14, [x0]
+-str	x0, [x11, x8, lsl #3]
+-add	x11, x9, x12
+-ldr	x12, [x11, x8, lsl #3]
+-add	x12, x12, #ADDR
+-str	x12, [x11, x8, lsl #3]
+-ldr	x8, [x9, x10]
+-add	x8, x8, x13
+-str	x8, [x9, x10]
+-b	ADDR
+-adrp	x9, 25 
+-add	x9, x9, #ADDR
+-add	x9, x9, x11
+-ldr	x10, [x9, x8, lsl #3]
+-str	x10, [x0]
+-str	x0, [x9, x8, lsl #3]
+-mov	x8, #-ADDR
+-str	x8, [x24]
+-str	xzr, [x24, #ADDR]
+-str	xzr, [x24, #ADDR]
+-adrp	x9, 25 
+-ldr	x8, [x9, #ADDR]
+-sub	x8, x8, #ADDR
+-str	x8, [x9, #ADDR]
+-ldr	x0, [sp, #ADDR]
+-mov	w8, #ADDR
+-str	x8, [x0, #ADDR]
+-ldr	x9, [x0, #ADDR]
+-cmp	x9, #ADDR
+-b.le	ADDR
+-ldr	x10, [x0, #ADDR]
+-ldr	x8, [x0]
+-ldr	x11, [x0, #ADDR]
+-add	x1, x11, x10
+-sub	x2, x9, x10
+-mov	w3, #ADDR
+-mov	x4, #ADDR
+-mov	x5, #ADDR
+-mov	w16, #ADDR
+-mov	x0, x8
+-svc	#ADDR
+-cneg	x0, x0, hs
+-tbnz	x0, #ADDR, ADDR
+-cbz	x0, ADDR
+-add	x8, x0, x10
+-cmp	x8, x9
+-b.ge	ADDR
+-ldr	x9, [sp, #ADDR]
+-str	x8, [x9, #ADDR]
+-b	ADDR
+-neg	w8, w0
+-adrp	x9, 25 
+-str	w8, [x9, #ADDR]
+-cmn	w0, #ADDR
+-ldr	x8, [sp, #ADDR]
+-b.eq	ADDR
+-cmn	w0, #ADDR
+-b.eq	ADDR
+-mov	x0, x8
+-b	ADDR
+-ldr	x0, [sp, #ADDR]
+-b	ADDR
+-stp	xzr, xzr, [x22]
+-ldr	x0, [sp, #ADDR]
+-ldr	x8, [x0, #ADDR]
+-cmp	x8, #ADDR
+-b.ne	ADDR
+-bl	_ax_rt_drop__seq
+-adrp	x22, 25 
+-add	x22, x22, #ADDR
+-ldr	x21, [sp, #ADDR]
+-ldp	x8, x10, [sp, #ADDR]
+-cbz	x8, ADDR
+-cbz	x10, ADDR
+-cmp	x10, #ADDR
+-b.eq	ADDR
+-and	x8, x10, #ADDR
+-tbnz	w10, #ADDR, ADDR
+-mov	x9, #-ADDR
+-ldaddal	x9, x9, [x8]
+-cmp	x9, #ADDR
+-b.ne	ADDR
+-b	ADDR
+-mov	x8, #ADDR
+-add	x8, x8, #ADDR
+-cmp	x10, #ADDR
+-ldr	x9, [sp, #ADDR]
+-csel	x0, x9, x8, eq
+-cbz	x0, ADDR
+-ldur	x9, [x0, #-ADDR]
+-add	x8, x9, #ADDR
+-cmp	x9, #ADDR
+-csel	x8, x8, x9, lt
+-asr	x8, x8, #2
+-tst	x9, #ADDR
+-mov	w10, #ADDR
+-mov	w11, #ADDR
+-csel	x11, x11, x10, ne
+-mov	w10, #ADDR
+-mov	w12, #ADDR
+-csel	x12, x12, x10, ne
+-mov	w10, #ADDR
+-mov	w13, #ADDR
+-csel	x10, x13, x10, ne
+-tbnz	w9, #ADDR, ADDR
+-cmp	x9, #ADDR
+-b.gt	ADDR
+-mov	w13, #ADDR
+-lsl	x13, x13, x8
+-ldr	x14, [x22, x10]
+-add	x14, x14, x13
+-mov	w15, #ADDR
+-movk	w15, #ADDR, lsl #16
+-cmp	x14, x15
+-b.ge	ADDR
+-add	x9, x22, x11
+-ldr	x11, [x9, x8, lsl #3]
+-str	x11, [x0]
+-str	x0, [x9, x8, lsl #3]
+-add	x9, x22, x12
+-ldr	x11, [x9, x8, lsl #3]
+-add	x11, x11, #ADDR
+-str	x11, [x9, x8, lsl #3]
+-ldr	x8, [x22, x10]
+-add	x8, x8, x13
+-str	x8, [x22, x10]
+-b	ADDR
+-ldr	x9, [x8]
+-subs	x9, x9, #ADDR
+-b.eq	ADDR
+-str	x9, [x8]
+-b	ADDR
+-add	x9, x22, x11
+-ldr	x10, [x9, x8, lsl #3]
+-str	x10, [x0]
+-str	x0, [x9, x8, lsl #3]
+-b	ADDR
+-ubfx	x1, x9, #1, #1
+-bl	_ax_rt_park__seq
+-b	ADDR
+-adrp	x9, 25 
+-add	x9, x9, #ADDR
+-add	x9, x9, x11
+-ldr	x10, [x9, x8, lsl #3]
+-str	x10, [x0]
+-str	x0, [x9, x8, lsl #3]
+-cmp	x25, #ADDR
+-csinc	x0, x25, xzr, hi
+-bl	_ax_alloc
+-mov	x26, x0
+-ldr	x8, [sp, #ADDR]
+-add	x1, x8, #ADDR
+-mov	x2, x25
+-bl	_memcpy
+-stp	x26, x25, [x24, #ADDR]
+-str	x21, [x24, #ADDR]
+-ldr	x9, [x22]
+-cmp	x9, #ADDR
+-ldr	x0, [sp, #ADDR]
+-mov	x25, x28
+-mov	x26, x27
+-ldp	x27, x28, [sp, #ADDR]
+-mov	w23, #ADDR
+-b.ge	ADDR
+-b	ADDR
+-ubfx	x1, x9, #1, #1
+-bl	_ax_rt_park__seq
+-b	ADDR
+-ubfx	x1, x9, #1, #1
+-bl	_ax_rt_park__seq
++ldr	x9, [x25, x24, lsl #3]
++cmp	x9, x22
++cinc	x24, x24, eq
+ b	ADDR
+ ldp	x29, x30, [sp, #ADDR]
+ ldp	x20, x19, [sp, #ADDR]
+ ldp	x22, x21, [sp, #ADDR]
+ ldp	x24, x23, [sp, #ADDR]
+ ldp	x26, x25, [sp, #ADDR]
+-ldp	x28, x27, [sp, #ADDR]
+-add	sp, sp, #ADDR
++ldp	x28, x27, [sp], #ADDR
+ ret

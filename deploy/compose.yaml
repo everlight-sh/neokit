@@ -1,0 +1,50 @@
+services:
+  app:
+    init: true
+    stop_grace_period: 35s
+    build:
+      context: ..
+      additional_contexts:
+        neo: ${NEO_HOME:-../../neo}
+        neo-libs: ../../axon-libs
+      args:
+        APP: examples/dashboard
+    environment:
+      NEO_THREADS: ${NEO_THREADS:-2}
+      NEOKIT_DATA_DIR: /data
+      NEOKIT_CACHE_DIR: /cache
+      NEOKIT_ORIGIN: https://${DOMAIN:?Set your domain}
+      NEOKIT_SESSION_SECRET: ${NEOKIT_SESSION_SECRET:?Set a random secret of at least 32 bytes}
+      NEOKIT_ADMIN_USER: ${NEOKIT_ADMIN_USER:-admin}
+      NEOKIT_ADMIN_PASSWORD_HASH: ${NEOKIT_ADMIN_PASSWORD_HASH:?Generate with neokit password}
+    volumes:
+      - app-data:/data
+      - app-cache:/cache
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: [CMD, /healthcheck, '8094']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+  proxy:
+    image: caddy:2
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      DOMAIN: ${DOMAIN:?Set your domain}
+    ports: ['80:80', '443:443']
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    stop_grace_period: 35s
+    restart: unless-stopped
+volumes:
+  app-data:
+  app-cache:
+  caddy-data:
+  caddy-config:

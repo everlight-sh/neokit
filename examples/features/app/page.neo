@@ -1,0 +1,4 @@
+import "../../../src/lib.neo"
+type FeatureProps = { title:Arr u8 _,items:Arr Arr u8 _ _,numbers:Arr i64 _,link:WebURL }
+fn features_load(request:WebRequest) -> FeatureProps
+  = FeatureProps { title="Features",items=arr(i in 0..3) if i==0 then "<first>" else if i==1 then "café" else "third",numbers=arr(i in 0..3) i,link=web_url("/org/acme/items/42") }

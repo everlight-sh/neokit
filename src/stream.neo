@@ -1,0 +1,41 @@
+import "std:http_server"
+import "std:http_server_transport"
+import "std:http_async"
+import "pkg:http-server" as stream
+
+; A handler streams each chunk immediately, then returns web_stream_done().
+; It must stop after the first failed write. Transport closes after the callback.
+fn web_stream_done() -> Arr u8 _ = ""
+
+import "std:random"
+import "std:base64"
+; Each loader receives an owned byte capture and returns rendered HTML bytes.
+; Use typed templates/WebHtml and escape text as usual; loaders can call the
+; native HTTP(S), DNS and PostgreSQL clients without hand-written task states.
+type WebDeferred = {id:Arr u8 _,fallback:WebHtml,capture:Arr u8 _,render:Effect<fs,net,env,time,process>(Arr u8 _)->Arr u8 _,timeout_ms:i64}
+private fn web_boundary_id(id:Arr u8 n)->bool
+  = n>=1 && n<=64 && loop(i=0,ok=true) while ok && i<n next(i+1,let c=str_byte(id,i) in c>=65 && c<=90 || c>=97 && c<=122 || c>=48 && c<=57 || c==45 || c==95) yield ok
+fn web_defer(id:Arr u8 n,fallback:WebHtml,capture:Arr u8 m,render:Effect<fs,net,env,time,process>(Arr u8 _)->Arr u8 _)->WebDeferred
+  = WebDeferred {id=id,fallback=fallback,capture=capture,render=render,timeout_ms=0}
+fn web_defer_timeout(part:WebDeferred,milliseconds:i64)->WebDeferred = part with {timeout_ms=milliseconds}
+fn web_boundary(part:WebDeferred)->WebHtml
+  = web_html(concat("<section data-web-boundary=\"",html_escape(part.id),"\" data-web-state=\"pending\" aria-busy=\"true\">",part.fallback.bytes,"</section>"))
+private fn web_deferred_task(part:WebDeferred,token:Arr u8 n,now:i64)->HttpDeferred
+  = let key=concat(token,":",part.id) in
+    let prefix=concat("<template data-web-fragment=\"",key,"\" data-web-state=\"ready\">") in
+    let suffix=concat("</template><template data-web-ready=\"",key,"\"></template>") in
+    let failure=concat("<template data-web-fragment=\"",key,"\" data-web-state=\"error\"><p role=\"status\">Could not load this section.</p>",suffix) in
+    http_deferred_frame(http_deferred(part.capture,part.render),prefix,suffix,failure,if part.timeout_ms==0 then 0 else now+part.timeout_ms)
+effect(fs,net,env,time,process) fn web_stream_page(title:Arr u8 n,shell:WebHtml,parts:Arr WebDeferred m,deadline:i64)->Arr u8 _
+  = let valid=m>=1 && m<=32 && loop(i=0,ok=true) while ok && i<m next(i+1,check i>=0 && i<m in
+      web_boundary_id(parts[i].id) && parts[i].timeout_ms>=0 && parts[i].timeout_ms<=120000 &&
+      str_find(shell.bytes,concat("data-web-boundary=\"",parts[i].id,"\"")).present &&
+      loop(j=0,unique=true) while unique && j<i next(j+1,check j>=0 && j<m in !str_equal(parts[j].id,parts[i].id)) yield unique) yield ok in
+    if !valid then web_encode_close(web_reply(500,"Invalid deferred page plan","text/plain; charset=utf-8"),false) else
+    let entropy=random_bytes(18) in let now=monotonic_ms() in
+    if !entropy.ok || !now.ok then web_encode_close(web_reply(503,"Async renderer unavailable","text/plain; charset=utf-8"),false) else
+    let token=base64url_encode(entropy.value) in
+    let page=web_html(concat("<!doctype html><html data-web-streaming><head><meta charset=\"utf-8\"><title>",html_escape(title),"</title><script type=\"module\" async src=\"/_web/neokit-client.js\"></script></head><body><main id=\"web-page\" aria-busy=\"true\" data-web-stream=\"",token,"\">",shell.bytes,"</main>")) in
+    let tail=web_html(concat("<template data-web-stream-end=\"",token,"\"></template></body></html>")) in
+    let started=http_render_start_with_tail(page,arr(i in 0..m) web_deferred_task(parts[i],token,now.value),tail,deadline) in
+    if started.ok then started.value else web_encode_close(web_reply(503,"Async capacity unavailable","text/plain; charset=utf-8"),false)

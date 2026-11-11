@@ -1,0 +1,152 @@
+bun test v1.3.13 (bf2e2cec)
+
+client/state.test.js:
+(pass) signals notify changes and computed subscriptions dispose [1.48ms]
+(pass) stable component state survives remount and can be explicitly cleared [0.21ms]
+(pass) typed JSON action sends CSRF and tracks pending result [2.20ms]
+(pass) optimistic mutations roll back on validation errors [0.21ms]
+(pass) actions reject external origins and unsupported methods [0.21ms]
+
+client/stream.test.js:
+(pass) waits for completion marker, resolves out of order and ignores stale requests [95.78ms]
+(pass) rejects executable fragments and completes pending fallbacks as errors [25.05ms]
+(pass) late module arrival processes completed fragments and ends truncated fallbacks [2.40ms]
+
+client/dom.test.js:
+(pass) nested layout and explicit persistent nodes retain identity and edited values [3.88ms]
+(pass) navigation replaces metadata without duplicating canonical or description tags [3.18ms]
+
+client/keyed.test.js:
+(pass) keyed reorder preserves row, input, draft, caret and state (moveBefore=false) [0.38ms]
+(pass) keyed reorder preserves row, input, draft, caret and state (moveBefore=true) [0.24ms]
+(pass) duplicate keys fail before changing the existing DOM [0.07ms]
+(pass) seeded structural updates match independent array order and preserve surviving identities [13.89ms]
+
+client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths [0.13ms]
+(pass) browser navigation boundaries > rejects external origins and executable protocols [0.11ms]
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.12ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads [0.52ms]
+
+client/windowed.test.js:
+(pass) 10,000 logical records use a bounded window, including the final record [9.45ms]
+(pass) updates, reordering and offscreen scrolling preserve the focused editor and caret [8.24ms]
+(pass) disposal cancels scroll work and drafts are recreated from models [30.33ms]
+(pass) viewport growth refreshes the mounted window [37.11ms]
+(pass) inert page data round trips escaped markup without creating executable nodes [1.73ms]
+
+client/runtime_dom.test.js:
+(pass) navigation preserves a shared layout, widget state, cleanup and prefetch [24.73ms]
+
+build/tailwind-check/before-web/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths [0.04ms]
+(pass) browser navigation boundaries > rejects external origins and executable protocols [0.02ms]
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.11ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads [0.07ms]
+
+bench/list-stress-results/2026-10-26/source-snapshot/client/keyed.test.js:
+(pass) keyed reorder preserves row, input, draft, caret and state (moveBefore=false) [0.28ms]
+(pass) keyed reorder preserves row, input, draft, caret and state (moveBefore=true) [0.06ms]
+(pass) duplicate keys fail before changing the existing DOM
+(pass) seeded structural updates match independent array order and preserve surviving identities [12.86ms]
+
+bench/tailwind-framework-results/2026-10-26/source-snapshot/web/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths
+(pass) browser navigation boundaries > rejects external origins and executable protocols
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads [0.13ms]
+
+bench/build-speed-results/2026-10-26/source-snapshot/web/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths
+(pass) browser navigation boundaries > rejects external origins and executable protocols [0.12ms]
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.07ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads [0.03ms]
+
+bench/tailwind-results/2026-10-26/source-snapshot/tailwind/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths
+(pass) browser navigation boundaries > rejects external origins and executable protocols [0.09ms]
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.06ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads
+
+bench/tailwind-results/2026-10-26/source-snapshot/before/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths [0.04ms]
+(pass) browser navigation boundaries > rejects external origins and executable protocols [0.02ms]
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.06ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads
+
+build/build-speed/astro-comparison-final/source-snapshot/web/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths
+(pass) browser navigation boundaries > rejects external origins and executable protocols [0.02ms]
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.04ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads
+
+build/framework-results/production-2026-10-26/source-snapshot/web/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths [0.02ms]
+(pass) browser navigation boundaries > rejects external origins and executable protocols [0.01ms]
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.03ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads
+
+build/framework-results/self-test-1/source-snapshot/web/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths
+(pass) browser navigation boundaries > rejects external origins and executable protocols
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.18ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads
+
+build/framework-results/production-monotonic-2026-10-26/source-snapshot/web/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths [0.03ms]
+(pass) browser navigation boundaries > rejects external origins and executable protocols [0.02ms]
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.04ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads [0.03ms]
+
+build/framework-results/production-final-2026-10-26/source-snapshot/web/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths [0.02ms]
+(pass) browser navigation boundaries > rejects external origins and executable protocols [0.04ms]
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads [0.08ms]
+
+build/tailwind-check/performance/source-snapshot/tailwind/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths [0.02ms]
+(pass) browser navigation boundaries > rejects external origins and executable protocols
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.05ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads [0.02ms]
+
+build/tailwind-check/performance/source-snapshot/before/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths [0.03ms]
+(pass) browser navigation boundaries > rejects external origins and executable protocols [0.02ms]
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.03ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads [0.03ms]
+
+bench/frameworks/results/2026-10-26/source-snapshot/web/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths
+(pass) browser navigation boundaries > rejects external origins and executable protocols [0.03ms]
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.03ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads
+
+build/tailwind-frameworks/2026-10-26/run/source-snapshot/web/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths [0.03ms]
+(pass) browser navigation boundaries > rejects external origins and executable protocols
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.07ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads [0.03ms]
+
+build/tailwind-frameworks/2026-10-26-accepted/run/source-snapshot/web/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths [0.04ms]
+(pass) browser navigation boundaries > rejects external origins and executable protocols [0.02ms]
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.06ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads [0.02ms]
+
+bench/frameworks/results/2026-10-26/preliminary/wall-clock-aborted/source-snapshot/web/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths [0.02ms]
+(pass) browser navigation boundaries > rejects external origins and executable protocols [0.03ms]
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.05ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads [0.02ms]
+
+bench/frameworks/results/2026-10-26/preliminary/disk-guard-aborted/source-snapshot/web/client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths
+(pass) browser navigation boundaries > rejects external origins and executable protocols
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.14ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads [0.02ms]
+
+ 96 pass
+ 0 fail
+ 72195 expect() calls
+Ran 96 tests across 25 files. [575.00ms]

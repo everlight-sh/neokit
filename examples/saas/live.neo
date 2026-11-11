@@ -1,0 +1,26 @@
+import "../../src/realtime.neo"
+import "model.neo"
+import "std:timer"
+
+; One publication per two-second wall-clock bucket, shared across tabs/workers.
+; One producer timer runs in worker zero, independently of subscriptions. Its
+; publications wake subscribers immediately. No financial service is contacted.
+effect(process,time) fn saas_live_tick()->unit
+  = let now=time_unix_ms() in let channel=web_channel("meridian") in let key=now.value/2000 in let last_key=event_last_key(channel) in
+    if !now.ok || last_key>=key then noop() else
+    let previous=event_latest(channel) in if !previous.ok then noop() else
+    let prior=if len(previous.events)>0 then check len(previous.events)>0 in json_parse(previous.events[0].json).value else json_parse("{}").value in
+    let old_key=json_int(json_get(prior,"tick").value).value in
+    if old_key>=key then noop() else
+    let kind=if key%3==0 then "Invoice paid" else if key%3==1 then "Customer joined" else "Plan upgraded" in
+    let amount=if key%3==1 then 0 else 29+(key%7)*25 in
+    let revenue=json_int(json_get(prior,"revenue").value).value+amount in
+    let signups=json_int(json_get(prior,"signups").value).value+(if key%3==1 then 1 else 0) in
+    let payload=concat("{\"tick\":",int_text(key),",\"stamp\":",int_text(now.value),",\"kind\":",json_quote(kind),",\"company\":",json_quote(saas_company(key%1000)),",\"amount\":",int_text(amount),",\"revenue\":",int_text(revenue),",\"signups\":",int_text(signups),"}") in
+    let sent=event_publish_once(channel,"dashboard",payload,now.value,key) in noop()
+effect(fs,net,env,time,process) fn saas_demo_producer(capture:Arr u8 n)->Arr u8 _
+  = let produced=saas_live_tick() in ""
+effect(process,time) fn saas_start()->IntResult
+  = let initial=saas_live_tick() in timer_interval_start(2000,function(saas_demo_producer),"")
+effect(net,time,process) fn saas_subscribe(request:WebRequest)->Arr u8 _
+  = web_subscribe(request,web_channel("meridian"))

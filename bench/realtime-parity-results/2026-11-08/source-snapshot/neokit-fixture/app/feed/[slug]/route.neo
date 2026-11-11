@@ -1,0 +1,2 @@
+import "../../../../../src/realtime.neo"
+effect fn fixture_child_feed(request:WebRequest)->Arr u8 _=web_subscribe(request,web_channel("fixture"))

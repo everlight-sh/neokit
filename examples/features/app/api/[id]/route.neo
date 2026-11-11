@@ -1,0 +1,7 @@
+import "../../../../../src/lib.neo"
+import "std:multipart"
+import "std:json"
+fn feature_mutation(request:WebRequest) -> WebResponse
+  = if str_starts(web_request_header(request,"content-type"),"multipart/") then
+      let part=web_upload(request,"file") in web_status(web_json(concat("{\"name\":",json_quote(part.filename),",\"bytes\":",int_text(len(part.body)),"}")),if part.ok then 201 else 400)
+    else web_with_header(web_status(web_json(concat("{\"method\":",json_quote(request.method),",\"id\":",json_quote(web_param(request,"id").value),",\"name\":",json_quote(web_form(request,"name").value),"}")),201),"X-NeoKit","features")

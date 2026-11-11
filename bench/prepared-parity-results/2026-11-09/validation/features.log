@@ -1,0 +1,2 @@
+PASS typed actions, validation, tagged cache hits/invalidation, personalized bypass, metadata, sitemap, gzip negotiation and conditional assets
+PASS typed lists/slots/URLs, nested layouts, multi-parameter/catch-all routes, methods, 1 MiB binary multipart, streaming flush and pipeline ordering

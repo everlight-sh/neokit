@@ -1,0 +1,2 @@
+@props(title:text,content:html,client:bool,mode:text)
+<aside data-web-persist="sidebar">Organization navigation</aside><section>{{ content }}</section>

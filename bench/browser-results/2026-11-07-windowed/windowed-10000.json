@@ -1,0 +1,93 @@
+{
+  "verification": {
+    "passed": true,
+    "rows": 10000,
+    "renderer": "windowed",
+    "mountedRows": 15,
+    "checks": [
+      {
+        "name": "Generated-array updates preserve mounted row nodes",
+        "passed": true
+      },
+      {
+        "name": "Updates preserve focus, draft and caret",
+        "passed": true
+      },
+      {
+        "name": "Reordering preserves focused node and selection",
+        "passed": true
+      },
+      {
+        "name": "Filtering preserves the matching focused row",
+        "passed": true
+      },
+      {
+        "name": "Add/remove preserves surviving mounted row nodes",
+        "passed": true
+      },
+      {
+        "name": "The last logical record can be rendered",
+        "passed": true
+      },
+      {
+        "name": "Scrolling pins the focused editor",
+        "passed": true
+      },
+      {
+        "name": "DOM row count stays bounded",
+        "passed": true
+      },
+      {
+        "name": "Fresh native data preserves focused input and local state",
+        "passed": true
+      },
+      {
+        "name": "Negative control detects visible-row redraw and focus loss",
+        "passed": true
+      },
+      {
+        "name": "Rendered IDs match stable row keys",
+        "passed": true
+      },
+      {
+        "name": "No unexplained empty rendered frames",
+        "passed": true
+      }
+    ],
+    "keyedFocusLosses": 0,
+    "expectedRedrawFocusLosses": 1,
+    "blankFrames": 0,
+    "serverRefreshes": 1,
+    "p95UpdateMs": 2,
+    "p95SteadyPatchMs": 1.2999999523162842,
+    "p95AllOperationsMs": 3.600000023841858,
+    "worstFrameMs": 16.600000000000364
+  },
+  "sustained": {
+    "renderer": "windowed",
+    "initialSSRRows": 32,
+    "serverRefreshes": 1,
+    "serverStamp": 1794082494305,
+    "updates": 832,
+    "liveTicks": 796,
+    "blankFrames": 0,
+    "keyedFocusLosses": 0,
+    "redrawFocusLosses": 1,
+    "longFrames": 0,
+    "worstFrameMs": 16.60000000000582,
+    "lastCreated": 0,
+    "lastRemoved": 0,
+    "lastRetained": 16,
+    "lastMoved": 0,
+    "lastPatchMs": 1,
+    "visibleRows": 10000,
+    "totalRows": 10000,
+    "mountedRows": 15,
+    "p95UpdateMs": 5.100000023841858,
+    "p95PatchMs": 3.5,
+    "p95SteadyPatchMs": 3.5,
+    "mode": "keyed",
+    "running": false,
+    "mountReadyMs": 128.39999997615814
+  }
+}

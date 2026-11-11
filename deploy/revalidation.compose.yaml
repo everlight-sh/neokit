@@ -1,0 +1,29 @@
+# Overlay for an app containing stale_ttl routes. Use after compose.yaml.
+services:
+  app:
+    image: neokit-local
+    build:
+      args:
+        APP: ${NEOKIT_APP:-examples/features}
+    environment:
+      NEOKIT_REVALIDATE_TOKEN: ${NEOKIT_REVALIDATE_TOKEN:?Set a random refresh secret of at least 32 bytes}
+  revalidation:
+    init: true
+    image: neokit-local
+    entrypoint: [/revalidate]
+    command: []
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      NEO_THREADS: '1'
+      NEOKIT_CACHE_DIR: /cache
+      NEOKIT_REVALIDATE_HOST: app
+      NEOKIT_REVALIDATE_PORT: '8094'
+      NEOKIT_REVALIDATE_TOKEN: ${NEOKIT_REVALIDATE_TOKEN:?Set a random refresh secret of at least 32 bytes}
+    volumes:
+      - app-cache:/cache
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped

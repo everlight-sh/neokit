@@ -5,6 +5,7 @@ import concurrent.futures
 import contextlib
 import functools
 import hashlib
+import html
 import http.client
 import http.server
 import json
@@ -12,10 +13,12 @@ import os
 from pathlib import Path
 import re
 import signal
+import secrets
 import socket
 import subprocess
 import sys
 import threading
+import tempfile
 import time
 from urllib.parse import quote
 
@@ -23,28 +26,45 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 def free_port():
-    with socket.socket() as sock:
-        sock.bind(('127.0.0.1',0))
-        return sock.getsockname()[1]
+    # Reserve a wildcard port outside the client's usual ephemeral range;
+    # rapid restarts otherwise race outbound client allocation/TIME_WAIT.
+    for _ in range(128):
+        port=15000+secrets.randbelow(15000)
+        with socket.socket() as sock:
+            try:sock.bind(('0.0.0.0',port))
+            except OSError:continue
+            return port
+    raise RuntimeError('No free local test port')
 
 
 @contextlib.contextmanager
-def running(binary, workers=1):
-    port=free_port()
-    process=subprocess.Popen([str(binary),str(port)],start_new_session=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,
-                             env={**os.environ,'AXON_THREADS':str(workers)})
+def running(binary, workers=1, env=None, port=None):
+    port=port or free_port()
+    diagnostics=tempfile.TemporaryFile()
+    def diagnostic_text():
+        diagnostics.seek(0)
+        return diagnostics.read().decode(errors='replace')
+    process=subprocess.Popen([str(binary),str(port)],start_new_session=True,stdout=subprocess.DEVNULL,stderr=diagnostics,
+                             env={**os.environ,**(env or {}),'NEO_THREADS':str(workers)})
+    failed=False
     try:
         for _ in range(100):
-            if process.poll() is not None:raise AssertionError(process.stderr.read().decode())
+            if process.poll() is not None:raise AssertionError(diagnostic_text())
             try:
                 with socket.create_connection(('127.0.0.1',port),timeout=.1):break
             except OSError:time.sleep(.03)
         else:raise AssertionError('Server did not start')
         yield port
+    except BaseException:
+        failed=True
+        raise
     finally:
         if process.poll() is None:os.killpg(process.pid,signal.SIGTERM)
         process.wait(timeout=10)
-        process.stderr.close()
+        if failed:
+            detail=diagnostic_text()
+            if detail:print('Native server diagnostics:\n'+detail,file=sys.stderr)
+        diagnostics.close()
 
 
 def request(port,path='/',method='GET',headers=None):
@@ -69,7 +89,7 @@ def main():
     parser.add_argument('--binary',type=Path)
     parser.add_argument('--out',type=Path,default=ROOT/'build/studio')
     args=parser.parse_args()
-    if not args.binary:subprocess.run([str(ROOT/'web'),'build','--out',str(args.out)],cwd=ROOT,check=True)
+    if not args.binary:subprocess.run([str(ROOT/'neokit'),'build','--out',str(args.out)],cwd=ROOT,check=True)
     binary=(args.binary or args.out/'server').resolve()
     manifest=json.loads((args.out/'manifest.json').read_text())
     audit(binary)
@@ -77,6 +97,7 @@ def main():
         with running(binary,workers) as port:
             status,headers,home=request(port)
             assert status==200 and b'Build your next' in home and b'data-web-widget="counter"' in home
+            assert b'NeoKit' in home and b'Axon Web' not in home
             assert b'data-web-form' in home and b'LIVE SERVER RENDER' in home
             assert headers['Cache-Control']=='no-store' and headers['X-Content-Type-Options']=='nosniff'
             assert b'Rendered on request' in home
@@ -87,7 +108,7 @@ def main():
             head=request(port,method='HEAD');assert head[0]==200 and head[2]==b'' and int(head[1]['Content-Length'])>500
             assert request(port,method='POST')[0]==405
             assert request(port,'/missing')[0]==404
-            assert request(port,'/_web/../src/lib.ax')[0]==404
+            assert request(port,'/_web/../src/lib.neo')[0]==404
             assert request(port,'/notes/')[0]==404
             for path in ('/notes/%2f','/notes/%2e%2e','/notes/%ff','/notes/%00','/notes/%zz'):
                 assert request(port,path)[0]==404,path
@@ -107,15 +128,22 @@ def main():
             for url,info in manifest['files'].items():
                 status,asset_headers,data=request(port,url)
                 assert status==200 and len(data)==info['bytes'] and hashlib.sha256(data).hexdigest()==info['sha256']
-                if url.startswith('/_web/'):assert 'immutable' in asset_headers['Cache-Control']
+                if url == '/_web/neokit-client.js':
+                    assert asset_headers['Cache-Control']=='no-store'
+                elif url.startswith('/_web/'):
+                    assert 'immutable' in asset_headers['Cache-Control']
                 if url.endswith('.js'):assert asset_headers['Content-Type'].startswith('text/javascript')
-            for count in (100,1000):
+            for count in (1,100,1000,10000):
                 status,_,stress=request(port,'/stress?n='+str(count))
-                assert status==200 and stress.count(b'<tr data-row-id=')==count
-                assert b'data-web-widget="list-stress"' in stress and b'Full redraw (comparison)' in stress
-                assert stress.count(b'data-note aria-label=')==count
-            assert request(port,'/stress?n=-1')[2].count(b'<tr data-row-id=')==1000
-            api=json.loads(request(port,'/api/status')[2]);assert api['renderer']=='native' and api['react'] is False and api['stamp']>0
+                assert status==200 and stress.count(b'<tr data-row-id=')==min(count,32)
+                embedded=re.search(rb'<template data-web-data="stress">(.*?)</template>',stress).group(1)
+                data=json.loads(html.unescape(embedded.decode()))
+                assert data['count']==count and data['values']==[(i*17)%1000 for i in range(1,count+1)]
+                assert b'data-web-widget="list-stress"' in stress and b'Redraw visible window (comparison)' in stress
+                assert stress.count(b'data-note aria-label=')==min(count,32)
+            assert request(port,'/stress?n=-1')[2].count(b'<tr data-row-id=')==32
+            assert request(port,'/stress?n=100&render=full')[2].count(b'<tr data-row-id=')==100
+            api=json.loads(request(port,'/api/status')[2]);assert api['framework']=='neokit' and api['renderer']=='native' and api['react'] is False and api['stamp']>0
             connection=http.client.HTTPConnection('127.0.0.1',port,timeout=10)
             for path in ('/','/about','/notes/native','/api/status')*3:
                 connection.request('GET',path);response=connection.getresponse();assert response.status==200;response.read()
@@ -135,11 +163,11 @@ def main():
                 assert stream.read(1)==b'';stream.close()
             print(f'PASS native SSR, fresh data, escaped fragments, dynamic routes, HEAD/pipeline, assets, API, 48 concurrent requests ({workers} workers)',flush=True)
     export=args.out.parent/'test-export'
-    subprocess.run([str(ROOT/'web'),'export','--out',str(args.out),'--dest',str(export)],cwd=ROOT,check=True)
+    subprocess.run([str(ROOT/'neokit'),'export','--out',str(args.out),'--dest',str(export)],cwd=ROOT,check=True)
     home=(export/'index.html').read_bytes()
     assert b'STATIC EXPORT' in home and b'data-web-form' not in home and b'data-web-widget="counter"' in home
     assert b'<script' not in (export/'about/index.html').read_bytes()
-    assert (export/'stress/index.html').read_bytes().count(b'<tr data-row-id=')==1000
+    assert (export/'stress/index.html').read_bytes().count(b'<tr data-row-id=')==32
     assert not (export/'greet/index.html').exists() and not (export/'api/status/index.html').exists()
     handler=functools.partial(http.server.SimpleHTTPRequestHandler,directory=str(export))
     static=http.server.ThreadingHTTPServer(('127.0.0.1',0),handler)
@@ -148,7 +176,7 @@ def main():
         assert request(static.server_port)[0]==200
         for url in manifest['files']:assert request(static.server_port,url)[0]==200
     finally:static.shutdown();static.server_close();thread.join()
-    strict=subprocess.run([str(ROOT/'web'),'export','--out',str(args.out),'--dest',str(export),'--strict'],cwd=ROOT,capture_output=True,text=True)
+    strict=subprocess.run([str(ROOT/'neokit'),'export','--out',str(args.out),'--dest',str(export),'--strict'],cwd=ROOT,capture_output=True,text=True)
     assert strict.returncode!=0 and 'Server-only routes' in strict.stderr
     print('PASS static export: 6 pages, same assets, interactive module references, zero-JS about page; explicit server-only omissions and strict rejection')
 

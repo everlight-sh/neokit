@@ -1,0 +1,17 @@
+{
+  "stream_seconds": {
+    "shell": 0.03409562500019092,
+    "network": 0.1175767500008078,
+    "error": 0.2843993330006924,
+    "database": 0.660905916000047,
+    "slow": 1.236478791000991
+  },
+  "fast_during_async_seconds": 0.016507583000930026,
+  "upstream_cancelled": 38,
+  "final": {
+    "live": 0,
+    "waiting": 0,
+    "captures": 0,
+    "results": 0
+  }
+}

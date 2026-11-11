@@ -1,0 +1,5 @@
+[server]
+before="fixture_guard"
+shutdown_grace_ms=250
+[realtime]
+max_event_bytes=8192

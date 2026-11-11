@@ -11,7 +11,7 @@ by bench/frameworks/model.py.
 
   python3 tests/large_responses.py build/catalog/server
 
-where build/catalog is ./web build --app bench/frameworks/apps/axon --out build/catalog.
+where build/catalog is ./neokit build --app bench/frameworks/apps/axon --out build/catalog.
 Each backend gets a fresh port: a server restarted on a port an io_uring
 server has just left can see connections reset while the old ring tears down.
 """
@@ -33,7 +33,7 @@ def free_port():
 
 
 def start(binary, port, env):
-    proc = subprocess.Popen([binary, str(port)], env={**os.environ, "AXON_THREADS": "1", **env},
+    proc = subprocess.Popen([binary, str(port)], env={**os.environ, "NEO_THREADS": "1", **env},
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     for _ in range(100):
         try:
@@ -115,7 +115,7 @@ def concurrent(port):
 
 def main():
     binary = sys.argv[1] if len(sys.argv) > 1 else "build/catalog/server"
-    for name, env in [("io_uring", {}), ("epoll", {"AXON_HTTP_URING": "0"})]:
+    for name, env in [("io_uring", {}), ("epoll", {"NEO_HTTP_URING": "0"})]:
         port = free_port(); proc = start(binary, port, env)
         try:
             print(f"PASS {name}: {pipelined(port)} pipelined, {closing(port)} closing, {concurrent(port)} concurrent responses", flush=True)

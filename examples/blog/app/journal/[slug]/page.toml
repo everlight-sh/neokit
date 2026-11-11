@@ -1,0 +1,4 @@
+loader="journal_article"
+mode="ssr"
+client=true
+paths=["/journal/a-smaller-web","/journal/slower-mornings","/journal/quiet-interfaces"]

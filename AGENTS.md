@@ -1,11 +1,10 @@
-# Axon Web
+# NeoKit
 
-This is the separate experimental web framework project, with the working name
-Axon Web. Keep application/framework code outside the language compiler.
+This is the separate experimental web framework project, named NeoKit. Keep application/framework code outside the language compiler.
 
-- `./web build`, `./web serve`, `./web export`, `./web test` drive the example.
-- `AXON_HOME` selects the external compiler checkout, default `../axon`.
-- Native runtime code stays Axon and C-free. Bun/Python/LLVM are build tools;
+- `./neokit build`, `./neokit serve`, `./neokit export`, `./neokit test` drive the example.
+- `NEO_HOME` selects the external `neoc` checkout; auto-detect `../neo` or `../axon`.
+- Native runtime code stays Neo and C-free. Bun/Python/LLVM are build tools;
   JavaScript executes in the browser. No JS engine runs inside the server.
 - Use Bun for JavaScript tooling and tests.
 - Keep template interpolation escaped; never accept raw user HTML or executable

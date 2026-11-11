@@ -1,6 +1,0 @@
-import "../../../src/lib.ax"
-
-type HomeProps = { title: Arr u8 _, name: Arr u8 _, stamp: i64, server: bool }
-fn home_load(request: WebRequest) -> HomeProps
-  = let name=web_query_get(request.query,"name") in
-    HomeProps { title="Axon Web starter",name=if name.present && len(name.value)<=120 then name.value else "friend",stamp=request.stamp,server=request.server }

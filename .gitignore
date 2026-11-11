@@ -1,4 +1,5 @@
 /build/
+**/.neo-build/
 **/.axon-build/
 **/__pycache__/
 *.pyc
@@ -9,3 +10,6 @@
 **/dist-ssr/
 **/dist-static/
 **/out/
+/data/
+/.neokit/
+.env

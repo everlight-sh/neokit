@@ -1,0 +1,3 @@
+import "../model.neo"
+effect fn journal_guard(request:WebRequest)->WebResponse
+  = if str_starts(request.path,"/journal/") && journal_index(web_segment(request.path,"/journal/").value)<0 then web_reply(404,"Story not found","text/plain; charset=utf-8") else web_continue()

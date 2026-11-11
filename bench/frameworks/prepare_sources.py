@@ -20,8 +20,8 @@ def relative(path,folder):return './'+os.path.relpath(path,folder)
 def main():
     native=HERE/'apps/axon'
     write(native/'web.toml','[site]\nname="Framework catalog benchmark"\n')
-    library=relative(ROOT/'src/lib.ax',native)
-    write(native/'model.ax',f'import "{library}"\n'+r'''
+    library=relative(ROOT/'src/lib.neo',native)
+    write(native/'model.neo',f'import "{library}"\n'+r'''
 type BenchData = { title:Arr u8 _,n:i64,seed:i64,token:Arr u8 _,stamp:i64,checksum:i64,rows:WebHtml,interactive:bool }
 fn bench_word(k:i64) -> Arr u8 _
   = let m=k%8 in if m==0 then "Widget" else if m==1 then "Gadget" else if m==2 then "Gizmo" else if m==3 then "Doohickey" else if m==4 then "Sprocket" else if m==5 then "Flange" else if m==6 then "Bracket" else "Grommet"
@@ -58,7 +58,7 @@ fn bench_load(request:WebRequest,default_n:i64,interactive:bool) -> BenchData
     for route,default,interactive in [('',3,False),('large',1000,False),('interactive',50,True)]:
         folder=native/'app'/route;loader='load_'+(route or 'home')
         write(folder/'page.toml',f'loader="{loader}"\nmode="ssr"\nclient={str(interactive).lower()}\nexport=true\n')
-        write(folder/'page.ax',f'import "{relative(native/"model.ax",folder)}"\nfn {loader}(request:WebRequest) -> BenchData = bench_load(request,{default},{str(interactive).lower()})\n')
+        write(folder/'page.neo',f'import "{relative(native/"model.neo",folder)}"\nfn {loader}(request:WebRequest) -> BenchData = bench_load(request,{default},{str(interactive).lower()})\n')
         write(folder/'page.view',view)
 
         astro=HERE/'apps/astro/src/pages'/((route or 'index')+'.astro')

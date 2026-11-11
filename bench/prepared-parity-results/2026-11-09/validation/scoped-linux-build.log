@@ -1,0 +1,1 @@
+neoc: build/prepared-parity-scoped/linux/fixture  graph b3436ffa726cdaba  obligations 678/825 proven, 147 runtime checks, 17 parallel regions, 0 vectorised sums, 0 calls folded, 1 inlined, build miss

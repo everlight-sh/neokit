@@ -1,0 +1,5 @@
+import "../../../../../src/lib.neo"
+import "std:json"
+type TypedInput={title:Arr u8 _,count:i64,enabled:bool}
+fn feature_typed(request:WebRequest,input:TypedInput) -> WebResponse
+  = web_json(concat("{\"title\":",json_quote(input.title),",\"count\":",int_text(input.count),",\"enabled\":",if input.enabled then "true" else "false","}"))

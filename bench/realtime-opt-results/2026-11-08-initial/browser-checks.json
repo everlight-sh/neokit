@@ -1,0 +1,41 @@
+{
+  "initial": {
+    "count": "4",
+    "cursor": "Event 66642378055958.11",
+    "status": "Live"
+  },
+  "paused": {
+    "count": "4",
+    "cursor": "Event 66642378055958.11",
+    "status": "Paused"
+  },
+  "static": {
+    "chartPoints": 30,
+    "expanded": true,
+    "liveWidgets": 0,
+    "snapshot": true,
+    "logs": []
+  },
+  "stillPaused": {
+    "count": "4",
+    "cursor": "Event 66642378055958.11",
+    "status": "Paused"
+  },
+  "resumed": {
+    "count": "30",
+    "cursor": "Event 66642378055958.37",
+    "rows": 12,
+    "status": "Live"
+  },
+  "twin": {
+    "cursor": "Event 66642378055958.46",
+    "revenue": "$3,145",
+    "signups": "16"
+  },
+  "primary": {
+    "cursor": "Event 66642378055958.46",
+    "revenue": "$3,145",
+    "signups": "16"
+  },
+  "logs": []
+}

@@ -1,0 +1,4 @@
+import "../../../../../src/lib.neo"
+
+fn status_route(request: WebRequest) -> WebResponse
+  = web_json(concat("{\"framework\":\"neokit\",\"renderer\":\"native\",\"react\":false,\"stamp\":",int_text(request.stamp),"}"))

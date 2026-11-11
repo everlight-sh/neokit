@@ -1,0 +1,5 @@
+import "../../src/lib.neo"
+type FormaHome={title:Arr u8 _,stamp:i64,server:bool}
+fn forma_home(request:WebRequest)->FormaHome=FormaHome {title="Considered spaces, better days",stamp=request.stamp,server=request.server}
+type FormaStudio={title:Arr u8 _}
+fn forma_studio(request:WebRequest)->FormaStudio=FormaStudio {title="A small studio with a long view"}

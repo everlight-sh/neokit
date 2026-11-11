@@ -1,0 +1,63 @@
+1/54 astro interactive-ssr C32: 4633.9 req/s, 272.49 CPU us/req, 317.0 MiB
+2/54 neokit large-ssr C1: 12369.6 req/s, 46.73 CPU us/req, 3.2 MiB
+3/54 next small-ssr C32: 939.8 req/s, 1255.96 CPU us/req, 369.3 MiB
+4/54 astro large-ssr C1: 660.3 req/s, 1525.11 CPU us/req, 249.3 MiB
+5/54 astro small-ssr C1: 6166.7 req/s, 189.03 CPU us/req, 284.8 MiB
+6/54 astro small-ssr C32: 9378.7 req/s, 147.64 CPU us/req, 302.3 MiB
+7/54 astro small-ssr C1: 5239.9 req/s, 217.85 CPU us/req, 278.9 MiB
+8/54 neokit interactive-ssr C1: 28371.2 req/s, 12.92 CPU us/req, 3.8 MiB
+9/54 next large-ssr C1: 30.3 req/s, 35163.93 CPU us/req, 350.2 MiB
+10/54 astro interactive-ssr C1: 3154.6 req/s, 296.91 CPU us/req, 263.2 MiB
+11/54 next large-ssr C32: 19.3 req/s, 57435.90 CPU us/req, 352.2 MiB
+12/54 neokit large-ssr C32: 17432.2 req/s, 52.04 CPU us/req, 2.9 MiB
+13/54 next large-ssr C1: 33.6 req/s, 32740.74 CPU us/req, 354.9 MiB
+14/54 next large-ssr C1: 31.3 req/s, 34015.75 CPU us/req, 322.1 MiB
+15/54 astro large-ssr C32: 604.3 req/s, 1543.16 CPU us/req, 311.7 MiB
+16/54 next interactive-ssr C1: 304.5 req/s, 3522.82 CPU us/req, 330.7 MiB
+17/54 next interactive-ssr C1: 279.1 req/s, 3892.86 CPU us/req, 294.8 MiB
+18/54 next small-ssr C32: 774.6 req/s, 1478.15 CPU us/req, 330.2 MiB
+19/54 next small-ssr C1: 493.9 req/s, 2107.12 CPU us/req, 286.1 MiB
+20/54 neokit small-ssr C32: 86224.2 req/s, 9.40 CPU us/req, 4.7 MiB
+21/54 astro small-ssr C1: 5348.0 req/s, 205.17 CPU us/req, 276.8 MiB
+22/54 next small-ssr C32: 933.9 req/s, 1269.67 CPU us/req, 373.2 MiB
+23/54 next large-ssr C32: 22.5 req/s, 51208.79 CPU us/req, 406.9 MiB
+24/54 astro interactive-ssr C1: 2987.9 req/s, 323.27 CPU us/req, 283.6 MiB
+25/54 neokit large-ssr C32: 21429.8 req/s, 46.32 CPU us/req, 3.0 MiB
+26/54 neokit large-ssr C32: 20575.5 req/s, 48.01 CPU us/req, 3.0 MiB
+27/54 next small-ssr C1: 644.1 req/s, 1686.84 CPU us/req, 351.1 MiB
+28/54 neokit large-ssr C1: 13000.9 req/s, 45.22 CPU us/req, 3.3 MiB
+29/54 neokit interactive-ssr C1: 34161.7 req/s, 11.14 CPU us/req, 5.0 MiB
+30/54 neokit interactive-ssr C32: 88078.0 req/s, 10.55 CPU us/req, 3.9 MiB
+31/54 neokit large-ssr C1: 11194.9 req/s, 50.32 CPU us/req, 2.9 MiB
+32/54 neokit small-ssr C1: 37455.1 req/s, 9.90 CPU us/req, 3.4 MiB
+33/54 neokit interactive-ssr C32: 73325.9 req/s, 11.30 CPU us/req, 3.5 MiB
+34/54 next interactive-ssr C32: 336.1 req/s, 3325.94 CPU us/req, 341.2 MiB
+35/54 astro interactive-ssr C1: 2400.8 req/s, 362.20 CPU us/req, 242.2 MiB
+36/54 next interactive-ssr C1: 227.5 req/s, 4273.41 CPU us/req, 318.1 MiB
+37/54 neokit small-ssr C1: 32130.0 req/s, 10.93 CPU us/req, 3.1 MiB
+38/54 neokit small-ssr C32: 84654.9 req/s, 9.74 CPU us/req, 4.5 MiB
+39/54 astro small-ssr C32: 8214.8 req/s, 170.66 CPU us/req, 404.1 MiB
+40/54 neokit interactive-ssr C1: 37961.5 req/s, 11.12 CPU us/req, 5.1 MiB
+41/54 astro large-ssr C1: 440.4 req/s, 1934.39 CPU us/req, 212.5 MiB
+42/54 next small-ssr C1: 540.3 req/s, 1948.58 CPU us/req, 291.9 MiB
+43/54 next large-ssr C32: 19.3 req/s, 57179.49 CPU us/req, 386.6 MiB
+44/54 astro small-ssr C32: 8721.4 req/s, 158.12 CPU us/req, 280.4 MiB
+45/54 neokit small-ssr C32: 98752.3 req/s, 8.67 CPU us/req, 4.8 MiB
+46/54 neokit interactive-ssr C32: 78633.2 req/s, 11.50 CPU us/req, 2.4 MiB
+47/54 astro interactive-ssr C32: 5188.8 req/s, 243.87 CPU us/req, 291.0 MiB
+48/54 astro large-ssr C32: 689.6 req/s, 1454.41 CPU us/req, 293.2 MiB
+49/54 next interactive-ssr C32: 389.7 req/s, 3035.71 CPU us/req, 390.7 MiB
+50/54 neokit small-ssr C1: 33642.0 req/s, 10.08 CPU us/req, 5.0 MiB
+51/54 next interactive-ssr C32: 347.0 req/s, 3278.81 CPU us/req, 364.3 MiB
+52/54 astro interactive-ssr C32: 5157.0 req/s, 247.78 CPU us/req, 323.3 MiB
+53/54 astro large-ssr C1: 563.8 req/s, 1769.03 CPU us/req, 214.6 MiB
+54/54 astro large-ssr C32: 758.7 req/s, 1404.14 CPU us/req, 332.3 MiB
+Fixed 1/9 next: 200.1 req/s, 49.18% CPU
+Fixed 2/9 neokit: 200.1 req/s, 0.67% CPU
+Fixed 3/9 astro: 200.1 req/s, 11.17% CPU
+Fixed 4/9 astro: 200.1 req/s, 12.84% CPU
+Fixed 5/9 next: 200.0 req/s, 45.49% CPU
+Fixed 6/9 astro: 200.1 req/s, 16.00% CPU
+Fixed 7/9 neokit: 200.1 req/s, 1.00% CPU
+Fixed 8/9 neokit: 200.1 req/s, 0.83% CPU
+Fixed 9/9 next: 200.1 req/s, 47.51% CPU

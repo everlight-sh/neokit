@@ -1,0 +1,4 @@
+handler="feature_async"
+stream=true
+async=true
+async_timeout_ms=10000

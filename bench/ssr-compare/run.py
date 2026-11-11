@@ -90,11 +90,11 @@ def main():
     args = a.parse_args(); args.out.mkdir(parents=True, exist_ok=True)
 
     # The framework's CSS link carries a content hash; the others use the same href.
-    proc, port = start([args.framework], args.server_cpu, {"AXON_THREADS": "1"})
+    proc, port = start([args.framework], args.server_cpu, {"NEO_THREADS": "1"})
     css = re.search(rb'<link rel="stylesheet" href="([^"]+)"', fetch(port, "/")[1])[1].decode()
     js = re.search(rb'<script type="module" src="([^"]+)"', fetch(port, "/interactive")[1])[1].decode(); stop(proc)
     servers = {
-        args.name: ([args.framework], {"AXON_THREADS": "1"}),
+        args.name: ([args.framework], {"NEO_THREADS": "1"}),
         "Bun": (["bun", args.bun], {"CSS_HREF": css, "JS_HREF": js}),
         "Go": ([args.go], {"CSS_HREF": css, "JS_HREF": js, "GOMAXPROCS": "1"}),
         "Rust": ([args.rust], {"CSS_HREF": css, "JS_HREF": js, "TOKIO_WORKER_THREADS": "1"}),

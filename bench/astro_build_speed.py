@@ -17,25 +17,25 @@ def main():
  assert sys.platform=='linux' and a.rounds>=3 and a.runtime_rounds>=3;os.sched_setaffinity(0,{2,3});out=a.out.resolve();out.mkdir(parents=True,exist_ok=False)
  for d in ('build-logs','runtime-logs','wrk'):(out/d).mkdir()
  inputs={}
- for base,folders in [(ROOT,('src','compiler','client','bench/frameworks/apps','bench/frameworks/shared')),(Path(os.environ['AXON_HOME']),('axonc','runtime','stdlib'))]:
+ for base,folders in [(ROOT,('src','compiler','client','bench/frameworks/apps','bench/frameworks/shared')),(Path(os.environ['NEO_HOME']),('neoc','runtime','stdlib'))]:
   for folder in folders:
    for directory,dirs,files in os.walk(base/folder):
-    dirs[:]=[d for d in dirs if d not in ('__pycache__','node_modules','.next','.astro','dist-ssr','dist-static','out','.axon-build')]
+    dirs[:]=[d for d in dirs if d not in ('__pycache__','node_modules','.next','.astro','dist-ssr','dist-static','out','.neo-build')]
     for name in files:
      f=Path(directory)/name
-     if f.suffix in ('.ax','.py','.js','.jsx','.mjs','.css','.toml','.view'):inputs[str(f)]=sha(f)
+     if f.suffix in ('.neo','.py','.js','.jsx','.mjs','.css','.toml','.view'):inputs[str(f)]=sha(f)
  meta={'started_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'platform':platform.uname()._asdict(),'versions':json.loads((ROOT/'bench/frameworks/installed-versions.json').read_text()),'clang':subprocess.check_output(['clang','--version'],text=True),'node':subprocess.check_output(['node','--version'],text=True).strip(),'bun':subprocess.check_output(['bun','--version'],text=True).strip(),'source_sha256':inputs,'build_cpus':[0,1,2,3],'server_cpu':0,'load_cpu':1,'rounds':a.rounds,'runtime_rounds':a.runtime_rounds,'container_ram_gib':4,'compression':'identity','library_preparation':'reported separately; no application native cache retained for cold trials'}
  meta['harness_sha256']=sha(__file__);meta['dependency_lock_sha256']=sha(ROOT/'bench/frameworks/bun.lock')
  if a.before_binary:meta['before_binary_sha256']=sha(a.before_binary)
  (out/'harness.py').write_text(Path(__file__).read_text())
  for file in inputs:
-  path=Path(file);prefix='web' if path.is_relative_to(ROOT) else 'axon';base=ROOT if prefix=='web' else Path(os.environ['AXON_HOME']);saved=out/'source-snapshot'/prefix/path.relative_to(base);saved.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(path,saved)
+  path=Path(file);prefix='web' if path.is_relative_to(ROOT) else 'axon';base=ROOT if prefix=='web' else Path(os.environ['NEO_HOME']);saved=out/'source-snapshot'/prefix/path.relative_to(base);saved.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(path,saved)
  (out/'metadata.json').write_text(json.dumps(meta,indent=2)+'\n');rng=random.Random(26102631);samples=[];runtime=[]
  def run_build(case,argv,cwd,env,repeat,kind,target=None):
   start=time.perf_counter_ns();process=subprocess.Popen(['taskset','-c','0-3',*map(str,argv)],cwd=cwd,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,start_new_session=True)
   sampler=Sampler(process.pid).start();stdout,_=process.communicate();memory=sampler.stop();wall=time.perf_counter_ns()-start
   (out/'build-logs'/f'{case}-{repeat}-{kind}.log').write_text(stdout);assert process.returncode==0,stdout[-5000:]
-  reports=[json.loads(f.read_text()) for f in (target/'generated/.axon-build').glob('*.json')] if target else []
+  reports=[json.loads(f.read_text()) for f in (target/'generated/.neo-build').glob('*.json')] if target else []
   if target:
    assert len(reports)==1,(case,len(reports))
    assert 'build miss' in stdout if kind!='warm' else 'build miss' not in stdout
@@ -43,10 +43,10 @@ def main():
   row={'case':case,'round':repeat,'kind':kind,'wall_ns':wall,**memory,'command':list(map(str,argv)),'compiler':[{k:r[k] for k in ('build','build_stages','optimization','native_libraries','summary') if k in r} for r in reports] if kind!='warm' else []}
   record(out/'build-samples.jsonl',row);samples.append(row);print('BUILD',case,repeat+1,kind,round(wall/1e9,3),flush=True);return row
  with tempfile.TemporaryDirectory(prefix='axon-astro-builds-') as temporary:
-  work=Path(temporary);cache=work/'prepared-libraries';env={**ENV,'AXON_LIBRARY_CACHE':str(cache)}
+  work=Path(temporary);cache=work/'prepared-libraries';env={**ENV,'NEOKIT_LIBRARY_CACHE':str(cache)}
   # Three truly first-use builds, each with both project AND library caches empty.
   for repeat in range(3):
-   target=work/('first-use-'+str(repeat));first_env={**ENV,'AXON_LIBRARY_CACHE':str(work/('fresh-library-'+str(repeat)))}
+   target=work/('first-use-'+str(repeat));first_env={**ENV,'NEOKIT_LIBRARY_CACHE':str(work/('fresh-library-'+str(repeat)))}
    run_build('Axon-first-use',[ROOT/'web','build','--app',ROOT/'bench/frameworks/apps/axon','--out',target],ROOT,first_env,repeat,'first-use',target)
   run_build('Axon-toolchain-prepare',[ROOT/'web','prepare'],ROOT,env,0,'prepare')
   artifacts=[]

@@ -1,0 +1,2 @@
+import "../../../../src/realtime.neo"
+effect fn fixture_publish(request:WebRequest)->WebResponse=let published=web_publish(web_channel("fixture"),"message",request.body) in if !published.ok then web_reply(400,"Invalid event","text/plain") else web_json(concat("{\"sequence\":",int_text(published.value),"}"))

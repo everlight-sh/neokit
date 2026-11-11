@@ -1,0 +1,21 @@
+{
+  "compiler_files": {
+    "neoc/native_libraries.py": "6d15f69f4fcbda3d6c0ff2156bcf568d1e07cebc3dbd5600878c507c449be4f8",
+    "neoc/return_aliases.py": "477f3ebadddeedc7ea5b49f341b54839070b47f7daf0a9ebe2849b790db692a2",
+    "neoc/llvm.py": "ea01cfa1fdd52a108231b7cceeefb37f0613532976b4f55c6d38f0eeb8c4c69a",
+    "neoc/cli.py": "4f083bd181106ddeb6e9a45133699694794b607eeadf850e8aada640a25143c1",
+    "tests/native_library_cache.py": "add96c2d86ec370bb6d2930856513a8102671b991475ac4eaac3faabb736e13f"
+  },
+  "validation": {
+    "native_library_cache": "passed /tmp/neokit-cache-contract-tests9.log",
+    "dashboard_smoke": "passed build/fixed-smoke.log",
+    "cold_warm_dashboard_sha256": "74e7b18f1229c5334db006681bd17b266a7a32115a55ce0e650c7a9fa432b8f2",
+    "cold_warm_ir_identical": true,
+    "prechecked_library_obligations": 1320,
+    "embedded_library_runtime_checks": 241,
+    "return_alias_and_inline_unit_tests": "PASS 11 tests",
+    "timed_trials": 88,
+    "measured_identities_unchanged": true,
+    "native_regression_median_change_percent": 1.9990425013848734
+  }
+}

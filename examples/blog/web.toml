@@ -1,0 +1,6 @@
+[site]
+name="Fieldnotes"
+description="Independent thoughts on design, engineering, and the everyday."
+[server]
+timing=true
+before="journal_guard"

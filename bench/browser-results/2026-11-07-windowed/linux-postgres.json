@@ -1,0 +1,46 @@
+{
+  "image_tag": "neokit-verify-1661d616539a",
+  "architecture": "aarch64",
+  "binary_sha256": "7bed1c5f11afe4ce9ebe71b302a31233c7fcadfebae69b80422249875ee151c7",
+  "profile": "scratch, Docker init, nonroot host UID, read-only root, all capabilities dropped, no-new-privileges; host-mounted disposable data",
+  "checks": "600000-round password login; CSRF and user authorization; 24 concurrent writes, two workers, restart persistence",
+  "image_id": "sha256:74fb5d5c1c45f649311bb5e1f36774a851d3ee804a9f9d87e65b0a1d8c1973bf",
+  "passed": true,
+  "postgres": {
+    "version": "PostgreSQL 17.11 aarch64-linux-musl",
+    "image_digest": "sha256:3540c0362c809df084ffac0ae69fe794515f9de92692f02178bcdce0ef0302ac",
+    "authentication": "SCRAM-SHA-256",
+    "native_clients": [
+      "macOS arm64",
+      "Linux aarch64"
+    ],
+    "fixture": "axon-libs/tests/postgres_real.neo",
+    "passed": true
+  },
+  "linux_amd64_emulated": {
+    "image_tag": "neokit-verify-4f602d299b51",
+    "docker_host_architecture": "aarch64",
+    "platform": "linux/amd64",
+    "binary_sha256": "eff69a8066c004b1169fa20f192ac7ec0d3ee944f185ef177a3cb18fafe864c4",
+    "profile": "scratch, Docker init, nonroot host UID, read-only root, all capabilities dropped, no-new-privileges; host-mounted disposable data",
+    "checks": "600000-round password login; CSRF and user authorization; 24 concurrent writes, two workers, restart persistence",
+    "image_id": "sha256:07dfc570868628b8104f9bebb54255b629bccfef5c5d3b8964e628cf5be9c50c",
+    "passed": true
+  },
+  "elf_audits": [
+    {
+      "arch": "arm64",
+      "sha256": "7bed1c5f11afe4ce9ebe71b302a31233c7fcadfebae69b80422249875ee151c7",
+      "no_interpreter": true,
+      "no_dynamic_dependencies": true,
+      "no_undefined_symbols": true
+    },
+    {
+      "arch": "amd64-emulated",
+      "sha256": "eff69a8066c004b1169fa20f192ac7ec0d3ee944f185ef177a3cb18fafe864c4",
+      "no_interpreter": true,
+      "no_dynamic_dependencies": true,
+      "no_undefined_symbols": true
+    }
+  ]
+}

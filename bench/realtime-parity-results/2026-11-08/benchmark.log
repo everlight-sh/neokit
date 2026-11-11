@@ -1,0 +1,54 @@
+Start next 1 round 2
+next 1: p50 1.717 ms / p99 2.717 ms, RSS 108.5 MiB
+Start neokit 100 round 2
+neokit 100: p50 1.076 ms / p99 1.738 ms, RSS 4.7 MiB
+Start neokit 1000 round 1
+neokit 1000: p50 7.205 ms / p99 14.045 ms, RSS 22.7 MiB
+Start next 100 round 1
+next 100: p50 3.098 ms / p99 4.143 ms, RSS 123.1 MiB
+Start astro 1000 round 2
+astro 1000: p50 11.021 ms / p99 17.586 ms, RSS 158.6 MiB
+Start neokit 1 round 0
+neokit 1: p50 0.308 ms / p99 0.433 ms, RSS 2.6 MiB
+Start next 100 round 2
+next 100: p50 2.970 ms / p99 5.020 ms, RSS 126.9 MiB
+Start astro 1000 round 0
+astro 1000: p50 11.270 ms / p99 17.666 ms, RSS 187.3 MiB
+Start astro 100 round 1
+astro 100: p50 2.541 ms / p99 5.137 ms, RSS 94.5 MiB
+Start astro 1 round 0
+astro 1: p50 1.384 ms / p99 3.097 ms, RSS 69.3 MiB
+Start next 1 round 1
+next 1: p50 1.815 ms / p99 4.056 ms, RSS 88.1 MiB
+Start neokit 100 round 0
+neokit 100: p50 1.134 ms / p99 1.801 ms, RSS 2.1 MiB
+Start neokit 1000 round 2
+neokit 1000: p50 7.214 ms / p99 12.870 ms, RSS 22.7 MiB
+Start neokit 1000 round 0
+neokit 1000: p50 7.280 ms / p99 13.546 ms, RSS 22.6 MiB
+Start astro 1000 round 1
+astro 1000: p50 10.657 ms / p99 16.783 ms, RSS 182.3 MiB
+Start astro 1 round 1
+astro 1: p50 1.130 ms / p99 2.135 ms, RSS 84.1 MiB
+Start next 100 round 0
+next 100: p50 4.815 ms / p99 13.836 ms, RSS 127.3 MiB
+Start neokit 100 round 1
+neokit 100: p50 1.386 ms / p99 7.085 ms, RSS 4.7 MiB
+Start neokit 1 round 2
+neokit 1: p50 0.426 ms / p99 13.720 ms, RSS 2.7 MiB
+Start astro 100 round 0
+astro 100: p50 3.356 ms / p99 10.582 ms, RSS 94.9 MiB
+Start neokit 1 round 1
+neokit 1: p50 0.424 ms / p99 1.190 ms, RSS 2.7 MiB
+Start next 1000 round 2
+next 1000: p50 15.126 ms / p99 23.393 ms, RSS 286.1 MiB
+Start astro 1 round 2
+astro 1: p50 1.173 ms / p99 2.483 ms, RSS 83.1 MiB
+Start astro 100 round 2
+astro 100: p50 2.416 ms / p99 3.474 ms, RSS 90.7 MiB
+Start next 1000 round 1
+next 1000: p50 15.380 ms / p99 23.135 ms, RSS 297.8 MiB
+Start next 1 round 0
+next 1: p50 1.750 ms / p99 3.495 ms, RSS 98.2 MiB
+Start next 1000 round 0
+next 1000: p50 14.235 ms / p99 21.023 ms, RSS 296.2 MiB

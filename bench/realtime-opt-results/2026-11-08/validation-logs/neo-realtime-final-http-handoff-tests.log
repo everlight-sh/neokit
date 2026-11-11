@@ -1,0 +1,2 @@
+PASS 2 native workers: 1024 short-lived concurrent connections, binary echoes, no retries
+PASS 4 native workers: 1024 short-lived concurrent connections, binary echoes, no retries

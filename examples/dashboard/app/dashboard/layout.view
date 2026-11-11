@@ -1,0 +1,2 @@
+@props(title:text,content:html,client:bool,mode:text)
+<header data-web-persist="dashboard-header"><a href="/dashboard" data-web-link>NeoKit Tasks</a></header><section>{{ content }}</section>

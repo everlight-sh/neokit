@@ -1,0 +1,4 @@
+loader="feature_async_page"
+async=true
+async_timeout_ms=2000
+export=false

@@ -1,0 +1,15 @@
+....Bundled 1 module in 5ms
+
+  client-p4n7nhx3.js  54 bytes  (entry point)
+
+Tailwind 4.3.3: site.css, 4753 bytes, 308ms
+Bundled 1 module in 6ms
+
+  client-p4n7nhx3.js  54 bytes  (entry point)
+
+Tailwind 4.3.3: site.css, 4847 bytes, 153ms
+..................
+----------------------------------------------------------------------
+Ran 22 tests in 0.630s
+
+OK

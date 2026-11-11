@@ -1,5 +1,5 @@
 [site]
-name = "Axon Web starter"
+name = "NeoKit starter"
 
 [css]
 tailwind = ["site.css"]

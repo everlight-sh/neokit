@@ -1,0 +1,29 @@
+[
+  {
+    "framework": "neokit",
+    "requests_per_sec": 88696.46,
+    "p50_single_ms": 0.026000000000000002,
+    "p99_saturated_ms": 0.538,
+    "peak_rss_mib": 5.453125,
+    "cpu_us_per_request": 9.706655520969678,
+    "fixed_cpu_percent_one_core": 1.0004133512728048
+  },
+  {
+    "framework": "next",
+    "requests_per_sec": 942.49,
+    "p50_single_ms": 1.42,
+    "p99_saturated_ms": 60.11,
+    "peak_rss_mib": 379.328125,
+    "cpu_us_per_request": 1250.0,
+    "fixed_cpu_percent_one_core": 40.49723100235382
+  },
+  {
+    "framework": "astro",
+    "requests_per_sec": 7694.97,
+    "p50_single_ms": 0.169,
+    "p99_saturated_ms": 9.82,
+    "peak_rss_mib": 302.9375,
+    "cpu_us_per_request": 187.3985060084443,
+    "fixed_cpu_percent_one_core": 15.340554579654045
+  }
+]

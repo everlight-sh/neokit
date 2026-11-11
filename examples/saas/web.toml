@@ -1,0 +1,6 @@
+[site]
+name="Meridian Analytics"
+description="A native NeoKit SaaS dashboard with server-rendered charts and a searchable customer dataset."
+[server]
+timing=true
+startup="saas_start"

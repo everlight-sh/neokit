@@ -1,0 +1,2 @@
+import "../../../../src/realtime.neo"
+effect fn fixture_stats(request:WebRequest)->WebResponse=let stats=async_stats() in let frames=http_async_frame_stats() in web_json(concat("{\"subscribers\":",int_text(http_async_subscribers()),",\"tasks\":",int_text(stats.live),",\"captures\":",int_text(stats.capture_bytes),",\"callbacks\":",int_text(http_async_callback_count()),",\"reads\":",int_text(event_read_count()),",\"frame_hits\":",int_text(frames.hits),",\"frame_misses\":",int_text(frames.misses),",\"frame_entries\":",int_text(frames.entries),"}"))

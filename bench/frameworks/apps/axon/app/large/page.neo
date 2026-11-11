@@ -1,0 +1,2 @@
+import "./../../model.neo"
+fn load_large(request:WebRequest) -> BenchData = bench_load(request,1000,false)

@@ -1,5 +1,6 @@
 .git/
 build/
+**/.neo-build/
 **/.axon-build/
 **/__pycache__/
 .DS_Store
@@ -9,3 +10,8 @@ build/
 **/dist-ssr/
 **/dist-static/
 **/out/
+**/.env
+**/.env.*
+!**/.env.example
+data/
+.neokit/

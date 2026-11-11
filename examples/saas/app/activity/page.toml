@@ -1,0 +1,3 @@
+loader="saas_activity"
+mode="ssr"
+client=true

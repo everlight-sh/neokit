@@ -1,0 +1,3 @@
+handler="saas_subscribe"
+methods=["GET"]
+realtime=true

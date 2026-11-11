@@ -1,0 +1,3 @@
+import "../../../../../src/lib.neo"
+type DocsProps={title:Arr u8 _,slug:Arr u8 _}
+fn feature_docs(request:WebRequest) -> DocsProps = DocsProps {title="Docs",slug=web_param(request,"slug").value}

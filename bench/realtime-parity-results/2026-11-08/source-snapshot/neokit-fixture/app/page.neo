@@ -1,0 +1,3 @@
+import "../../../src/lib.neo"
+type FixturePage={title:Arr u8 _}
+fn fixture_page(request:WebRequest)->FixturePage=FixturePage {title="Realtime test"}

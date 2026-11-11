@@ -1,0 +1,52 @@
+{
+  "machine": {
+    "cpu": "Apple M1 Pro",
+    "memory_bytes": 17179869184,
+    "logical_cpus": 10
+  },
+  "load_average": [
+    13.21533203125,
+    11.921875,
+    15.404296875
+  ],
+  "binary": {
+    "path": "/Users/marcoschwartz/Documents/code/neokit/build/realtime-opt-final/features/server",
+    "sha256": "b18887323a0088d4f3f256659fb3ee39fdb21fc4c9f1c2ca451067baa815b99c"
+  },
+  "configuration": {
+    "workers": 1,
+    "wrk_threads": 1,
+    "connections": 32,
+    "rounds": 1,
+    "duration_seconds": 6,
+    "cases": [
+      "database-and-network-streams"
+    ]
+  },
+  "samples": [
+    {
+      "requests_per_sec": 108241.27,
+      "raw": "Running 6s test @ http://127.0.0.1:28451\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   428.51us    1.65ms  34.38ms   97.30%\n    Req/Sec   108.77k    20.82k  149.16k    77.05%\n  Latency Distribution\n     50%  185.00us\n     75%  229.00us\n     90%  347.00us\n     99%    7.74ms\n  660367 requests in 6.10s, 204.05MB read\nRequests/sec: 108241.27\nTransfer/sec:     33.45MB\n",
+      "p50_ms": 0.185,
+      "p99_ms": 7.74,
+      "resource_wall_seconds": 6.110518999994383,
+      "server_cpu_seconds": 5.5600000000000005,
+      "cpu_percent_one_core": 90.99063434718248,
+      "cpu_us_per_request": 8.419560638251156,
+      "peak_sampled_rss_kib": 6960,
+      "start_rss_kib": 6384,
+      "resource_samples": 23,
+      "round": 0,
+      "case": "database-and-network-streams",
+      "background_clients": 16,
+      "background_completions": 112,
+      "requests": 660367,
+      "after": {
+        "live": 0,
+        "waiting": 0,
+        "captures": 0,
+        "results": 0
+      }
+    }
+  ]
+}

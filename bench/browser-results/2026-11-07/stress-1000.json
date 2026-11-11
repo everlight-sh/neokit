@@ -1,0 +1,76 @@
+{
+  "report": {
+    "passed": true,
+    "rows": 1000,
+    "checks": [
+      {
+        "name": "24 generated-array updates preserve every row node",
+        "passed": true
+      },
+      {
+        "name": "Updates preserve focus, draft and caret",
+        "passed": true
+      },
+      {
+        "name": "Reordering preserves focused node and selection",
+        "passed": true
+      },
+      {
+        "name": "Filtering keeps a matching focused row alive",
+        "passed": true
+      },
+      {
+        "name": "Add/remove preserves existing row nodes",
+        "passed": true
+      },
+      {
+        "name": "Fresh Neo render preserves focused input and local state",
+        "passed": true
+      },
+      {
+        "name": "Negative control detects full redraw and focus loss",
+        "passed": true
+      },
+      {
+        "name": "Rendered ID cells match their stable row keys",
+        "passed": true
+      },
+      {
+        "name": "No unexplained empty rendered frames",
+        "passed": true
+      }
+    ],
+    "keyedFocusLosses": 0,
+    "expectedFullRedrawFocusLosses": 1,
+    "blankFrames": 0,
+    "serverRefreshes": 1,
+    "p95SteadyPatchMs": 4.199999988079071,
+    "p95AllOperationsMs": 94.80000001192093,
+    "worstFrameMs": 241.5
+  },
+  "metrics": {
+    "initialSSRRows": 1000,
+    "serverRefreshes": 1,
+    "serverStamp": 1794078500263,
+    "updates": 36,
+    "liveTicks": 0,
+    "blankFrames": 0,
+    "keyedFocusLosses": 0,
+    "redrawFocusLosses": 1,
+    "longFrames": 8,
+    "worstFrameMs": 267.2000000000003,
+    "layoutShift": 0.10987204924307518,
+    "lastCreated": 0,
+    "lastRemoved": 0,
+    "lastRetained": 1000,
+    "lastMoved": 0,
+    "lastPatchMs": 0.699999988079071,
+    "listLayoutShift": 0,
+    "visibleRows": 1000,
+    "totalRows": 1000,
+    "p95PatchMs": 94.80000001192093,
+    "p95SteadyPatchMs": 4.199999988079071,
+    "mode": "keyed",
+    "running": false
+  }
+}

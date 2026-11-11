@@ -1,0 +1,6 @@
+{
+  grace_period 30s
+}
+{$DOMAIN} {
+  import Caddyfile.routes
+}

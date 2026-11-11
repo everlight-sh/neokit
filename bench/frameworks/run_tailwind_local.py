@@ -3,12 +3,12 @@
 import argparse,json,os,platform,shutil,subprocess,tarfile,tempfile,time,uuid
 from pathlib import Path
 HERE=Path(__file__).resolve().parent;ROOT=HERE.parents[1]
-IGNORED={'.git','node_modules','__pycache__','build','.next','.astro','dist-ssr','dist-static','out','results','build-speed-results','tailwind-results','tailwind-framework-results','.axon-build'}
+IGNORED={'.git','node_modules','__pycache__','build','.next','.astro','dist-ssr','dist-static','out','results','build-speed-results','tailwind-results','tailwind-framework-results','.neo-build'}
 
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--out',type=Path,required=True);p.add_argument('--axon-home',type=Path,default=ROOT.parent/'axon')
+    p.add_argument('--out',type=Path,required=True);p.add_argument('--neo-home','--axon-home',dest='axon_home',type=Path,default=ROOT.parent/'axon')
     p.add_argument('--context',default='desktop-linux');p.add_argument('--image',default='axon-web-framework-bench-tools:latest')
     p.add_argument('--keep-container',action='store_true');p.add_argument('--rounds',type=int,default=3);p.add_argument('--build-rounds',type=int,default=3)
     a=p.parse_args();out=a.out.resolve();out.mkdir(parents=True,exist_ok=False)
@@ -28,7 +28,7 @@ def main():
             def filtered(member):return None if any(x in IGNORED for x in Path(member.name).parts) else member
             with tarfile.open(archive,'w') as tar:
                 tar.add(ROOT,arcname='axon-web',filter=filtered)
-                for name in ('axon','axonc','axon.toml','runtime','stdlib'):
+                for name in ('neo','neoc','neo.toml','runtime','stdlib'):
                     source=a.axon_home.resolve()/name
                     if source.exists():tar.add(source,arcname='axon/'+name,filter=filtered)
             run('cp',archive,container+':/tmp/sources.tar')

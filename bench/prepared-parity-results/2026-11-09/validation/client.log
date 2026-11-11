@@ -1,0 +1,49 @@
+bun test v1.3.13 (bf2e2cec)
+
+client/state.test.js:
+(pass) signals notify changes and computed subscriptions dispose [1.22ms]
+(pass) stable component state survives remount and can be explicitly cleared [0.52ms]
+(pass) typed JSON action sends CSRF and tracks pending result [3.41ms]
+(pass) optimistic mutations roll back on validation errors [0.32ms]
+(pass) actions reject external origins and unsupported methods [0.31ms]
+
+client/stream.test.js:
+(pass) waits for completion marker, resolves out of order and ignores stale requests [94.99ms]
+(pass) rejects executable fragments and completes pending fallbacks as errors [24.59ms]
+(pass) late module arrival processes completed fragments and ends truncated fallbacks [4.90ms]
+
+client/dom.test.js:
+(pass) nested layout and explicit persistent nodes retain identity and edited values [3.47ms]
+(pass) navigation replaces metadata without duplicating canonical or description tags [3.40ms]
+
+client/keyed.test.js:
+(pass) keyed reorder preserves row, input, draft, caret and state (moveBefore=false) [0.54ms]
+(pass) keyed reorder preserves row, input, draft, caret and state (moveBefore=true) [0.06ms]
+(pass) duplicate keys fail before changing the existing DOM [0.07ms]
+(pass) seeded structural updates match independent array order and preserve surviving identities [13.17ms]
+
+client/runtime.test.js:
+(pass) browser navigation boundaries > keeps query and same-origin paths
+(pass) browser navigation boundaries > rejects external origins and executable protocols [0.15ms]
+(pass) browser navigation boundaries > GET forms encode Unicode and reserved text without duplicating old values [0.13ms]
+(pass) browser navigation boundaries > rejects form cross-origin requests and unsupported file uploads [1.33ms]
+
+client/realtime.test.js:
+(pass) subscriptions validate JSON, deduplicate IDs, resume cursors and recover replay gaps [5.51ms]
+(pass) rejects cross-origin subscriptions, oversized payloads and unsafe IDs [0.79ms]
+(pass) dashboard retains only 60 chart samples and 12 activity rows, rendering event text safely [90.11ms]
+
+client/windowed.test.js:
+(pass) 10,000 logical records use a bounded window, including the final record [8.32ms]
+(pass) updates, reordering and offscreen scrolling preserve the focused editor and caret [6.55ms]
+(pass) disposal cancels scroll work and drafts are recreated from models [30.85ms]
+(pass) viewport growth refreshes the mounted window [35.44ms]
+(pass) inert page data round trips escaped markup without creating executable nodes [1.82ms]
+
+client/runtime_dom.test.js:
+(pass) navigation preserves a shared layout, widget state, cleanup and prefetch [22.14ms]
+
+ 27 pass
+ 0 fail
+ 36075 expect() calls
+Ran 27 tests across 8 files. [516.00ms]

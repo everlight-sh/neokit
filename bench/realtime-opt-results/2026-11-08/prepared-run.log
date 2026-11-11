@@ -1,0 +1,15 @@
+1/15 monolithic-current: 8328.1 req/s, 119.36 CPU us/req
+2/15 prepared-before: 8278.8 req/s, 120.54 CPU us/req
+3/15 prepared-current: 8295.8 req/s, 120.30 CPU us/req
+4/15 prepared-before: 8273.3 req/s, 120.64 CPU us/req
+5/15 monolithic-current: 8523.4 req/s, 117.09 CPU us/req
+6/15 prepared-current: 8343.0 req/s, 119.62 CPU us/req
+7/15 monolithic-current: 8528.9 req/s, 116.79 CPU us/req
+8/15 prepared-before: 8333.1 req/s, 119.76 CPU us/req
+9/15 prepared-current: 8411.3 req/s, 118.65 CPU us/req
+10/15 prepared-before: 7733.4 req/s, 125.23 CPU us/req
+11/15 prepared-current: 8387.1 req/s, 119.23 CPU us/req
+12/15 monolithic-current: 8620.7 req/s, 115.55 CPU us/req
+13/15 monolithic-current: 8500.0 req/s, 117.18 CPU us/req
+14/15 prepared-current: 8385.4 req/s, 118.78 CPU us/req
+15/15 prepared-before: 8317.7 req/s, 119.51 CPU us/req

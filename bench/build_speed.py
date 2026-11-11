@@ -14,14 +14,14 @@ def median(rows,key):return statistics.median(r[key] for r in rows)
 def append(path,row):
  with path.open('a') as file:file.write(json.dumps(row)+'\n')
 def fingerprints(root):
- ignored={'node_modules','__pycache__','.git','.axon-build','build','results'}
- return {str(p.relative_to(root)):sha(p) for p in root.rglob('*') if p.is_file() and p.suffix in ('.ax','.py','.view','.toml','.js','.css') and not ignored.intersection(p.relative_to(root).parts)}
+ ignored={'node_modules','__pycache__','.git','.axon-build','.neo-build','build','results'}
+ return {str(p.relative_to(root)):sha(p) for p in root.rglob('*') if p.is_file() and p.suffix in ('.ax','.neo','.py','.view','.toml','.js','.css') and not ignored.intersection(p.relative_to(root).parts)}
 
 @contextlib.contextmanager
 def server(binary,log):
  with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
  with log.open('w') as file:
-  proc=subprocess.Popen(['taskset','-c','0',str(binary),str(port)],stdout=file,stderr=file,start_new_session=True,env={**os.environ,'AXON_THREADS':'1'})
+  proc=subprocess.Popen(['taskset','-c','0',str(binary),str(port)],stdout=file,stderr=file,start_new_session=True,env={**os.environ,'NEO_THREADS':'1'})
   try:
    for _ in range(500):
     assert proc.poll() is None,log.read_text()
@@ -42,7 +42,7 @@ def load(port,path,seconds,clock):
 
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--out',type=Path,required=True);p.add_argument('--rounds',type=int,default=3);p.add_argument('--runtime-rounds',type=int,default=5)
- p.add_argument('--before-snapshot',type=Path,default=ROOT/'bench/frameworks/results/2026-10-26/source-snapshot');p.add_argument('--axon-home',type=Path,default=Path(os.environ.get('AXON_HOME',ROOT.parent/'axon')))
+ p.add_argument('--before-snapshot',type=Path,default=ROOT/'bench/frameworks/results/2026-10-26/source-snapshot');p.add_argument('--neo-home','--axon-home',dest='axon_home',type=Path,default=Path(os.environ.get('NEO_HOME',ROOT.parent/'axon')))
  a=p.parse_args();assert sys.platform=='linux' and a.rounds>=3 and a.runtime_rounds>=3
  os.sched_setaffinity(0,{2,3});out=a.out.resolve();out.mkdir(parents=True,exist_ok=False)
  for name in ('logs','runtime-logs'):(out/name).mkdir()
@@ -64,11 +64,11 @@ def main():
      argv=[sys.executable,str(web/'web'),command,'--app',str(web/'bench/frameworks/apps/axon'),'--out',str(target)]
      if command=='export':argv+=['--dest',str(dest)]
      if profile:argv+=['--profile',profile]
-     env={**os.environ,'AXON_HOME':str(compiler),'AXON_THREADS':'1'};env.pop('AXON_OPT_LEVEL',None);env.pop('AXON_INLINE_BUDGET',None)
+     env={**os.environ,'NEO_HOME':str(compiler),'NEO_THREADS':'1','AXON_HOME':str(compiler),'AXON_THREADS':'1'};env.pop('NEO_OPT_LEVEL',None);env.pop('NEO_INLINE_BUDGET',None)
      start=time.perf_counter_ns();process=subprocess.Popen(['taskset','-c','0-3',*argv],cwd=web,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,start_new_session=True)
      sampler=Sampler(process.pid).start();stdout,_=process.communicate();memory=sampler.stop();elapsed=time.perf_counter_ns()-start
      (out/'logs'/f'{name}-{repeat}-{kind}.log').write_text(stdout);assert process.returncode==0,stdout[-4000:]
-     reports=[json.loads(f.read_text()) for f in (target/'generated/.axon-build').glob('*.json')]
+     reports=[json.loads(f.read_text()) for f in (target/('generated/.neo-build' if name.startswith('after-') else 'generated/.axon-build')).glob('*.json')]
      row={'case':name,'round':repeat,'kind':kind,'wall_ns':elapsed,'command':argv,**memory,'compiler_reports':[{k:r[k] for k in ('build','build_stages','optimization','summary','binary_sha256') if k in r} for r in reports] if kind=='cold' else []}
      assert 'build miss' not in stdout if kind=='warm' else 'build miss' in stdout
      if name.startswith('after-'):

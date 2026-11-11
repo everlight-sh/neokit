@@ -1,0 +1,93 @@
+{
+  "configuration": {
+    "rounds": 3,
+    "duration_s": 2,
+    "warmup_s": 1,
+    "connections": 32,
+    "workers": 1,
+    "client_timeout_s": 10
+  },
+  "hardware": {
+    "cpu": "Apple M1 Pro",
+    "memory_bytes": 17179869184,
+    "logical_cpus": 10
+  },
+  "binaries": {
+    "prepared-dashboard": {
+      "sha256": "6e0881be707400057563e0c69a9930f907b346623a603544b2696b61f784215f",
+      "bytes": 2285784
+    },
+    "monolithic-dashboard": {
+      "sha256": "7854708099f430a7bb0f671b229c8027c3b26008c732fdda1156d0ba1a6faa61",
+      "bytes": 3197128
+    }
+  },
+  "samples": [
+    {
+      "requests_per_sec": 6243.54,
+      "raw": "Running 2s test @ http://127.0.0.1:24909\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency     5.12ms    0.90ms  10.73ms   96.64%\n    Req/Sec     6.27k    73.00     6.41k    71.43%\n  Latency Distribution\n     50%    4.96ms\n     75%    5.06ms\n     90%    5.18ms\n     99%   10.01ms\n  13116 requests in 2.10s, 544.68MB read\nRequests/sec:   6243.54\nTransfer/sec:    259.28MB\n",
+      "p50_ms": 4.96,
+      "p99_ms": 10.01,
+      "round": 0,
+      "case": "authenticated-db-ssr",
+      "mode": "prepared",
+      "rss_kib": 3392,
+      "startup_ms": 5.007417
+    },
+    {
+      "requests_per_sec": 6245.55,
+      "raw": "Running 2s test @ http://127.0.0.1:29215\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency     5.11ms    0.90ms  10.60ms   96.59%\n    Req/Sec     6.28k    77.27     6.42k    52.38%\n  Latency Distribution\n     50%    4.96ms\n     75%    5.06ms\n     90%    5.19ms\n     99%   10.01ms\n  13119 requests in 2.10s, 544.80MB read\nRequests/sec:   6245.55\nTransfer/sec:    259.36MB\n",
+      "p50_ms": 4.96,
+      "p99_ms": 10.01,
+      "round": 1,
+      "case": "authenticated-db-ssr",
+      "mode": "prepared",
+      "rss_kib": 3376,
+      "startup_ms": 8.645
+    },
+    {
+      "requests_per_sec": 6273.46,
+      "raw": "Running 2s test @ http://127.0.0.1:27257\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency     9.49ms   18.74ms 199.20ms   93.18%\n    Req/Sec     6.37k     2.07k    7.39k    85.00%\n  Latency Distribution\n     50%    4.30ms\n     75%    4.46ms\n     90%   10.99ms\n     99%  109.70ms\n  12709 requests in 2.03s, 527.78MB read\nRequests/sec:   6273.46\nTransfer/sec:    260.52MB\n",
+      "p50_ms": 4.3,
+      "p99_ms": 109.7,
+      "round": 1,
+      "case": "authenticated-db-ssr",
+      "mode": "monolithic",
+      "rss_kib": 3504,
+      "startup_ms": 8.644375
+    },
+    {
+      "requests_per_sec": 6267.7,
+      "raw": "Running 2s test @ http://127.0.0.1:29756\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency     5.10ms    0.90ms  10.69ms   96.56%\n    Req/Sec     6.30k    69.21     6.45k    66.67%\n  Latency Distribution\n     50%    4.94ms\n     75%    5.04ms\n     90%    5.17ms\n     99%    9.97ms\n  13167 requests in 2.10s, 546.80MB read\nRequests/sec:   6267.70\nTransfer/sec:    260.28MB\n",
+      "p50_ms": 4.94,
+      "p99_ms": 9.97,
+      "round": 2,
+      "case": "authenticated-db-ssr",
+      "mode": "prepared",
+      "rss_kib": 3392,
+      "startup_ms": 8.0665
+    },
+    {
+      "requests_per_sec": 7232.61,
+      "raw": "Running 2s test @ http://127.0.0.1:23533\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency     4.42ms  775.61us   9.41ms   96.49%\n    Req/Sec     7.27k    66.95     7.41k    61.90%\n  Latency Distribution\n     50%    4.28ms\n     75%    4.37ms\n     90%    4.49ms\n     99%    8.63ms\n  15188 requests in 2.10s, 630.72MB read\nRequests/sec:   7232.61\nTransfer/sec:    300.35MB\n",
+      "p50_ms": 4.28,
+      "p99_ms": 8.63,
+      "round": 0,
+      "case": "authenticated-db-ssr",
+      "mode": "monolithic",
+      "rss_kib": 3504,
+      "startup_ms": 9.176125
+    },
+    {
+      "requests_per_sec": 7233.63,
+      "raw": "Running 2s test @ http://127.0.0.1:25676\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency     4.42ms  777.25us   9.19ms   96.60%\n    Req/Sec     7.27k    86.88     7.41k    61.90%\n  Latency Distribution\n     50%    4.28ms\n     75%    4.38ms\n     90%    4.50ms\n     99%    8.64ms\n  15189 requests in 2.10s, 630.76MB read\nRequests/sec:   7233.63\nTransfer/sec:    300.40MB\n",
+      "p50_ms": 4.28,
+      "p99_ms": 8.64,
+      "round": 2,
+      "case": "authenticated-db-ssr",
+      "mode": "monolithic",
+      "rss_kib": 3520,
+      "startup_ms": 8.663125
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+handler="fixture_child_feed"
+methods=["GET"]
+realtime=true

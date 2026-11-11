@@ -1,0 +1,5 @@
+PASS root I/O-to-stream handoff, partial admission rollback, and root failure before headers
+PASS 8 backpressured 8 MiB streams do not stall fast requests 0.009159042005194351
+PASS exact 256-task admission bound and cancellation of every admitted task
+PASS slow-reader deadlines release task and result memory
+PASS graceful shutdown cancels held socket/timer continuations by deadline

@@ -1,0 +1,3 @@
+import "../../../../../../../src/lib.neo"
+type ItemProps = {title:Arr u8 _,org:Arr u8 _,id:Arr u8 _}
+fn feature_item(request:WebRequest) -> ItemProps = ItemProps {title="Item",org=web_param(request,"org").value,id=web_param(request,"id").value}

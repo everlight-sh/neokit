@@ -1,0 +1,2 @@
+@props(title:text,events:html[])
+<section class="page-heading"><div><span class="eyebrow">THE LITTLE THINGS ADD UP</span><h1>Activity</h1><p>A clear view of the moments moving your business forward.</p></div><a class="button secondary" href="/customers">Explore customers ↗</a></section><section class="panel activity-panel"><header class="panel-heading"><div><h2>Recent activity</h2><p>Synthetic events from the demo workspace</p></div><span class="demo-pill">18 events</span></header><div class="activity-list">{% for event in events %}{{ event }}{% endfor %}</div></section>

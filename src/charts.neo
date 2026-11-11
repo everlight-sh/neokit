@@ -1,0 +1,27 @@
+import "std:http_server"
+
+; Server-rendered SVG charts. Inputs are bounded, coordinates are numeric and
+; labels are escaped. The data table works without JavaScript.
+private fn chart_valid(values:Arr i64 n)->bool
+  = n>=1 && n<=366 && loop(i=0,ok=true) while ok && i<n next(i+1,check i>=0 && i<n in values[i]>=0 && values[i]<=1000000000000) yield ok
+private fn chart_max(values:Arr i64 n)->i64
+  = loop(i=0,maximum=1) while i<n next(i+1,check i>=0 && i<n in if values[i]>maximum then values[i] else maximum) yield maximum
+private fn chart_tick(value:i64)->Arr u8 _
+  = if value<1000 then int_text(value) else concat(int_text(value/1000),if value%1000>=100 then concat(".",int_text(value%1000/100)) else "","k")
+private fn chart_x(i:i64,n:i64)->i64 = 48+i*704/(if n>1 then n-1 else 1)
+private fn chart_y(value:i64,maximum:i64)->i64 = 224-value*200/(if maximum>0 then maximum else 1)
+private fn chart_path(values:Arr i64 n,maximum:i64)->Arr u8 _
+  = str_concat_parts(arr(i in 0..n) check i>=0 && i<n in concat(if i==0 then "M" else " L",int_text(chart_x(i,n))," ",int_text(chart_y(values[i],maximum))))
+fn web_line_chart(title:Arr u8 _,labels:Arr Arr u8 _ n,values:Arr i64 m,previous:Arr i64 k)->WebHtml
+  = if n!=m || m!=k || n<2 || !chart_valid(values) || !chart_valid(previous) then web_html("<p class=\"chart-empty\">No chart data available.</p>") else
+    let a=chart_max(values) in let b=chart_max(previous) in let maximum=if a>b then a else b in
+    let grid=str_concat_parts(arr(i in 0..5) concat("<line class=\"chart-grid\" x1=\"48\" x2=\"752\" y1=\"",int_text(24+i*50),"\" y2=\"",int_text(24+i*50),"\"/><text class=\"chart-tick\" x=\"38\" y=\"",int_text(28+i*50),"\" text-anchor=\"end\">",chart_tick(maximum*(4-i)/4),"</text>")) in
+    let ticks=str_concat_parts(arr(i in 0..5) let at=i*(n-1)/4 in check at>=0 && at<n in concat("<text class=\"chart-tick\" x=\"",int_text(chart_x(at,n)),"\" y=\"254\" text-anchor=\"middle\">",html_escape(labels[at]),"</text>")) in
+    let points=str_concat_parts(arr(i in 0..n) check i>=0 && i<n && i<m in concat("<circle class=\"chart-point\" cx=\"",int_text(chart_x(i,n)),"\" cy=\"",int_text(chart_y(values[i],maximum)),"\" r=\"5\" tabindex=\"0\" data-chart-label=\"",html_escape(labels[i]),"\" data-chart-value=\"",int_text(values[i]),"\"><title>",html_escape(labels[i]),": $",int_text(values[i]),"</title></circle>")) in
+    let rows=str_concat_parts(arr(i in 0..n) check i>=0 && i<n && i<m && i<k in concat("<tr><th scope=\"row\">",html_escape(labels[i]),"</th><td>",int_text(values[i]),"</td><td>",int_text(previous[i]),"</td></tr>")) in
+    web_html(concat("<figure class=\"line-chart\"><figcaption class=\"sr-only\">",html_escape(title),". Current and previous period, in dollars.</figcaption><svg viewBox=\"0 0 800 272\" role=\"img\" aria-label=\"",html_escape(title),"\">",grid,
+      "<path class=\"chart-area\" d=\"",chart_path(values,maximum)," L752 224 L48 224 Z\"/><path class=\"chart-previous\" d=\"",chart_path(previous,maximum),"\"/><path class=\"chart-current\" d=\"",chart_path(values,maximum),"\"/>",points,ticks,"</svg><output class=\"chart-tooltip\" data-chart-tooltip aria-live=\"polite\">Hover or focus a point to explore revenue</output><details class=\"chart-data\"><summary>View chart data</summary><table><thead><tr><th>Day</th><th>Revenue ($)</th><th>Previous ($)</th></tr></thead><tbody>",rows,"</tbody></table></details></figure>"))
+fn web_percentage_bars(title:Arr u8 _,labels:Arr Arr u8 _ n,values:Arr i64 m)->WebHtml
+  = if n!=m || n>12 || !chart_valid(values) || !(loop(i=0,ok=true) while ok && i<m next(i+1,check i>=0 && i<m in values[i]<=100) yield ok) then web_html("<p>No chart data available.</p>") else
+    web_html(concat("<figure class=\"bar-chart\"><figcaption class=\"sr-only\">",html_escape(title),"</figcaption>",str_concat_parts(arr(i in 0..n) check i>=0 && i<n && i<m in
+      concat("<div class=\"bar-row\"><div><span>",html_escape(labels[i]),"</span><strong>",int_text(values[i]),"%</strong></div><svg viewBox=\"0 0 300 8\" role=\"img\" aria-label=\"",html_escape(labels[i]),": ",int_text(values[i])," percent\"><rect class=\"bar-track\" width=\"300\" height=\"8\" rx=\"4\"/><rect class=\"bar-fill bar-",int_text(i),"\" width=\"",int_text(values[i]*3),"\" height=\"8\" rx=\"4\"/></svg></div>")),"</figure>"))

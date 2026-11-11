@@ -1,0 +1,241 @@
+{
+  "machine": {
+    "cpu": "Apple M1 Pro",
+    "memory_bytes": 17179869184,
+    "logical_cpus": 10
+  },
+  "load_average": [
+    14.07373046875,
+    10.1201171875,
+    9.89892578125
+  ],
+  "binary": {
+    "path": "/Users/marcoschwartz/Documents/code/neokit/build/auth-fixed/features/server",
+    "sha256": "6e70aa2cde784054f2ec8110bce436e2317db1a95c0dc44d25ce388839d3e08a"
+  },
+  "configuration": {
+    "workers": 1,
+    "wrk_threads": 1,
+    "connections": 32,
+    "rounds": 3,
+    "duration_seconds": 4
+  },
+  "samples": [
+    {
+      "requests_per_sec": 96021.75,
+      "raw": "Running 4s test @ http://127.0.0.1:27730\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   340.76us  750.70us  17.87ms   96.18%\n    Req/Sec    96.60k    17.50k  117.21k    82.93%\n  Latency Distribution\n     50%  189.00us\n     75%  251.00us\n     90%  411.00us\n     99%    3.53ms\n  393790 requests in 4.10s, 121.68MB read\nRequests/sec:  96021.75\nTransfer/sec:     29.67MB\n",
+      "p50_ms": 0.189,
+      "p99_ms": 3.53,
+      "resource_wall_seconds": 4.110603249999258,
+      "server_cpu_seconds": 3.74,
+      "cpu_percent_one_core": 90.98421259703609,
+      "cpu_us_per_request": 9.497447878310775,
+      "peak_sampled_rss_kib": 7168,
+      "start_rss_kib": 6496,
+      "resource_samples": 16,
+      "round": 1,
+      "case": "database-and-network-streams",
+      "background_clients": 16,
+      "background_completions": 80,
+      "requests": 393790,
+      "after": {
+        "live": 0,
+        "waiting": 0,
+        "captures": 0,
+        "results": 0
+      }
+    },
+    {
+      "requests_per_sec": 79558.47,
+      "raw": "Running 4s test @ http://127.0.0.1:19447\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   482.32us    1.10ms  17.45ms   95.78%\n    Req/Sec    79.96k    20.47k  112.17k    70.73%\n  Latency Distribution\n     50%  222.00us\n     75%  370.00us\n     90%  665.00us\n     99%    6.33ms\n  326409 requests in 4.10s, 100.86MB read\nRequests/sec:  79558.47\nTransfer/sec:     24.58MB\n",
+      "p50_ms": 0.222,
+      "p99_ms": 6.33,
+      "resource_wall_seconds": 4.130737249999584,
+      "server_cpu_seconds": 3.38,
+      "cpu_percent_one_core": 81.82558694577683,
+      "cpu_us_per_request": 10.35510663002552,
+      "peak_sampled_rss_kib": 6384,
+      "start_rss_kib": 6384,
+      "resource_samples": 16,
+      "round": 2,
+      "case": "database-and-network-streams",
+      "background_clients": 16,
+      "background_completions": 80,
+      "requests": 326409,
+      "after": {
+        "live": 0,
+        "waiting": 0,
+        "captures": 0,
+        "results": 0
+      }
+    },
+    {
+      "requests_per_sec": 93365.88,
+      "raw": "Running 4s test @ http://127.0.0.1:29478\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   394.58us    0.94ms  20.46ms   95.98%\n    Req/Sec    93.90k    23.88k  116.72k    82.93%\n  Latency Distribution\n     50%  191.00us\n     75%  258.00us\n     90%  487.00us\n     99%    5.22ms\n  382968 requests in 4.10s, 118.33MB read\nRequests/sec:  93365.88\nTransfer/sec:     28.85MB\n",
+      "p50_ms": 0.191,
+      "p99_ms": 5.22,
+      "resource_wall_seconds": 4.11181516599936,
+      "server_cpu_seconds": 3.62,
+      "cpu_percent_one_core": 88.03897679870963,
+      "cpu_us_per_request": 9.452486891855195,
+      "peak_sampled_rss_kib": 6448,
+      "start_rss_kib": 6448,
+      "resource_samples": 16,
+      "round": 0,
+      "case": "database-and-network-streams",
+      "background_clients": 16,
+      "background_completions": 80,
+      "requests": 382968,
+      "after": {
+        "live": 0,
+        "waiting": 0,
+        "captures": 0,
+        "results": 0
+      }
+    },
+    {
+      "requests_per_sec": 89053.7,
+      "raw": "Running 4s test @ http://127.0.0.1:21653\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   279.26us  300.68us   8.06ms   93.76%\n    Req/Sec    89.50k    18.35k  109.98k    73.17%\n  Latency Distribution\n     50%  193.00us\n     75%  279.00us\n     90%  458.00us\n     99%    1.51ms\n  365359 requests in 4.10s, 112.89MB read\nRequests/sec:  89053.70\nTransfer/sec:     27.52MB\n",
+      "p50_ms": 0.193,
+      "p99_ms": 1.51,
+      "resource_wall_seconds": 4.113735584000096,
+      "server_cpu_seconds": 3.3000000000000003,
+      "cpu_percent_one_core": 80.21905960205544,
+      "cpu_us_per_request": 9.032212152978305,
+      "peak_sampled_rss_kib": 3856,
+      "start_rss_kib": 3056,
+      "resource_samples": 16,
+      "round": 0,
+      "case": "idle",
+      "background_clients": 0,
+      "background_completions": 0,
+      "requests": 365359,
+      "after": {
+        "live": 0,
+        "waiting": 0,
+        "captures": 0,
+        "results": 0
+      }
+    },
+    {
+      "requests_per_sec": 102014.35,
+      "raw": "Running 4s test @ http://127.0.0.1:16567\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   455.06us    1.59ms  25.00ms   96.74%\n    Req/Sec   102.67k    24.03k  115.01k    90.00%\n  Latency Distribution\n     50%  178.00us\n     75%  213.00us\n     90%  330.00us\n     99%    8.72ms\n  408411 requests in 4.00s, 126.20MB read\nRequests/sec: 102014.35\nTransfer/sec:     31.52MB\n",
+      "p50_ms": 0.178,
+      "p99_ms": 8.72,
+      "resource_wall_seconds": 4.013974333000078,
+      "server_cpu_seconds": 3.6000000000000005,
+      "cpu_percent_one_core": 89.68667214444618,
+      "cpu_us_per_request": 8.814649948213933,
+      "peak_sampled_rss_kib": 6752,
+      "start_rss_kib": 5296,
+      "resource_samples": 15,
+      "round": 2,
+      "case": "network-waits",
+      "background_clients": 32,
+      "background_completions": 96,
+      "requests": 408411,
+      "after": {
+        "live": 0,
+        "waiting": 0,
+        "captures": 0,
+        "results": 0
+      }
+    },
+    {
+      "requests_per_sec": 105900.16,
+      "raw": "Running 4s test @ http://127.0.0.1:21199\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   192.11us   64.86us   2.23ms   87.55%\n    Req/Sec   106.44k     2.13k  111.27k    73.17%\n  Latency Distribution\n     50%  179.00us\n     75%  193.00us\n     90%  251.00us\n     99%  428.00us\n  434251 requests in 4.10s, 134.18MB read\nRequests/sec: 105900.16\nTransfer/sec:     32.72MB\n",
+      "p50_ms": 0.179,
+      "p99_ms": 0.428,
+      "resource_wall_seconds": 4.109327582998958,
+      "server_cpu_seconds": 3.7300000000000004,
+      "cpu_percent_one_core": 90.76910819745046,
+      "cpu_us_per_request": 8.589502384565609,
+      "peak_sampled_rss_kib": 6496,
+      "start_rss_kib": 3456,
+      "resource_samples": 16,
+      "round": 2,
+      "case": "idle",
+      "background_clients": 0,
+      "background_completions": 0,
+      "requests": 434251,
+      "after": {
+        "live": 0,
+        "waiting": 0,
+        "captures": 0,
+        "results": 0
+      }
+    },
+    {
+      "requests_per_sec": 96673.34,
+      "raw": "Running 4s test @ http://127.0.0.1:15469\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   254.78us  296.60us   7.34ms   95.56%\n    Req/Sec    97.24k    17.27k  113.07k    82.50%\n  Latency Distribution\n     50%  187.00us\n     75%  247.00us\n     90%  370.00us\n     99%    1.19ms\n  387131 requests in 4.00s, 119.62MB read\nRequests/sec:  96673.34\nTransfer/sec:     29.87MB\n",
+      "p50_ms": 0.187,
+      "p99_ms": 1.19,
+      "resource_wall_seconds": 4.016648332999466,
+      "server_cpu_seconds": 3.5600000000000005,
+      "cpu_percent_one_core": 88.63110994189377,
+      "cpu_us_per_request": 9.195853599944206,
+      "peak_sampled_rss_kib": 5808,
+      "start_rss_kib": 5376,
+      "resource_samples": 16,
+      "round": 0,
+      "case": "network-waits",
+      "background_clients": 32,
+      "background_completions": 96,
+      "requests": 387131,
+      "after": {
+        "live": 0,
+        "waiting": 0,
+        "captures": 0,
+        "results": 0
+      }
+    },
+    {
+      "requests_per_sec": 115167.4,
+      "raw": "Running 4s test @ http://127.0.0.1:29664\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   196.82us  101.54us   3.75ms   90.47%\n    Req/Sec   115.65k     7.50k  139.70k    80.49%\n  Latency Distribution\n     50%  183.00us\n     75%  209.00us\n     90%  260.00us\n     99%  490.00us\n  472189 requests in 4.10s, 145.90MB read\nRequests/sec: 115167.40\nTransfer/sec:     35.59MB\n",
+      "p50_ms": 0.183,
+      "p99_ms": 0.49,
+      "resource_wall_seconds": 4.108562499999607,
+      "server_cpu_seconds": 3.6700000000000004,
+      "cpu_percent_one_core": 89.32564613536611,
+      "cpu_us_per_request": 7.772311510856882,
+      "peak_sampled_rss_kib": 4800,
+      "start_rss_kib": 3168,
+      "resource_samples": 16,
+      "round": 1,
+      "case": "idle",
+      "background_clients": 0,
+      "background_completions": 0,
+      "requests": 472189,
+      "after": {
+        "live": 0,
+        "waiting": 0,
+        "captures": 0,
+        "results": 0
+      }
+    },
+    {
+      "requests_per_sec": 104396.05,
+      "raw": "Running 4s test @ http://127.0.0.1:22527\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   241.50us  290.38us   7.96ms   96.20%\n    Req/Sec   105.04k    20.73k  120.62k    85.00%\n  Latency Distribution\n     50%  186.00us\n     75%  226.00us\n     90%  335.00us\n     99%    1.28ms\n  417993 requests in 4.00s, 129.16MB read\nRequests/sec: 104396.05\nTransfer/sec:     32.26MB\n",
+      "p50_ms": 0.186,
+      "p99_ms": 1.28,
+      "resource_wall_seconds": 4.013441500001136,
+      "server_cpu_seconds": 3.4999999999999996,
+      "cpu_percent_one_core": 87.2069519388537,
+      "cpu_us_per_request": 8.373345965123816,
+      "peak_sampled_rss_kib": 6448,
+      "start_rss_kib": 5248,
+      "resource_samples": 15,
+      "round": 1,
+      "case": "network-waits",
+      "background_clients": 32,
+      "background_completions": 96,
+      "requests": 417993,
+      "after": {
+        "live": 0,
+        "waiting": 0,
+        "captures": 0,
+        "results": 0
+      }
+    }
+  ]
+}

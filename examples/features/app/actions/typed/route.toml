@@ -1,0 +1,8 @@
+handler="feature_typed"
+input_type="TypedInput"
+methods=["POST"]
+csrf=false
+[input]
+title={type="text",min=1,max=50}
+count={type="int",min=0,max=100}
+enabled="bool"

@@ -1,0 +1,20 @@
+import "posts.neo"
+fn journal_index(slug:Arr u8 n)->i64=loop(i=0,found= -1) while i<3 && found<0 next(i+1,if str_equal(journal_post(i).slug,slug) then i else found) yield found
+fn journal_matches(post:JournalPost,query:Arr u8 _,category:Arr u8 _)->bool
+  = (str_equal(category,"all") || str_equal(http_lower(post.category),category)) && (len(query)==0 || str_find(http_lower(concat(post.title," ",post.excerpt)),http_lower(query)).present)
+fn journal_card(index:i64)->WebHtml
+  = let p=journal_post(index) in web_html(concat("<article class=\"story-card\"><a href=\"/journal/",p.slug,"\"><img src=\"/cover-",int_text(index),".svg\" alt=\"\" width=\"800\" height=\"520\" loading=\"lazy\"><div class=\"story-meta\"><span>",p.category,"</span><span>",p.minutes,"</span></div><h3>",html_escape(p.title),"</h3><p>",html_escape(p.excerpt),"</p><div class=\"story-author\"><span class=\"avatar\">",p.initials,"</span><span>",p.author,"<small>",p.date,"</small></span><b aria-hidden=\"true\">↗</b></div></a></article>"))
+type JournalHome={title:Arr u8 _,server:bool,query:Arr u8 _,category:Arr u8 _,cards:Arr WebHtml _,featured:bool,empty:bool}
+fn journal_home(request:WebRequest)->JournalHome
+  = let q=web_query_get(request.query,"q").value in let query=if len(q)<=120 then q else "" in
+    let raw=web_query_get(request.query,"category").value in let category=if str_equal(raw,"engineering") || str_equal(raw,"design") || str_equal(raw,"notes") then raw else "all" in
+    let count=sum(i in 0..3) if journal_matches(journal_post(i),query,category) then 1 else 0 in
+    JournalHome {title="Ideas worth slowing down for",server=request.server,query=query,category=category,featured=len(query)==0 && str_equal(category,"all"),empty=count==0,
+      cards=arr(i in 0..3) if journal_matches(journal_post(i),query,category) then journal_card(i) else web_html("")}
+type JournalArticle={title:Arr u8 _,category:Arr u8 _,minutes:Arr u8 _,date:Arr u8 _,author:Arr u8 _,initials:Arr u8 _,excerpt:Arr u8 _,cover:WebURL,body:WebHtml,related:Arr WebHtml _}
+fn journal_article(request:WebRequest)->JournalArticle
+  = let index=journal_index(web_param(request,"slug").value) in let p=journal_post(index) in
+    JournalArticle {title=p.title,category=p.category,minutes=p.minutes,date=p.date,author=p.author,initials=p.initials,excerpt=p.excerpt,
+      cover=web_url(concat("/cover-",int_text(index),".svg")),body=journal_body(index),related=arr(i in 0..3) if i!=index then journal_card(i) else web_html("")}
+type JournalAbout={title:Arr u8 _}
+fn journal_about(request:WebRequest)->JournalAbout=JournalAbout {title="A place for good ideas"}

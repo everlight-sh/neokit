@@ -1,0 +1,36 @@
+Start neokit-before 1000 round 1
+neokit-before 1000: p50 9.715 ms / p99 60.261 ms, RSS 1.8 MiB
+Start neokit-before 1 round 0
+neokit-before 1: p50 0.380 ms / p99 4.014 ms, RSS 2.7 MiB
+Start neokit-before 100 round 2
+neokit-before 100: p50 1.165 ms / p99 4.027 ms, RSS 4.7 MiB
+Start neokit-before 1 round 2
+neokit-before 1: p50 0.384 ms / p99 0.877 ms, RSS 1.5 MiB
+Start neokit 100 round 1
+neokit 100: p50 1.418 ms / p99 7.822 ms, RSS 1.6 MiB
+Start neokit-before 1 round 1
+neokit-before 1: p50 1.876 ms / p99 92.082 ms, RSS 1.5 MiB
+Start neokit 1000 round 1
+neokit 1000: p50 9.655 ms / p99 40.787 ms, RSS 1.8 MiB
+Start neokit-before 1000 round 0
+neokit-before 1000: p50 8.659 ms / p99 38.140 ms, RSS 2.2 MiB
+Start neokit 1000 round 2
+neokit 1000: p50 7.974 ms / p99 28.554 ms, RSS 1.8 MiB
+Start neokit 1 round 1
+neokit 1: p50 0.365 ms / p99 10.558 ms, RSS 2.8 MiB
+Start neokit 100 round 2
+neokit 100: p50 1.405 ms / p99 16.293 ms, RSS 1.5 MiB
+Start neokit 100 round 0
+neokit 100: p50 1.329 ms / p99 2.539 ms, RSS 4.7 MiB
+Start neokit 1 round 2
+neokit 1: p50 0.341 ms / p99 0.457 ms, RSS 1.5 MiB
+Start neokit-before 100 round 1
+neokit-before 100: p50 1.260 ms / p99 2.382 ms, RSS 1.5 MiB
+Start neokit-before 100 round 0
+neokit-before 100: p50 1.223 ms / p99 4.200 ms, RSS 1.7 MiB
+Start neokit-before 1000 round 2
+neokit-before 1000: p50 7.820 ms / p99 15.689 ms, RSS 22.5 MiB
+Start neokit 1 round 0
+neokit 1: p50 0.349 ms / p99 6.768 ms, RSS 2.8 MiB
+Start neokit 1000 round 0
+neokit 1000: p50 7.710 ms / p99 15.114 ms, RSS 22.7 MiB

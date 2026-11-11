@@ -1,0 +1,18 @@
+import "pkg:oauth2"
+import "std:https_client"
+
+; Fixed provider URLs are configured by the application, never by a request.
+; The native driver validates TLS names/chains using system trust anchors.
+effect(fs,net,time,process) fn neokit_oauth_http(url:HTTPURL,method:Arr u8 n,headers:Arr HttpHeader h,body:Arr u8 m)->HttpResult
+  = if !url.ok || !url.secure then net_error(22,"OAuth endpoints require HTTPS") else
+    using arena=new_arena(8) in let client=https_client(url.host,url.port,tls_system_roots()) in
+    let result=http_send_headers(arena,client,method,url.target,body,10000,1048576,headers) in let closed=http_client_close(result.client) in result.response
+fn neokit_oauth_transport()->OAuthHTTP = OAuthHTTP {request=function(neokit_oauth_http)}
+effect fn neokit_oauth_start(provider:OAuthProvider,key:Arr u8 n,now:i64)->WebResponse
+  = let start=oauth_begin(provider,key,now) in if !start.ok then web_reply(503,"Identity provider is not configured","text/plain") else
+    web_set_cookie(web_with_header(web_reply(303,"","text/plain"),"Location",start.url),"neokit_oauth",start.cookie,600,provider.redirect.secure)
+effect fn neokit_oauth_finish(request:WebRequest,provider:OAuthProvider,key:Arr u8 n,secret:Arr u8 m)->OAuthIdentity
+  = let callback=oauth_callback(provider,request.query,web_cookie(request,"neokit_oauth").value,key,request.stamp) in
+    oauth_exchange(neokit_oauth_transport(),provider,callback,secret)
+fn neokit_oauth_clear(response:WebResponse,provider:OAuthProvider)->WebResponse
+  = web_set_cookie(response,"neokit_oauth","",0,provider.redirect.secure)

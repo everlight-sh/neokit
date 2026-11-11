@@ -1,0 +1,5 @@
+[site]
+name="Forma Studio"
+description="Spaces for a slower, better everyday. A native NeoKit SSR example."
+[server]
+timing=true

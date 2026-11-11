@@ -1,0 +1,29 @@
+import "../../../../src/stream.neo"
+import "../../../../src/database.neo"
+import "std:http_client"
+import "std:socket_transport"
+private effect(fs,net,env,time,process) fn feature_network(capture:Arr u8 n)->Arr u8 _
+  = let port=int_parse(env_get("NEOKIT_ASYNC_HTTP_PORT").value) in
+    let result=http_request("127.0.0.1",port.value,"GET",capture,"",10000,1048576) in
+    if !result.ok then let failed=async_fail(result.error.code) in "" else
+    concat("<p>",html_escape(result.body),"</p>",if str_equal(capture,"/fast") then "<div data-web-widget=\"stream-counter\" data-web-key=\"stream-demo\"><output aria-label=\"Streamed counter\">0</output><button type=\"button\">Add one</button></div>" else "")
+private effect(fs,net,env,time,process) fn feature_database(capture:Arr u8 n)->Arr u8 _
+  = let port=int_parse(env_get("NEOKIT_ASYNC_PG_PORT").value) in let deadline=deadline_after(10000) in
+    using arena=new_arena(4) in using cancel=new_cancellation() in
+    let cancellation=adopt(cancel,arena) in using socket=tcp_connect_ipv4("127.0.0.1",port.value,deadline.value) in
+    let status=socket_status(socket) in if !status.ok then let failed=async_fail(status.error.code) in "" else
+    let connection=pg_connect(http_plain_transport(adopt(socket,arena),cancellation),"test","test","pencil",false,deadline.value) in
+    let delay=env_get("NEOKIT_ASYNC_PG_DELAY") in
+    let result=pg_query(connection,"select $1::text as value from pg_sleep($2::float8)",arr(i in 0..2) if i==0 then pg_text(capture) else pg_text(if delay.present then delay.value else "0.6"),deadline.value) in
+    if !result.ok then let failed=async_fail(result.error.code) in "" else
+    let first=json_array_get(result.rows,0) in concat("<p>",html_escape(json_text(json_get(first.value,"value").value).value),"</p>")
+effect fn feature_async(request:WebRequest)->Arr u8 _
+  = let port=int_parse(env_get("NEOKIT_ASYNC_HTTP_PORT").value) in
+    let initial=http_request("127.0.0.1",port.value,"GET","/auth","",5000,1048576) in
+    if !initial.ok || initial.status!=200 then web_encode_close(web_reply(503,"Prelude unavailable","text/plain; charset=utf-8"),false) else
+    let database=web_defer("database",web_html("<p>Loading database…</p>"),"Database <row> café",function(feature_database)) in
+    let network=web_defer("network",web_html("<p>Loading network…</p>"),"/fast",function(feature_network)) in
+    let slow=web_defer("slow",web_html("<p>Loading slower network…</p>"),"/slow",function(feature_network)) in
+    let failed=web_defer_timeout(web_defer("timeout",web_html("<p>Waiting with a short deadline…</p>"),"/timeout",function(feature_network)),250) in
+    let shell=web_html(concat("<h1>Async NeoKit</h1><p>Shell ready</p>",web_boundary(database).bytes,web_boundary(network).bytes,web_boundary(slow).bytes,web_boundary(failed).bytes)) in
+    let deadline=deadline_after(10000) in web_stream_page("Async NeoKit",shell,arr(i in 0..4) if i==0 then database else if i==1 then network else if i==2 then slow else failed,deadline.value)

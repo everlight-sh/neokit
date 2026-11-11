@@ -1,0 +1,3 @@
+handler="fixture_feed"
+realtime=true
+methods=["GET"]

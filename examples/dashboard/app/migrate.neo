@@ -1,0 +1,5 @@
+import "../model.neo"
+fn dashboard_migration(context:i64,previous:Json)->JsonResult = dashboard_initial(previous)
+effect fn migrate()->IntResult
+  = let result=document_transaction(dashboard_database(),0,function(dashboard_migration)) in
+    if result.ok then int_ok(1) else int_error(result.error.code,result.error.message,0)

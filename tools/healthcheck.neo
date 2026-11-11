@@ -1,0 +1,4 @@
+import "std:http_client"
+import "std:process"
+effect fn main(port:i64)->unit
+  = let result=http_request("127.0.0.1",port,"GET","/healthz","",2000,1024) in process_exit(if result.ok && result.status==200 then 0 else 1)

@@ -1,0 +1,41 @@
+{
+  "subscribers": 1000,
+  "idle": {
+    "resource_wall_seconds": 2.00280125000063,
+    "server_cpu_seconds": 0,
+    "cpu_percent_one_core": 0.0,
+    "cpu_us_per_request": 0.0,
+    "peak_sampled_rss_kib": 23024,
+    "start_rss_kib": 23024,
+    "resource_samples": 9,
+    "client_cpu_seconds": 0.03256499999999998,
+    "client_cpu_percent_one_core": 1.6259726220956643
+  },
+  "fixed_rate": {
+    "publishes": 40,
+    "deliveries": 40000,
+    "publishes_per_sec": 10.054940299372277,
+    "deliveries_per_sec": 10054.940299372276,
+    "delivery_p50_ms": 9.616291499999999,
+    "delivery_p99_ms": 22.27525,
+    "all_subscribers_p50_ms": 15.9266045,
+    "all_subscribers_p99_ms": 26.696958,
+    "resource_wall_seconds": 3.978143958000146,
+    "server_cpu_seconds": 0.26,
+    "cpu_percent_one_core": 6.53571119459198,
+    "cpu_us_per_request": 6500.0,
+    "peak_sampled_rss_kib": 23200,
+    "start_rss_kib": 23024,
+    "resource_samples": 15,
+    "client_cpu_seconds": 0.673353,
+    "client_cpu_percent_one_core": 16.926310538508048
+  },
+  "closed_loop": {
+    "publishes": 622,
+    "elapsed_seconds": 7.003618375001679,
+    "publish_and_deliver_to_all_per_sec": 88.81123537800572
+  },
+  "replay": "PASS exact retained events",
+  "client_cpu_seconds_total": 7.798655,
+  "wall_seconds_total": 17.10214462500153
+}

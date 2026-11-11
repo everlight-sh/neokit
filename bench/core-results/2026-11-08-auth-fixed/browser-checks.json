@@ -1,0 +1,28 @@
+{
+  "boundaries": [
+    {
+      "id": "database",
+      "ms": 4125.0999999996275,
+      "state": "ready"
+    },
+    {
+      "id": "network",
+      "ms": 1310.7999999988824,
+      "state": "ready"
+    },
+    {
+      "id": "slow",
+      "ms": 6109.5,
+      "state": "ready"
+    },
+    {
+      "id": "timeout",
+      "ms": 354.69999999925494,
+      "state": "error"
+    }
+  ],
+  "streamedCounter": "2",
+  "staticCounter": "2",
+  "staticReset": "0",
+  "logs": []
+}

@@ -9,7 +9,7 @@ HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[1]
 BUILD=ROOT/'build/frameworks'
 ENGINES=('Axon','Astro','Next')
-ENV={**os.environ,'NODE_ENV':'production','NEXT_TELEMETRY_DISABLED':'1','ASTRO_TELEMETRY_DISABLED':'1','AXON_THREADS':'1','UV_THREADPOOL_SIZE':'4'}
+ENV={**os.environ,'NODE_ENV':'production','NEXT_TELEMETRY_DISABLED':'1','ASTRO_TELEMETRY_DISABLED':'1','NEO_THREADS':'1','UV_THREADPOOL_SIZE':'4'}
 
 
 def framework_cli(package,name):

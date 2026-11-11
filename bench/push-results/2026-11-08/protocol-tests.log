@@ -1,0 +1,40 @@
+{
+  "idle_channel_reads": 0,
+  "idle_subscriber_callbacks": 0,
+  "arbitrary_publish_delivery_ms": {
+    "p50": 1.5402079989144113,
+    "p95": 4.271999998309184,
+    "max": 4.463541001314297,
+    "samples": [
+      2.0630409999284893,
+      2.0781250022992026,
+      0.7590829991386272,
+      1.1188329990545753,
+      1.300457999604987,
+      1.1415829976613168,
+      1.7108749998442363,
+      1.4497920019493904,
+      1.322833002632251,
+      2.303582998138154,
+      1.9717089999176096,
+      1.7032499999913853,
+      1.8863750010496005,
+      1.7853339995781425,
+      4.271999998309184,
+      1.3271669995447155,
+      1.5402079989144113,
+      1.3662080018548295,
+      4.463541001314297,
+      1.2240839969308581,
+      1.0505829995963722,
+      1.7367920008837245,
+      1.4448330002778675,
+      1.2167089989816304
+    ]
+  },
+  "replay_16_events_seconds": 0.00015387500025099143,
+  "heartbeat_seconds": 15.002122416997736,
+  "shutdown_seconds": 0.3647135409992188,
+  "single_worker": "PASS auth/HEAD/methods, static-over-dynamic stream precedence, async loader/SSE coexistence, matching subscribers, replay, reset, UTF-8, heartbeat, bounds, slow readers, cleanup, shutdown",
+  "two_workers": "PASS matching events across forked workers after connection churn/slot compaction"
+}

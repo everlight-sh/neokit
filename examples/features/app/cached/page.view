@@ -1,0 +1,2 @@
+@props(title:text,stamp:int)
+<h1>{{ title }}</h1><output id="cached-stamp">{{ stamp }}</output>

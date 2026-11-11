@@ -1,0 +1,64 @@
+{
+  "passed": true,
+  "rows": 10000,
+  "renderer": "windowed",
+  "mountedRows": 8,
+  "checks": [
+    {
+      "name": "Generated-array updates preserve mounted row nodes",
+      "passed": true
+    },
+    {
+      "name": "Updates preserve focus, draft and caret",
+      "passed": true
+    },
+    {
+      "name": "Reordering preserves focused node and selection",
+      "passed": true
+    },
+    {
+      "name": "Filtering preserves the matching focused row",
+      "passed": true
+    },
+    {
+      "name": "Add/remove preserves surviving mounted row nodes",
+      "passed": true
+    },
+    {
+      "name": "The last logical record can be rendered",
+      "passed": true
+    },
+    {
+      "name": "Scrolling pins the focused editor",
+      "passed": true
+    },
+    {
+      "name": "DOM row count stays bounded",
+      "passed": true
+    },
+    {
+      "name": "Negative control detects visible-row redraw and focus loss",
+      "passed": true
+    },
+    {
+      "name": "Rendered IDs match stable row keys",
+      "passed": true
+    },
+    {
+      "name": "Empty filters render the empty state without stale rows",
+      "passed": true
+    },
+    {
+      "name": "No unexplained empty rendered frames",
+      "passed": true
+    }
+  ],
+  "keyedFocusLosses": 0,
+  "expectedRedrawFocusLosses": 1,
+  "blankFrames": 0,
+  "serverRefreshes": 0,
+  "p95UpdateMs": 2.199999988079071,
+  "p95SteadyPatchMs": 1.5999999642372131,
+  "p95AllOperationsMs": 2.100000023841858,
+  "worstFrameMs": 8.900000000000034
+}

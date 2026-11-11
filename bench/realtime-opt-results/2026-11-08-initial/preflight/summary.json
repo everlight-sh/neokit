@@ -1,0 +1,26 @@
+[
+  {
+    "framework": "neokit-before",
+    "subscribers": 1000,
+    "trials": 1,
+    "p50_ms": 8.9210835,
+    "p99_ms": 17.598333,
+    "all_p99_ms": 18.57825,
+    "rss_mib": 22.578125,
+    "cpu_percent": 6.582328333384968,
+    "idle_cpu_percent": 0.0,
+    "serial_publishes_per_sec": 87.71052605617275
+  },
+  {
+    "framework": "neokit",
+    "subscribers": 1000,
+    "trials": 1,
+    "p50_ms": 8.560271,
+    "p99_ms": 17.806375,
+    "all_p99_ms": 19.108583,
+    "rss_mib": 22.625,
+    "cpu_percent": 3.543236863363324,
+    "idle_cpu_percent": 0.0,
+    "serial_publishes_per_sec": 81.39554649747505
+  }
+]

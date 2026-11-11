@@ -1,0 +1,4 @@
+import "../../../../src/lib.neo"
+import "std:async"
+effect fn feature_async_stats(request:WebRequest)->WebResponse
+  = let stats=async_stats() in web_json(concat("{\"live\":",int_text(stats.live),",\"waiting\":",int_text(stats.waiting),",\"captures\":",int_text(stats.capture_bytes),",\"results\":",int_text(stats.result_bytes),"}"))

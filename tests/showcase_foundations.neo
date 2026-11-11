@@ -1,0 +1,14 @@
+import "std:http_observability"
+import "../src/charts.neo"
+fn main()->i64
+  = let parts=arr(i in 0..5) if i==0 then "" else if i==1 then "café" else if i==2 then "\0" else if i==3 then "東京" else "end" in
+    let result=str_concat_parts(parts) in check str_equal(result,"café\0東京end") && str_equal(parts[1],"café") in
+    let empty=str_concat_parts(arr(i in 0..0) "") in check len(empty)==0 in
+    let wire=web_encode(web_reply(200,result,"text/plain"),false) in let timed=web_server_timing(wire,1000,1235567) in
+    check str_equal(web_header(timed,"server-timing"),"render;dur=1.234") && str_equal(http_body(timed),result) in
+    check str_equal(web_server_timing("",0,2000),"") in
+    check str_equal(web_header(web_server_timing(wire,2000,1000),"server-timing"),"render;dur=0.000") in
+    let chart=web_line_chart("<script>",arr(i in 0..2) if i==0 then "A&B" else "quote\"",arr(i in 0..2) i+1,arr(i in 0..2) i) in
+    check str_find(chart.bytes,"&lt;script&gt;").present && str_find(chart.bytes,"A&amp;B").present && !str_find(chart.bytes,"<script>").present in
+    let invalid=web_percentage_bars("invalid",arr(i in 0..1) "bad",arr(i in 0..1) 101) in
+    check str_find(invalid.bytes,"No chart data").present in 42

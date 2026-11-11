@@ -1,0 +1,4 @@
+import "../../../../src/lib.neo"
+
+type AboutProps = { title: Arr u8 _ }
+fn about_load(request: WebRequest) -> AboutProps = AboutProps { title="Under the hood" }

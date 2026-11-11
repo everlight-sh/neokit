@@ -1,0 +1,3 @@
+import "../../../src/lib.neo"
+type LandingProps={title:Arr u8 _}
+fn landing_load(request:WebRequest) -> LandingProps = LandingProps {title="Native tasks"}

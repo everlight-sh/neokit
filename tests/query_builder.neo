@@ -1,0 +1,15 @@
+import "../src/database.neo"
+effect fn main()->unit
+  = let dangerous="x'); DROP TABLE tasks; -- café" in
+    let where=arr(i in 0..2) if i==0 then pg_field("owner",pg_text(dangerous)) else pg_field("deleted_at",pg_null()) in
+    let selected=pg_select("tasks",arr(i in 0..2) if i==0 then "id" else "title",where,100) in
+    check selected.ok && str_equal(selected.sql,"SELECT \"id\",\"title\" FROM \"tasks\" WHERE \"owner\" IS NOT DISTINCT FROM $1 AND \"deleted_at\" IS NOT DISTINCT FROM $2 LIMIT 100") in
+    check len(selected.params)==2 && str_equal(selected.params[0].value,dangerous) && selected.params[1].is_null && !str_find(selected.sql,"DROP").present in
+    let fields=arr(i in 0..1) pg_field("title",pg_text(dangerous)) in
+    let inserted=pg_insert("tasks",fields) in check inserted.ok && str_equal(inserted.sql,"INSERT INTO \"tasks\" (\"title\") VALUES ($1) RETURNING *") in
+    let updated=pg_update("tasks",fields,where) in check updated.ok && str_find(updated.sql,"$3").present && len(updated.params)==3 && str_equal(updated.params[1].value,dangerous) && updated.params[2].is_null in
+    let deleted=pg_delete("tasks",where) in check deleted.ok && str_starts(deleted.sql,"DELETE FROM \"tasks\" WHERE ") in
+    let empty=arr(i in 0..0) pg_field("",pg_null()) in
+    check !pg_update("tasks",fields,empty).ok && !pg_delete("tasks",empty).ok && !pg_insert("tasks; DROP TABLE users",fields).ok in
+    check !pg_select("tasks",arr(i in 0..1) "title; DROP",empty,10).ok && !pg_select("tasks",arr(i in 0..1) "title",empty,0).ok in
+    let printed=print_out("NeoKit consumes reusable parameterized SQL builders OK\n") in noop()

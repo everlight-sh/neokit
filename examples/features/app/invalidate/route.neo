@@ -1,0 +1,4 @@
+import "../../../../src/cache.neo"
+effect fn feature_invalidate(request:WebRequest) -> WebResponse
+  = let invalidated=web_cache_invalidate_tag(neokit_cache(),"features",request.stamp) in
+    web_status(web_json("{\"invalidated\":true}"),if invalidated.ok then 200 else 503)

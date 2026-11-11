@@ -1,0 +1,2 @@
+handler="fixture_stats"
+methods=["GET"]

@@ -1,0 +1,2 @@
+@props(title:text,items:text[],numbers:int[],link:url)
+<h1>{{ title }}</h1><a href="{{ link }}">Item</a>{% component Card title=title %}<ul>{% for item in items %}<li title="{{ item }}">{{ item }}</li>{% endfor %}</ul>{% endcomponent %}<ol>{% for number in numbers %}<li>{{ number }}</li>{% endfor %}</ol>

@@ -1,0 +1,12 @@
+Start neokit-before 1000 round 1
+neokit-before 1000: p50 8.881 ms / p99 18.371 ms, RSS 22.7 MiB
+Start neokit 1000 round 2
+neokit 1000: p50 7.297 ms / p99 13.292 ms, RSS 22.7 MiB
+Start neokit-before 1000 round 2
+neokit-before 1000: p50 7.366 ms / p99 14.290 ms, RSS 22.7 MiB
+Start neokit 1000 round 1
+neokit 1000: p50 7.447 ms / p99 14.258 ms, RSS 22.7 MiB
+Start neokit-before 1000 round 0
+neokit-before 1000: p50 7.294 ms / p99 14.519 ms, RSS 22.6 MiB
+Start neokit 1000 round 0
+neokit 1000: p50 9.914 ms / p99 19.970 ms, RSS 22.7 MiB

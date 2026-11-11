@@ -1,0 +1,2 @@
+@props(title:text,org:text,id:text)
+<h1>{{ org }} / {{ id }}</h1>

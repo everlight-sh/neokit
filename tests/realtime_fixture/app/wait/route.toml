@@ -1,0 +1,4 @@
+handler="fixture_wait"
+methods=["GET"]
+async=true
+async_timeout_ms=2000

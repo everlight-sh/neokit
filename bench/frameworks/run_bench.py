@@ -32,15 +32,15 @@ def command(args,**kwargs):return subprocess.check_output(list(map(str,args)),te
 
 def sources():
     paths={}
-    suffixes={'.py','.ax','.js','.jsx','.mjs','.astro','.view','.toml','.json','.css','.lock','.lua','.c','.html'}
-    ignored={'.git','node_modules','__pycache__','.axon-build','.next','.astro','dist-ssr','dist-static','out','build','results','build-speed-results','tailwind-results','tailwind-framework-results'}
-    for prefix,base,folders in [('web',ROOT,('src','compiler','client','bench/frameworks')),('axon',Path(os.environ['AXON_HOME']),('axonc','runtime','stdlib'))]:
+    suffixes={'.py','.neo','.js','.jsx','.mjs','.astro','.view','.toml','.json','.css','.lock','.lua','.c','.html'}
+    ignored={'.git','node_modules','__pycache__','.neo-build','.next','.astro','dist-ssr','dist-static','out','build','results','build-speed-results','tailwind-results','tailwind-framework-results'}
+    for prefix,base,folders in [('web',ROOT,('src','compiler','client','bench/frameworks')),('axon',Path(os.environ['NEO_HOME']),('neoc','runtime','stdlib'))]:
         for folder in folders:
             for path in (base/folder).rglob('*'):
                 rel=path.relative_to(base)
                 if path.is_file() and not any(p in ignored for p in rel.parts) and (path.suffix in suffixes or path.name=='Dockerfile'):
                     paths[prefix+'/'+rel.as_posix()]=path
-    for path in [ROOT/'web',ROOT/'axon.toml',ROOT/'package.json',ROOT/'bun.lock',HERE/'bun.lock']:
+    for path in [ROOT/'web',ROOT/'neo.toml',ROOT/'package.json',ROOT/'bun.lock',HERE/'bun.lock']:
         paths['web/'+path.relative_to(ROOT).as_posix()]=path
     return paths
 
@@ -189,7 +189,7 @@ def main():
     parser.add_argument('--reuse-deployments',action='store_true',help='Use already packaged deployment copies; requires --reuse-builds')
     parser.add_argument('--tools-image',default='unknown')
     args=parser.parse_args()
-    assert platform.system()=='Linux' and platform.machine() in ('aarch64','x86_64') and not os.environ.get('AXON_RUNNER')
+    assert platform.system()=='Linux' and platform.machine() in ('aarch64','x86_64') and not os.environ.get('NEO_RUNNER')
     assert args.rounds>=3 or args.self_test
     assert args.build_rounds>=1 and args.duration>=1 and args.warmup>=.5
     assert args.connections and all(c>0 for c in args.connections)
@@ -208,7 +208,7 @@ def main():
               'versions':versions,'node':command(['node','--version']),'bun':command(['bun','--version']),'clang':command(['clang','--version']),
               'node_bytes':Path(shutil.which('node')).stat().st_size,'node_sha256':sha(shutil.which('node')),'tools_image':args.tools_image,
               'cpuinfo':Path('/proc/cpuinfo').read_text(),'meminfo':Path('/proc/meminfo').read_text(),
-              'load_clock':'CLOCK_MONOTONIC via benchmark-only wrk LD_PRELOAD; never applied to servers','wrk_package':command(['dpkg-query','-W','-f=${Version}','wrk']),'settings':{'server_cpu':0,'load_cpu':1,'driver_cpus':[2,3],'build_cpus':[0,1,2,3],'rounds':args.rounds,'build_rounds':args.build_rounds,'duration_s':args.duration,'warmup_s':args.warmup,'connections':args.connections,'seed':261026391,'NODE_ENV':'production','AXON_THREADS':1,'compression':'Accept-Encoding identity; wrk default sends no Accept-Encoding','streaming':'framework defaults retained; latency covers complete responses'},'sources':hashes}
+              'load_clock':'CLOCK_MONOTONIC via benchmark-only wrk LD_PRELOAD; never applied to servers','wrk_package':command(['dpkg-query','-W','-f=${Version}','wrk']),'settings':{'server_cpu':0,'load_cpu':1,'driver_cpus':[2,3],'build_cpus':[0,1,2,3],'rounds':args.rounds,'build_rounds':args.build_rounds,'duration_s':args.duration,'warmup_s':args.warmup,'connections':args.connections,'seed':261026391,'NODE_ENV':'production','NEO_THREADS':1,'compression':'Accept-Encoding identity; wrk default sends no Accept-Encoding','streaming':'framework defaults retained; latency covers complete responses'},'sources':hashes}
     (out/'metadata.json').write_text(json.dumps(metadata,indent=2)+'\n')
     builds=[]
     if args.reuse_builds:

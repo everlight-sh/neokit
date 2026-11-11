@@ -1,0 +1,7 @@
+Bundled 6 modules in 19ms
+
+  client-ex1kjpcc.js  15.24 KB  (entry point)
+
+neoc: /Users/marcoschwartz/Documents/code/neokit/build/prepared-parity-final/fixture/server  graph f85bd97291f9eb3b  obligations 662/809 proven, 147 runtime checks, 17 parallel regions, 0 vectorised sums, 0 calls folded, 1 inlined, build miss
+Built /Users/marcoschwartz/Documents/code/neokit/build/prepared-parity-final/fixture/server
+Routes: 1; browser JS: 15269 bytes across split modules

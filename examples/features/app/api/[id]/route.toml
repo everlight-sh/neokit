@@ -1,0 +1,2 @@
+handler="feature_mutation"
+methods=["POST","PATCH","DELETE","OPTIONS"]

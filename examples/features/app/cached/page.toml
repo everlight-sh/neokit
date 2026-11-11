@@ -1,0 +1,4 @@
+loader="feature_cached"
+cache_ttl=1
+stale_ttl=10
+cache_tag="features"

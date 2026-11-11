@@ -1,0 +1,3 @@
+handler="feature_async_api"
+async=true
+async_timeout_ms=2000

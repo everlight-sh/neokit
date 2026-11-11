@@ -1,0 +1,2 @@
+import "../../../../../src/realtime.neo"
+fn fixture_snapshot(request:WebRequest)->WebResponse=web_json("{\"snapshot\":true}")

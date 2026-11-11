@@ -1,0 +1,3 @@
+import "../../../src/lib.neo"
+import "../../../src/realtime.neo"
+fn fixture_guard(request:WebRequest)->WebResponse=if (str_equal(request.path,"/feed") || str_starts(request.path,"/feed/")) && !str_equal(web_request_header(request,"cookie"),"session=allowed") then web_reply(403,"Forbidden","text/plain") else web_continue()

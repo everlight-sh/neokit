@@ -1,0 +1,844 @@
+{
+  "machine": {
+    "cpu": "Apple M1 Pro",
+    "memory_bytes": 17179869184,
+    "logical_cpus": 10
+  },
+  "configuration": {
+    "rounds": 3,
+    "duration": 4,
+    "rate": 10,
+    "burst_seconds": 3.0,
+    "clients": [
+      1,
+      100,
+      1000
+    ],
+    "frameworks": [
+      "neokit-before",
+      "neokit"
+    ],
+    "neokit_binary": "build/prepared-parity-final/fixture/server",
+    "before_binary": "build/realtime-opt-final/fixture/server"
+  },
+  "versions": {
+    "next": "16.1.1",
+    "astro": "7.4.7",
+    "astro_node": "11.1.11",
+    "node": "v25.7.0"
+  },
+  "identities": {
+    "neokit": {
+      "path": "build/prepared-parity-final/fixture/server",
+      "sha256": "0f5c166bdee3620903eb633d7b6c5213a04489dff8483ca4928a408e85a891ea",
+      "bytes": 583192
+    },
+    "hub": {
+      "path": "/Users/marcoschwartz/Documents/code/neokit/build/realtime-parity/hub.mjs",
+      "sha256": "fb3f105dc1ed67fe7c40f3c525823ab4fa0548fd2fc03b5919d1bf89e58effd0",
+      "bytes": 3836
+    },
+    "harness": {
+      "path": "/Users/marcoschwartz/Documents/code/neokit/bench/realtime_parity.py",
+      "sha256": "e3ffea1bbcdb394e22011f1bb8c2bedda543e78446591d6e7c72fde2785d22c9",
+      "bytes": 21782
+    },
+    "next-build": {
+      "path": "/Users/marcoschwartz/Documents/code/neokit/build/realtime-parity/next/.next/BUILD_ID",
+      "sha256": "bb49f038cc5b4e9c2a8158847eebc2904780a508918cd66e3683653aba8fe366",
+      "bytes": 21
+    },
+    "astro-entry": {
+      "path": "/Users/marcoschwartz/Documents/code/neokit/build/realtime-parity/astro/dist/server/entry.mjs",
+      "sha256": "18e775187cc0f5d516297bfac1abba5660c180872cd7dd08da5230465fccb9db",
+      "bytes": 248297
+    },
+    "neokit-before": {
+      "path": "build/realtime-opt-final/fixture/server",
+      "sha256": "f2f78a15fcff4085403ec55683dddd40edd478f5d7466cf731b1c88c7e3da74f",
+      "bytes": 561192
+    },
+    "next-server": {
+      "sha256": "89b3f7542e4f2d4bb25ac150520689c475beab7f40475f2ad96a83884a6f52f5"
+    },
+    "astro-dist": {
+      "sha256": "dd0b959cc5a1c8e36d90d96be877dc4809f68c9e65239022b51e73c0fd74e64d"
+    }
+  },
+  "samples": [
+    {
+      "subscribers": 1000,
+      "idle": {
+        "resource_wall_seconds": 2.0018092500104103,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 23088,
+        "start_rss_kib": 23088,
+        "resource_samples": 9
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 40000,
+        "publishes_per_sec": 10.068110559027332,
+        "deliveries_per_sec": 10068.110559027331,
+        "delivery_p50_ms": 9.714792,
+        "delivery_p99_ms": 60.260625,
+        "all_subscribers_p50_ms": 13.7591875,
+        "all_subscribers_p99_ms": 90.670958,
+        "resource_wall_seconds": 3.9729400829965016,
+        "server_cpu_seconds": 0.12000000000000001,
+        "cpu_percent_one_core": 3.0204331677081995,
+        "cpu_us_per_request": 3000.0000000000005,
+        "peak_sampled_rss_kib": 1824,
+        "start_rss_kib": 1600,
+        "resource_samples": 15
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 39960,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 227,
+        "elapsed_seconds": 3.0064619580080034,
+        "publish_and_deliver_to_all_per_sec": 75.50403203851073
+      },
+      "replay": "PASS exact retained events",
+      "round": 1,
+      "framework": "neokit-before",
+      "startup_socket_ms": 23.459875
+    },
+    {
+      "subscribers": 1,
+      "idle": {
+        "resource_wall_seconds": 2.00134554199758,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 2800,
+        "start_rss_kib": 2800,
+        "resource_samples": 9
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 40,
+        "publishes_per_sec": 10.067186621637081,
+        "deliveries_per_sec": 10.067186621637081,
+        "delivery_p50_ms": 0.38029199999999996,
+        "delivery_p99_ms": 4.013541,
+        "all_subscribers_p50_ms": 0.38029199999999996,
+        "all_subscribers_p99_ms": 4.013541,
+        "resource_wall_seconds": 3.9733047079935204,
+        "server_cpu_seconds": 0.01,
+        "cpu_percent_one_core": 0.2516796655409271,
+        "cpu_us_per_request": 250.0,
+        "peak_sampled_rss_kib": 2800,
+        "start_rss_kib": 2800,
+        "resource_samples": 16
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 0,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 23453,
+        "elapsed_seconds": 3.0000740830000723,
+        "publish_and_deliver_to_all_per_sec": 7817.473619367097
+      },
+      "replay": "PASS exact retained events",
+      "round": 0,
+      "framework": "neokit-before",
+      "startup_socket_ms": 9.530875
+    },
+    {
+      "subscribers": 100,
+      "idle": {
+        "resource_wall_seconds": 2.000432708999142,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 4800,
+        "start_rss_kib": 4800,
+        "resource_samples": 9
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 4000,
+        "publishes_per_sec": 10.062574856296525,
+        "deliveries_per_sec": 1006.2574856296525,
+        "delivery_p50_ms": 1.164625,
+        "delivery_p99_ms": 4.027458,
+        "all_subscribers_p50_ms": 1.599042,
+        "all_subscribers_p99_ms": 4.313541,
+        "resource_wall_seconds": 3.9751257080060896,
+        "server_cpu_seconds": 0.01,
+        "cpu_percent_one_core": 0.25156437140741317,
+        "cpu_us_per_request": 250.0,
+        "peak_sampled_rss_kib": 4832,
+        "start_rss_kib": 4800,
+        "resource_samples": 16
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 3960,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 1902,
+        "elapsed_seconds": 3.0009323749982286,
+        "publish_and_deliver_to_all_per_sec": 633.8030193036665
+      },
+      "replay": "PASS exact retained events",
+      "round": 2,
+      "framework": "neokit-before",
+      "startup_socket_ms": 9.418625
+    },
+    {
+      "subscribers": 1,
+      "idle": {
+        "resource_wall_seconds": 2.0015657910116715,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 2800,
+        "start_rss_kib": 2800,
+        "resource_samples": 9
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 40,
+        "publishes_per_sec": 10.07149333388136,
+        "deliveries_per_sec": 10.07149333388136,
+        "delivery_p50_ms": 0.38393750000000004,
+        "delivery_p99_ms": 0.877291,
+        "all_subscribers_p50_ms": 0.38393750000000004,
+        "all_subscribers_p99_ms": 0.877291,
+        "resource_wall_seconds": 3.9716056670004036,
+        "server_cpu_seconds": 0.01,
+        "cpu_percent_one_core": 0.251787333347034,
+        "cpu_us_per_request": 250.0,
+        "peak_sampled_rss_kib": 1584,
+        "start_rss_kib": 1360,
+        "resource_samples": 16
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 0,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 15264,
+        "elapsed_seconds": 3.0001048749982147,
+        "publish_and_deliver_to_all_per_sec": 5087.822138220779
+      },
+      "replay": "PASS exact retained events",
+      "round": 2,
+      "framework": "neokit-before",
+      "startup_socket_ms": 9.851833
+    },
+    {
+      "subscribers": 100,
+      "idle": {
+        "resource_wall_seconds": 2.001409332995536,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 4800,
+        "start_rss_kib": 4800,
+        "resource_samples": 9
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 4000,
+        "publishes_per_sec": 10.081688666904371,
+        "deliveries_per_sec": 1008.1688666904372,
+        "delivery_p50_ms": 1.41775,
+        "delivery_p99_ms": 7.822083,
+        "all_subscribers_p50_ms": 1.943854,
+        "all_subscribers_p99_ms": 11.4085,
+        "resource_wall_seconds": 3.9675892919913167,
+        "server_cpu_seconds": 0.019999999999999997,
+        "cpu_percent_one_core": 0.5040844333452186,
+        "cpu_us_per_request": 499.9999999999999,
+        "peak_sampled_rss_kib": 1632,
+        "start_rss_kib": 1424,
+        "resource_samples": 15
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 3960,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 1405,
+        "elapsed_seconds": 3.002142665995052,
+        "publish_and_deliver_to_all_per_sec": 467.99907809654894
+      },
+      "replay": "PASS exact retained events",
+      "round": 1,
+      "framework": "neokit",
+      "startup_socket_ms": 55.6125
+    },
+    {
+      "subscribers": 1,
+      "idle": {
+        "resource_wall_seconds": 2.0115108330064686,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 2800,
+        "start_rss_kib": 2800,
+        "resource_samples": 8
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 40,
+        "publishes_per_sec": 10.095547629628264,
+        "deliveries_per_sec": 10.095547629628264,
+        "delivery_p50_ms": 1.87575,
+        "delivery_p99_ms": 92.081542,
+        "all_subscribers_p50_ms": 1.87575,
+        "all_subscribers_p99_ms": 92.081542,
+        "resource_wall_seconds": 3.962142666001455,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 1568,
+        "start_rss_kib": 1360,
+        "resource_samples": 10
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 0,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 6978,
+        "elapsed_seconds": 3.000083667007857,
+        "publish_and_deliver_to_all_per_sec": 2325.9351319890125
+      },
+      "replay": "PASS exact retained events",
+      "round": 1,
+      "framework": "neokit-before",
+      "startup_socket_ms": 12.024417
+    },
+    {
+      "subscribers": 1000,
+      "idle": {
+        "resource_wall_seconds": 2.002310458003194,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 23088,
+        "start_rss_kib": 23088,
+        "resource_samples": 9
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 40000,
+        "publishes_per_sec": 10.11250094094097,
+        "deliveries_per_sec": 10112.50094094097,
+        "delivery_p50_ms": 9.654708,
+        "delivery_p99_ms": 40.786875,
+        "all_subscribers_p50_ms": 14.1212295,
+        "all_subscribers_p99_ms": 43.53825,
+        "resource_wall_seconds": 3.9555002499982947,
+        "server_cpu_seconds": 0.13,
+        "cpu_percent_one_core": 3.286562805805816,
+        "cpu_us_per_request": 3250.0,
+        "peak_sampled_rss_kib": 1872,
+        "start_rss_kib": 1728,
+        "resource_samples": 15
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 39960,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 210,
+        "elapsed_seconds": 3.0113218750047963,
+        "publish_and_deliver_to_all_per_sec": 69.73681616139608
+      },
+      "replay": "PASS exact retained events",
+      "round": 1,
+      "framework": "neokit",
+      "startup_socket_ms": 10.542208
+    },
+    {
+      "subscribers": 1000,
+      "idle": {
+        "resource_wall_seconds": 2.001727042006678,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 23088,
+        "start_rss_kib": 23088,
+        "resource_samples": 9
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 40000,
+        "publishes_per_sec": 10.070399222935302,
+        "deliveries_per_sec": 10070.399222935303,
+        "delivery_p50_ms": 8.658750000000001,
+        "delivery_p99_ms": 38.140334,
+        "all_subscribers_p50_ms": 13.305854499999999,
+        "all_subscribers_p99_ms": 45.681209,
+        "resource_wall_seconds": 3.9720371669973247,
+        "server_cpu_seconds": 0.12000000000000001,
+        "cpu_percent_one_core": 3.021119766880591,
+        "cpu_us_per_request": 3000.0000000000005,
+        "peak_sampled_rss_kib": 2304,
+        "start_rss_kib": 2096,
+        "resource_samples": 15
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 39960,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 164,
+        "elapsed_seconds": 3.0032294590055244,
+        "publish_and_deliver_to_all_per_sec": 54.60788202787083
+      },
+      "replay": "PASS exact retained events",
+      "round": 0,
+      "framework": "neokit-before",
+      "startup_socket_ms": 9.9105
+    },
+    {
+      "subscribers": 1000,
+      "idle": {
+        "resource_wall_seconds": 2.0053885000088485,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 23088,
+        "start_rss_kib": 23088,
+        "resource_samples": 9
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 40000,
+        "publishes_per_sec": 10.085927266633794,
+        "deliveries_per_sec": 10085.927266633793,
+        "delivery_p50_ms": 7.973542,
+        "delivery_p99_ms": 28.553792,
+        "all_subscribers_p50_ms": 12.928187999999999,
+        "all_subscribers_p99_ms": 33.908542,
+        "resource_wall_seconds": 3.965921916998923,
+        "server_cpu_seconds": 0.10999999999999999,
+        "cpu_percent_one_core": 2.7736299983242927,
+        "cpu_us_per_request": 2749.9999999999995,
+        "peak_sampled_rss_kib": 1872,
+        "start_rss_kib": 1664,
+        "resource_samples": 16
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 39960,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 214,
+        "elapsed_seconds": 3.0028070420084987,
+        "publish_and_deliver_to_all_per_sec": 71.26665050607482
+      },
+      "replay": "PASS exact retained events",
+      "round": 2,
+      "framework": "neokit",
+      "startup_socket_ms": 9.160708
+    },
+    {
+      "subscribers": 1,
+      "idle": {
+        "resource_wall_seconds": 2.0019262909918325,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 2800,
+        "start_rss_kib": 2800,
+        "resource_samples": 9
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 40,
+        "publishes_per_sec": 10.071724631228626,
+        "deliveries_per_sec": 10.071724631228626,
+        "delivery_p50_ms": 0.3649795,
+        "delivery_p99_ms": 10.558125,
+        "all_subscribers_p50_ms": 0.3649795,
+        "all_subscribers_p99_ms": 10.558125,
+        "resource_wall_seconds": 3.9715144590009004,
+        "server_cpu_seconds": 0.01,
+        "cpu_percent_one_core": 0.2517931157807156,
+        "cpu_us_per_request": 250.0,
+        "peak_sampled_rss_kib": 2816,
+        "start_rss_kib": 2752,
+        "resource_samples": 15
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 0,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 16205,
+        "elapsed_seconds": 3.000117666000733,
+        "publish_and_deliver_to_all_per_sec": 5401.4548108047575
+      },
+      "replay": "PASS exact retained events",
+      "round": 1,
+      "framework": "neokit",
+      "startup_socket_ms": 9.832792
+    },
+    {
+      "subscribers": 100,
+      "idle": {
+        "resource_wall_seconds": 2.001506625005277,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 4800,
+        "start_rss_kib": 4800,
+        "resource_samples": 8
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 4000,
+        "publishes_per_sec": 10.06545439172324,
+        "deliveries_per_sec": 1006.5454391723239,
+        "delivery_p50_ms": 1.405292,
+        "delivery_p99_ms": 16.292666,
+        "all_subscribers_p50_ms": 1.8218334999999999,
+        "all_subscribers_p99_ms": 16.595291,
+        "resource_wall_seconds": 3.973988500001724,
+        "server_cpu_seconds": 0.019999999999999997,
+        "cpu_percent_one_core": 0.5032727195861619,
+        "cpu_us_per_request": 499.9999999999999,
+        "peak_sampled_rss_kib": 1584,
+        "start_rss_kib": 1376,
+        "resource_samples": 15
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 3960,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 1997,
+        "elapsed_seconds": 3.0008115419914247,
+        "publish_and_deliver_to_all_per_sec": 665.4866432147663
+      },
+      "replay": "PASS exact retained events",
+      "round": 2,
+      "framework": "neokit",
+      "startup_socket_ms": 17.035208
+    },
+    {
+      "subscribers": 100,
+      "idle": {
+        "resource_wall_seconds": 2.0013106249971315,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 4800,
+        "start_rss_kib": 4800,
+        "resource_samples": 9
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 4000,
+        "publishes_per_sec": 10.073924239131378,
+        "deliveries_per_sec": 1007.3924239131377,
+        "delivery_p50_ms": 1.3291455,
+        "delivery_p99_ms": 2.539458,
+        "all_subscribers_p50_ms": 1.814125,
+        "all_subscribers_p99_ms": 3.216625,
+        "resource_wall_seconds": 3.970647292007925,
+        "server_cpu_seconds": 0.01,
+        "cpu_percent_one_core": 0.25184810597828444,
+        "cpu_us_per_request": 250.0,
+        "peak_sampled_rss_kib": 4816,
+        "start_rss_kib": 4800,
+        "resource_samples": 15
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 3960,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 1913,
+        "elapsed_seconds": 3.000042500003474,
+        "publish_and_deliver_to_all_per_sec": 637.6576331827915
+      },
+      "replay": "PASS exact retained events",
+      "round": 0,
+      "framework": "neokit",
+      "startup_socket_ms": 9.230916
+    },
+    {
+      "subscribers": 1,
+      "idle": {
+        "resource_wall_seconds": 2.0004244160081726,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 2800,
+        "start_rss_kib": 2800,
+        "resource_samples": 9
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 40,
+        "publishes_per_sec": 10.06618305478188,
+        "deliveries_per_sec": 10.06618305478188,
+        "delivery_p50_ms": 0.3409375,
+        "delivery_p99_ms": 0.4565,
+        "all_subscribers_p50_ms": 0.3409375,
+        "all_subscribers_p99_ms": 0.4565,
+        "resource_wall_seconds": 3.9737008340016473,
+        "server_cpu_seconds": 0.01,
+        "cpu_percent_one_core": 0.25165457636954697,
+        "cpu_us_per_request": 250.0,
+        "peak_sampled_rss_kib": 1584,
+        "start_rss_kib": 1360,
+        "resource_samples": 16
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 0,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 20980,
+        "elapsed_seconds": 3.0001723340101307,
+        "publish_and_deliver_to_all_per_sec": 6992.931626683401
+      },
+      "replay": "PASS exact retained events",
+      "round": 2,
+      "framework": "neokit",
+      "startup_socket_ms": 9.844791
+    },
+    {
+      "subscribers": 100,
+      "idle": {
+        "resource_wall_seconds": 2.001476958001149,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 4800,
+        "start_rss_kib": 4800,
+        "resource_samples": 9
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 4000,
+        "publishes_per_sec": 10.071425182714384,
+        "deliveries_per_sec": 1007.1425182714383,
+        "delivery_p50_ms": 1.260479,
+        "delivery_p99_ms": 2.382,
+        "all_subscribers_p50_ms": 1.750583,
+        "all_subscribers_p99_ms": 2.931458,
+        "resource_wall_seconds": 3.9716325420013163,
+        "server_cpu_seconds": 0.01,
+        "cpu_percent_one_core": 0.2517856295678596,
+        "cpu_us_per_request": 250.0,
+        "peak_sampled_rss_kib": 1584,
+        "start_rss_kib": 1360,
+        "resource_samples": 16
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 3960,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 1643,
+        "elapsed_seconds": 3.0241277089953655,
+        "publish_and_deliver_to_all_per_sec": 543.2971613972662
+      },
+      "replay": "PASS exact retained events",
+      "round": 1,
+      "framework": "neokit-before",
+      "startup_socket_ms": 8.620625
+    },
+    {
+      "subscribers": 100,
+      "idle": {
+        "resource_wall_seconds": 2.0017365000094287,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 4800,
+        "start_rss_kib": 4800,
+        "resource_samples": 9
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 4000,
+        "publishes_per_sec": 10.069860918851196,
+        "deliveries_per_sec": 1006.9860918851197,
+        "delivery_p50_ms": 1.222521,
+        "delivery_p99_ms": 4.2005,
+        "all_subscribers_p50_ms": 1.6642915,
+        "all_subscribers_p99_ms": 4.389,
+        "resource_wall_seconds": 3.9722495000023628,
+        "server_cpu_seconds": 0.01,
+        "cpu_percent_one_core": 0.2517465229712799,
+        "cpu_us_per_request": 250.0,
+        "peak_sampled_rss_kib": 1712,
+        "start_rss_kib": 1504,
+        "resource_samples": 15
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 3960,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 1652,
+        "elapsed_seconds": 3.000890082999831,
+        "publish_and_deliver_to_all_per_sec": 550.5033354465895
+      },
+      "replay": "PASS exact retained events",
+      "round": 0,
+      "framework": "neokit-before",
+      "startup_socket_ms": 18.762292
+    },
+    {
+      "subscribers": 1000,
+      "idle": {
+        "resource_wall_seconds": 2.00152912500198,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 23088,
+        "start_rss_kib": 23088,
+        "resource_samples": 9
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 40000,
+        "publishes_per_sec": 10.068433782655463,
+        "deliveries_per_sec": 10068.433782655464,
+        "delivery_p50_ms": 7.820104499999999,
+        "delivery_p99_ms": 15.689417,
+        "all_subscribers_p50_ms": 13.000584,
+        "all_subscribers_p99_ms": 19.473791,
+        "resource_wall_seconds": 3.9728125410038047,
+        "server_cpu_seconds": 0.12000000000000001,
+        "cpu_percent_one_core": 3.020530134796639,
+        "cpu_us_per_request": 3000.0000000000005,
+        "peak_sampled_rss_kib": 23088,
+        "start_rss_kib": 23088,
+        "resource_samples": 16
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 39960,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 211,
+        "elapsed_seconds": 3.006676167002297,
+        "publish_and_deliver_to_all_per_sec": 70.17716184924906
+      },
+      "replay": "PASS exact retained events",
+      "round": 2,
+      "framework": "neokit-before",
+      "startup_socket_ms": 9.341875
+    },
+    {
+      "subscribers": 1,
+      "idle": {
+        "resource_wall_seconds": 2.0013839159946656,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 2800,
+        "start_rss_kib": 2800,
+        "resource_samples": 9
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 40,
+        "publishes_per_sec": 10.07370690074543,
+        "deliveries_per_sec": 10.07370690074543,
+        "delivery_p50_ms": 0.348792,
+        "delivery_p99_ms": 6.768333,
+        "all_subscribers_p50_ms": 0.348792,
+        "all_subscribers_p99_ms": 6.768333,
+        "resource_wall_seconds": 3.970732957997825,
+        "server_cpu_seconds": 0.01,
+        "cpu_percent_one_core": 0.25184267251863574,
+        "cpu_us_per_request": 250.0,
+        "peak_sampled_rss_kib": 2864,
+        "start_rss_kib": 2800,
+        "resource_samples": 16
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 0,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 21801,
+        "elapsed_seconds": 3.0002309170085937,
+        "publish_and_deliver_to_all_per_sec": 7266.440685084625
+      },
+      "replay": "PASS exact retained events",
+      "round": 0,
+      "framework": "neokit",
+      "startup_socket_ms": 9.50375
+    },
+    {
+      "subscribers": 1000,
+      "idle": {
+        "resource_wall_seconds": 2.0014302499912446,
+        "server_cpu_seconds": 0,
+        "cpu_percent_one_core": 0.0,
+        "cpu_us_per_request": 0.0,
+        "peak_sampled_rss_kib": 23088,
+        "start_rss_kib": 23088,
+        "resource_samples": 9
+      },
+      "fixed_rate": {
+        "publishes": 40,
+        "deliveries": 40000,
+        "publishes_per_sec": 10.06495038293077,
+        "deliveries_per_sec": 10064.950382930769,
+        "delivery_p50_ms": 7.7098955,
+        "delivery_p99_ms": 15.113959,
+        "all_subscribers_p50_ms": 12.633062500000001,
+        "all_subscribers_p99_ms": 17.489542,
+        "resource_wall_seconds": 3.974187500003609,
+        "server_cpu_seconds": 0.12,
+        "cpu_percent_one_core": 3.0194851148792305,
+        "cpu_us_per_request": 3000.0,
+        "peak_sampled_rss_kib": 23264,
+        "start_rss_kib": 23088,
+        "resource_samples": 16
+      },
+      "frame_cache": {
+        "misses": 40,
+        "hits": 39960,
+        "entries": 45
+      },
+      "closed_loop": {
+        "publishes": 247,
+        "elapsed_seconds": 3.005184041991015,
+        "publish_and_deliver_to_all_per_sec": 82.19130560681265
+      },
+      "replay": "PASS exact retained events",
+      "round": 0,
+      "framework": "neokit",
+      "startup_socket_ms": 9.94875
+    }
+  ]
+}

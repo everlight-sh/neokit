@@ -1,0 +1,1 @@
+PASS 3900 newlines/event: eight exact replayed UTF-8 events across bounded callback chunks, reset/latest, cleanup and bounded cache

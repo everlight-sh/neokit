@@ -13,7 +13,7 @@ def main():
     axon=HERE/'apps/axon'
     with (axon/'web.toml').open('a') as f:f.write('\n[css]\ntailwind=["site.css"]\n')
     (axon/'styles/site.css').write_text('@import "../../../shared/site.css";\n')
-    p=axon/'model.ax';s=p.read_text().replace('interactive:bool }','interactive:bool,metrics:bool }')
+    p=axon/'model.neo';s=p.read_text().replace('interactive:bool }','interactive:bool,metrics:bool }')
     s=s.replace('interactive=interactive }','interactive=interactive,metrics=str_equal(web_query_get(request.query,"metrics").value,"1") }');p.write_text(s)
     for p in (axon/'app').rglob('page.view'):
         s=p.read_text().replace('interactive:bool)','interactive:bool,metrics:bool)')

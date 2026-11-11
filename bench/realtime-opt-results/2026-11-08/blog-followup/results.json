@@ -1,0 +1,278 @@
+{
+  "configuration": {
+    "rounds": 6,
+    "duration": 10,
+    "connections": 32,
+    "workers": 1,
+    "paired": true
+  },
+  "machine": {
+    "cpu": "Apple M1 Pro",
+    "memory_bytes": 17179869184,
+    "logical_cpus": 10
+  },
+  "identities": {
+    "before/blog": {
+      "path": "/Users/marcoschwartz/Documents/code/neokit/build/realtime-opt-before/blog/server",
+      "sha256": "5eee5c1162a66b0e09055205fe1077c321a5fd244ef83782461be6b4804fe7e3"
+    },
+    "after/blog": {
+      "path": "/Users/marcoschwartz/Documents/code/neokit/build/realtime-opt-final/blog/server",
+      "sha256": "c997f7e3eda8ad425c224a9cef531dd27de85bd04be0a1aa497ed1359043c93d"
+    }
+  },
+  "samples": [
+    {
+      "requests_per_sec": 106617.0,
+      "raw": "Running 10s test @ http://127.0.0.1:27866\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   268.20us  108.62us   2.10ms   81.34%\n    Req/Sec   107.22k    12.40k  148.64k    73.27%\n  Latency Distribution\n     50%  248.00us\n     75%  323.00us\n     90%  372.00us\n     99%  637.00us\n  1076852 requests in 10.10s, 5.02GB read\nRequests/sec: 106617.00\nTransfer/sec:    509.41MB\n",
+      "p50_ms": 0.248,
+      "p99_ms": 0.637,
+      "resource_wall_seconds": 10.108694416994695,
+      "server_cpu_seconds": 9.959999999999999,
+      "cpu_percent_one_core": 98.52904429730597,
+      "cpu_us_per_request": 9.24918187457515,
+      "peak_sampled_rss_kib": 3920,
+      "start_rss_kib": 3040,
+      "resource_samples": 37,
+      "round": 0,
+      "phase": "before",
+      "case": "blog",
+      "load_average": [
+        4.890625,
+        5.85107421875,
+        5.14306640625
+      ]
+    },
+    {
+      "requests_per_sec": 120973.8,
+      "raw": "Running 10s test @ http://127.0.0.1:27792\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   235.24us   95.36us   1.62ms   80.17%\n    Req/Sec   121.64k    14.17k  155.68k    70.30%\n  Latency Distribution\n     50%  215.00us\n     75%  283.00us\n     90%  338.00us\n     99%  588.00us\n  1221876 requests in 10.10s, 5.70GB read\nRequests/sec: 120973.80\nTransfer/sec:    578.00MB\n",
+      "p50_ms": 0.215,
+      "p99_ms": 0.588,
+      "resource_wall_seconds": 10.108895749996009,
+      "server_cpu_seconds": 9.98,
+      "cpu_percent_one_core": 98.72492749768381,
+      "cpu_us_per_request": 8.167768251442864,
+      "peak_sampled_rss_kib": 4512,
+      "start_rss_kib": 3136,
+      "resource_samples": 37,
+      "round": 0,
+      "phase": "after",
+      "case": "blog",
+      "load_average": [
+        4.7529296875,
+        5.7900390625,
+        5.12939453125
+      ]
+    },
+    {
+      "requests_per_sec": 130062.83,
+      "raw": "Running 10s test @ http://127.0.0.1:15045\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   216.93us   86.56us   0.91ms   74.57%\n    Req/Sec   130.85k    16.11k  171.88k    65.35%\n  Latency Distribution\n     50%  202.00us\n     75%  255.00us\n     90%  320.00us\n     99%  564.00us\n  1313608 requests in 10.10s, 6.13GB read\nRequests/sec: 130062.83\nTransfer/sec:    621.43MB\n",
+      "p50_ms": 0.202,
+      "p99_ms": 0.5640000000000001,
+      "resource_wall_seconds": 10.107623582996894,
+      "server_cpu_seconds": 9.92,
+      "cpu_percent_one_core": 98.14374188496181,
+      "cpu_us_per_request": 7.551720147867552,
+      "peak_sampled_rss_kib": 4544,
+      "start_rss_kib": 3104,
+      "resource_samples": 38,
+      "round": 1,
+      "phase": "after",
+      "case": "blog",
+      "load_average": [
+        4.63037109375,
+        5.73046875,
+        5.11572265625
+      ]
+    },
+    {
+      "requests_per_sec": 118477.51,
+      "raw": "Running 10s test @ http://127.0.0.1:16094\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   235.29us   95.42us   1.91ms   79.86%\n    Req/Sec   119.13k    12.78k  163.07k    75.25%\n  Latency Distribution\n     50%  213.00us\n     75%  284.00us\n     90%  342.00us\n     99%  600.00us\n  1196668 requests in 10.10s, 5.58GB read\nRequests/sec: 118477.51\nTransfer/sec:    566.07MB\n",
+      "p50_ms": 0.213,
+      "p99_ms": 0.6,
+      "resource_wall_seconds": 10.109289874999376,
+      "server_cpu_seconds": 9.92,
+      "cpu_percent_one_core": 98.12756506797281,
+      "cpu_us_per_request": 8.289684356897652,
+      "peak_sampled_rss_kib": 4800,
+      "start_rss_kib": 3088,
+      "resource_samples": 38,
+      "round": 1,
+      "phase": "before",
+      "case": "blog",
+      "load_average": [
+        4.50244140625,
+        5.6455078125,
+        5.09521484375
+      ]
+    },
+    {
+      "requests_per_sec": 99398.96,
+      "raw": "Running 10s test @ http://127.0.0.1:27119\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   276.83us  102.56us   1.14ms   85.04%\n    Req/Sec    99.95k     8.01k  126.61k    71.29%\n  Latency Distribution\n     50%  253.00us\n     75%  359.00us\n     90%  374.00us\n     99%  671.00us\n  1003987 requests in 10.10s, 4.68GB read\nRequests/sec:  99398.96\nTransfer/sec:    474.92MB\n",
+      "p50_ms": 0.253,
+      "p99_ms": 0.671,
+      "resource_wall_seconds": 10.108716959002777,
+      "server_cpu_seconds": 9.83,
+      "cpu_percent_one_core": 97.24280578699404,
+      "cpu_us_per_request": 9.790963428809338,
+      "peak_sampled_rss_kib": 5088,
+      "start_rss_kib": 3168,
+      "resource_samples": 38,
+      "round": 2,
+      "phase": "before",
+      "case": "blog",
+      "load_average": [
+        4.79296875,
+        5.6728515625,
+        5.11083984375
+      ]
+    },
+    {
+      "requests_per_sec": 99417.81,
+      "raw": "Running 10s test @ http://127.0.0.1:20409\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   283.04us  102.70us   1.53ms   80.35%\n    Req/Sec    99.93k    11.81k  134.83k    83.17%\n  Latency Distribution\n     50%  284.00us\n     75%  357.00us\n     90%  372.00us\n     99%  679.00us\n  1004141 requests in 10.10s, 4.69GB read\nRequests/sec:  99417.81\nTransfer/sec:    475.01MB\n",
+      "p50_ms": 0.28400000000000003,
+      "p99_ms": 0.679,
+      "resource_wall_seconds": 10.109610416002397,
+      "server_cpu_seconds": 9.89,
+      "cpu_percent_one_core": 97.82770644005453,
+      "cpu_us_per_request": 9.849214403156529,
+      "peak_sampled_rss_kib": 4640,
+      "start_rss_kib": 3184,
+      "resource_samples": 38,
+      "round": 2,
+      "phase": "after",
+      "case": "blog",
+      "load_average": [
+        7.18798828125,
+        6.14697265625,
+        5.28466796875
+      ]
+    },
+    {
+      "requests_per_sec": 114263.34,
+      "raw": "Running 10s test @ http://127.0.0.1:26838\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   245.83us   98.98us   2.05ms   72.21%\n    Req/Sec   114.99k    18.30k  161.90k    73.27%\n  Latency Distribution\n     50%  206.00us\n     75%  323.00us\n     90%  361.00us\n     99%  599.00us\n  1154116 requests in 10.10s, 5.39GB read\nRequests/sec: 114263.34\nTransfer/sec:    545.94MB\n",
+      "p50_ms": 0.20600000000000002,
+      "p99_ms": 0.599,
+      "resource_wall_seconds": 10.109678583998175,
+      "server_cpu_seconds": 9.9,
+      "cpu_percent_one_core": 97.92596191603897,
+      "cpu_us_per_request": 8.57799389316152,
+      "peak_sampled_rss_kib": 5840,
+      "start_rss_kib": 3280,
+      "resource_samples": 38,
+      "round": 3,
+      "phase": "before",
+      "case": "blog",
+      "load_average": [
+        7.51416015625,
+        6.255859375,
+        5.3330078125
+      ]
+    },
+    {
+      "requests_per_sec": 104245.39,
+      "raw": "Running 10s test @ http://127.0.0.1:26258\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   278.20us  246.86us   9.67ms   97.21%\n    Req/Sec   104.82k    15.76k  144.05k    84.16%\n  Latency Distribution\n     50%  206.00us\n     75%  354.00us\n     90%  369.00us\n     99%  727.00us\n  1052949 requests in 10.10s, 4.91GB read\nRequests/sec: 104245.39\nTransfer/sec:    498.07MB\n",
+      "p50_ms": 0.20600000000000002,
+      "p99_ms": 0.727,
+      "resource_wall_seconds": 10.10958204200142,
+      "server_cpu_seconds": 9.76,
+      "cpu_percent_one_core": 96.5420722582888,
+      "cpu_us_per_request": 9.269204871271068,
+      "peak_sampled_rss_kib": 6640,
+      "start_rss_kib": 3344,
+      "resource_samples": 38,
+      "round": 3,
+      "phase": "after",
+      "case": "blog",
+      "load_average": [
+        6.8828125,
+        6.177734375,
+        5.3212890625
+      ]
+    },
+    {
+      "requests_per_sec": 123271.99,
+      "raw": "Running 10s test @ http://127.0.0.1:21718\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   226.72us   93.56us 833.00us   71.75%\n    Req/Sec   123.94k    21.06k  169.96k    57.43%\n  Latency Distribution\n     50%  206.00us\n     75%  276.00us\n     90%  351.00us\n     99%  575.00us\n  1245028 requests in 10.10s, 5.81GB read\nRequests/sec: 123271.99\nTransfer/sec:    588.98MB\n",
+      "p50_ms": 0.20600000000000002,
+      "p99_ms": 0.5750000000000001,
+      "resource_wall_seconds": 10.108511374994123,
+      "server_cpu_seconds": 9.9,
+      "cpu_percent_one_core": 97.9372692253191,
+      "cpu_us_per_request": 7.951628397112354,
+      "peak_sampled_rss_kib": 5328,
+      "start_rss_kib": 3360,
+      "resource_samples": 38,
+      "round": 4,
+      "phase": "after",
+      "case": "blog",
+      "load_average": [
+        6.36572265625,
+        6.0888671875,
+        5.2998046875
+      ]
+    },
+    {
+      "requests_per_sec": 121116.53,
+      "raw": "Running 10s test @ http://127.0.0.1:15752\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   237.26us  100.90us   2.10ms   73.43%\n    Req/Sec   121.77k    21.40k  170.01k    61.39%\n  Latency Distribution\n     50%  214.00us\n     75%  294.00us\n     90%  358.00us\n     99%  598.00us\n  1223291 requests in 10.10s, 5.71GB read\nRequests/sec: 121116.53\nTransfer/sec:    578.68MB\n",
+      "p50_ms": 0.214,
+      "p99_ms": 0.598,
+      "resource_wall_seconds": 10.108632875002513,
+      "server_cpu_seconds": 9.94,
+      "cpu_percent_one_core": 98.33179345725847,
+      "cpu_us_per_request": 8.125621785822016,
+      "peak_sampled_rss_kib": 4640,
+      "start_rss_kib": 3072,
+      "resource_samples": 38,
+      "round": 4,
+      "phase": "before",
+      "case": "blog",
+      "load_average": [
+        6.24853515625,
+        6.0693359375,
+        5.3017578125
+      ]
+    },
+    {
+      "requests_per_sec": 97564.9,
+      "raw": "Running 10s test @ http://127.0.0.1:23875\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   283.36us  102.55us   1.58ms   82.78%\n    Req/Sec    98.07k    12.74k  155.91k    86.14%\n  Latency Distribution\n     50%  278.00us\n     75%  357.00us\n     90%  373.00us\n     99%  685.00us\n  985438 requests in 10.10s, 4.60GB read\nRequests/sec:  97564.90\nTransfer/sec:    466.16MB\n",
+      "p50_ms": 0.278,
+      "p99_ms": 0.685,
+      "resource_wall_seconds": 10.109169208000822,
+      "server_cpu_seconds": 9.88,
+      "cpu_percent_one_core": 97.73305596844253,
+      "cpu_us_per_request": 10.025998591489266,
+      "peak_sampled_rss_kib": 4624,
+      "start_rss_kib": 3200,
+      "resource_samples": 38,
+      "round": 5,
+      "phase": "before",
+      "case": "blog",
+      "load_average": [
+        5.91552734375,
+        6.0009765625,
+        5.2861328125
+      ]
+    },
+    {
+      "requests_per_sec": 119123.69,
+      "raw": "Running 10s test @ http://127.0.0.1:24871\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   246.95us  283.33us  16.02ms   97.76%\n    Req/Sec   119.85k    23.87k  167.92k    61.39%\n  Latency Distribution\n     50%  202.00us\n     75%  301.00us\n     90%  364.00us\n     99%  672.00us\n  1203174 requests in 10.10s, 5.61GB read\nRequests/sec: 119123.69\nTransfer/sec:    569.16MB\n",
+      "p50_ms": 0.202,
+      "p99_ms": 0.672,
+      "resource_wall_seconds": 10.109370291000232,
+      "server_cpu_seconds": 9.82,
+      "cpu_percent_one_core": 97.13760320701833,
+      "cpu_us_per_request": 8.161745516442343,
+      "peak_sampled_rss_kib": 5584,
+      "start_rss_kib": 3328,
+      "resource_samples": 38,
+      "round": 5,
+      "phase": "after",
+      "case": "blog",
+      "load_average": [
+        6.09912109375,
+        6.03369140625,
+        5.3095703125
+      ]
+    }
+  ]
+}

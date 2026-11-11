@@ -1,0 +1,22 @@
+Native server diagnostics:
+neo: serving, workers=1
+
+Traceback (most recent call last):
+  File "/Users/marcoschwartz/Documents/code/neokit/tests/features_smoke.py", line 119, in <module>
+    main(parser.parse_args().out)
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcoschwartz/Documents/code/neokit/tests/features_smoke.py", line 91, in main
+    worker=subprocess.Popen([str(out/'revalidate')],env={**os.environ,'NEO_THREADS':'1','NEOKIT_CACHE_DIR':cache,'NEOKIT_REVALIDATE_TOKEN':'test-revalidation-secret-at-least-32-bytes','NEOKIT_REVALIDATE_PORT':str(port)},stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,start_new_session=True)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py", line 1039, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        pass_fds, cwd, env,
+                        ^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+                        gid, gids, uid, umask,
+                        ^^^^^^^^^^^^^^^^^^^^^^
+                        start_new_session, process_group)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py", line 1990, in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+FileNotFoundError: [Errno 2] No such file or directory: '/Users/marcoschwartz/Documents/code/neokit/build/prepared-parity-final/features/revalidate'

@@ -3,11 +3,11 @@
 import argparse,json,os,platform,shutil,subprocess,tarfile,tempfile,time,uuid
 from pathlib import Path
 HERE=Path(__file__).resolve().parent;ROOT=HERE.parents[1]
-IGNORED={'.git','node_modules','__pycache__','build','.next','.astro','dist-ssr','dist-static','out','results','build-speed-results','tailwind-results','.axon-build'}
+IGNORED={'.git','node_modules','__pycache__','build','.next','.astro','dist-ssr','dist-static','out','results','build-speed-results','tailwind-results','.neo-build'}
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--axon-home',type=Path,default=Path(os.environ.get('AXON_HOME',ROOT.parent/'axon')))
+    p.add_argument('--neo-home','--axon-home',dest='axon_home',type=Path,default=Path(os.environ.get('NEO_HOME',ROOT.parent/'axon')))
     p.add_argument('--context',default='desktop-linux');p.add_argument('--image',default='axon-web-framework-bench-tools:latest')
     p.add_argument('--skip-image-build',action='store_true');p.add_argument('--out',type=Path,required=True)
     p.add_argument('--build-speed',action='store_true',help='compare clean/warm Axon and Astro builds, including library preparation')
@@ -26,7 +26,7 @@ def main():
                 def filter_member(member):return None if any(x in IGNORED for x in Path(member.name).parts) else member
                 tar.add(ROOT,arcname='axon-web',filter=filter_member)
                 # Only compiler/build source is needed, never previous bench outputs.
-                for name in ('axon','axonc','axon.toml','runtime','stdlib'):
+                for name in ('neo','neoc','neo.toml','runtime','stdlib'):
                     source=a.axon_home.resolve()/name
                     if source.exists():tar.add(source,arcname='axon/'+name,filter=filter_member)
             run('cp',archive,container+':/tmp/sources.tar')

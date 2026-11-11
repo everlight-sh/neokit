@@ -1,0 +1,41 @@
+{
+  "idle_channel_reads": 0,
+  "idle_subscriber_callbacks": 0,
+  "shared_frame_encoding": "PASS one prepared frame for two subscribers",
+  "arbitrary_publish_delivery_ms": {
+    "p50": 0.6754170026397333,
+    "p95": 0.8232919935835525,
+    "max": 1.8701250082813203,
+    "samples": [
+      1.8701250082813203,
+      0.6333330093184486,
+      0.8232919935835525,
+      0.7777499995427206,
+      0.46462500176858157,
+      0.684083002852276,
+      0.6754170026397333,
+      0.5889589956495911,
+      0.5737080064136535,
+      0.6093330011935905,
+      0.6324589921860024,
+      0.6927079957677051,
+      0.6234169995877892,
+      0.6271669990383089,
+      0.7204590074252337,
+      0.6329999887384474,
+      0.7039170013740659,
+      0.807915988843888,
+      0.6931249954504892,
+      0.6382499996107072,
+      0.6030840013409033,
+      0.5799999926239252,
+      0.6916670099599287,
+      0.7891669956734404
+    ]
+  },
+  "replay_16_events_seconds": 0.00018237500626128167,
+  "heartbeat_seconds": 15.011614125003689,
+  "shutdown_seconds": 0.3298655830003554,
+  "single_worker": "PASS auth/HEAD/methods, static-over-dynamic stream precedence, async loader/SSE coexistence, matching subscribers, replay, reset, UTF-8, heartbeat, bounds, slow readers, cleanup, shutdown",
+  "two_workers": "PASS matching events across forked workers after connection churn/slot compaction"
+}

@@ -1,0 +1,2 @@
+PASS 600000-round native password login (0.424s)
+PASS real login/logout, CSRF, escaping, cross-user authorization, 24 concurrent durable writes across two workers and restart persistence

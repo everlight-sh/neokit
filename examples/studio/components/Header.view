@@ -1,7 +1,7 @@
 @props()
 <header class="border-b border-slate-200 bg-white">
   <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-5">
-    <a class="flex items-center gap-3 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-indigo-600" href="/" data-web-link aria-label="Axon Web home"><span class="flex size-9 items-center justify-center rounded-lg bg-indigo-600 text-lg font-bold text-white">A</span><span class="text-lg font-semibold tracking-tight text-slate-900">Axon Web</span><span class="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">Starter</span></a>
+    <a class="flex items-center gap-3 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-indigo-600" href="/" data-web-link aria-label="NeoKit home"><span class="flex size-9 items-center justify-center rounded-lg bg-indigo-600 text-lg font-bold text-white">N</span><span class="text-lg font-semibold tracking-tight text-slate-900">NeoKit</span><span class="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">Starter</span></a>
     <nav class="flex items-center gap-6 text-sm font-medium text-slate-600" aria-label="Main navigation"><a class="transition hover:text-indigo-600" href="/" data-web-link>Home</a><a class="transition hover:text-indigo-600" href="/notes/native" data-web-link>Guides</a><a class="transition hover:text-indigo-600" href="/stress" data-web-link>Stress test</a><a class="transition hover:text-indigo-600" href="/about" data-web-link>About</a></nav>
   </div>
 </header>

@@ -1,4 +1,0 @@
-import "../../../../../src/lib.ax"
-
-fn status_route(request: WebRequest) -> WebResponse
-  = web_json(concat("{\"framework\":\"axon-web\",\"renderer\":\"native\",\"react\":false,\"stamp\":",int_text(request.stamp),"}"))

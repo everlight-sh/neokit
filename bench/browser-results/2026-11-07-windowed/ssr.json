@@ -1,0 +1,281 @@
+{
+  "profile": "1000/10000 logical records; before all HTML rows, after 32 HTML rows plus inert JSON. Payloads differ.",
+  "machine": {
+    "cpu": "Apple M1 Pro",
+    "memory_bytes": 17179869184,
+    "logical_cpus": 10
+  },
+  "disk_free_bytes": 2347188224,
+  "rounds": 3,
+  "seconds": 2,
+  "samples": [
+    {
+      "requests_per_sec": 2199.01,
+      "raw": "Running 2s test @ http://127.0.0.1:18492\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency    14.54ms    3.16ms  63.51ms   94.51%\n    Req/Sec     2.21k    92.53     2.30k    90.48%\n  Latency Distribution\n     50%   13.93ms\n     75%   14.29ms\n     90%   14.80ms\n     99%   28.51ms\n  4618 requests in 2.10s, 4.09GB read\nRequests/sec:   2199.01\nTransfer/sec:      1.95GB\n",
+      "p50_ms": 13.93,
+      "p99_ms": 28.51,
+      "round": 1,
+      "framework": "before",
+      "count": 1000,
+      "connections": 32,
+      "bytes": 949678
+    },
+    {
+      "requests_per_sec": 139.2,
+      "raw": "Running 2s test @ http://127.0.0.1:28454\n  1 threads and 1 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency     7.17ms  746.84us  10.20ms   73.38%\n    Req/Sec   139.81     11.67   166.00     90.48%\n  Latency Distribution\n     50%    7.36ms\n     75%    7.64ms\n     90%    7.85ms\n     99%    9.56ms\n  293 requests in 2.10s, 2.58GB read\nRequests/sec:    139.20\nTransfer/sec:      1.23GB\n",
+      "p50_ms": 7.36,
+      "p99_ms": 9.56,
+      "round": 1,
+      "framework": "before",
+      "count": 10000,
+      "connections": 1,
+      "bytes": 9462696
+    },
+    {
+      "requests_per_sec": 1570.44,
+      "raw": "Running 2s test @ http://127.0.0.1:21027\n  1 threads and 1 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   635.38us  115.72us   1.89ms   72.28%\n    Req/Sec     1.58k   213.61     1.93k    71.43%\n  Latency Distribution\n     50%  653.00us\n     75%  701.00us\n     90%  750.00us\n     99%    1.00ms\n  3299 requests in 2.10s, 2.92GB read\nRequests/sec:   1570.44\nTransfer/sec:      1.39GB\n",
+      "p50_ms": 0.653,
+      "p99_ms": 1.0,
+      "round": 0,
+      "framework": "before",
+      "count": 1000,
+      "connections": 1,
+      "bytes": 949678
+    },
+    {
+      "requests_per_sec": 3182.45,
+      "raw": "Running 2s test @ http://127.0.0.1:29771\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency    10.04ms    2.12ms  28.79ms   91.10%\n    Req/Sec     3.20k   249.01     3.45k    76.19%\n  Latency Distribution\n     50%    9.35ms\n     75%    9.98ms\n     90%   11.76ms\n     99%   19.64ms\n  6684 requests in 2.10s, 503.47MB read\nRequests/sec:   3182.45\nTransfer/sec:    239.72MB\n",
+      "p50_ms": 9.35,
+      "p99_ms": 19.64,
+      "round": 1,
+      "framework": "windowed",
+      "count": 10000,
+      "connections": 32,
+      "bytes": 78675
+    },
+    {
+      "requests_per_sec": 14452.52,
+      "raw": "Running 2s test @ http://127.0.0.1:20866\n  1 threads and 1 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency    68.42us   17.59us 800.00us   91.89%\n    Req/Sec    14.53k   381.57    14.97k    71.43%\n  Latency Distribution\n     50%   65.00us\n     75%   71.00us\n     90%   84.00us\n     99%  119.00us\n  30347 requests in 2.10s, 1.24GB read\nRequests/sec:  14452.52\nTransfer/sec:    606.02MB\n",
+      "p50_ms": 0.065,
+      "p99_ms": 0.11900000000000001,
+      "round": 0,
+      "framework": "windowed",
+      "count": 1000,
+      "connections": 1,
+      "bytes": 43660
+    },
+    {
+      "requests_per_sec": 153.33,
+      "raw": "Running 2s test @ http://127.0.0.1:18669\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   199.05ms   61.44ms 486.02ms   81.03%\n    Req/Sec   161.89     53.32   237.00     61.11%\n  Latency Distribution\n     50%  183.03ms\n     75%  233.32ms\n     90%  277.74ms\n     99%  393.60ms\n  308 requests in 2.01s, 2.82GB read\nRequests/sec:    153.33\nTransfer/sec:      1.40GB\n",
+      "p50_ms": 183.03,
+      "p99_ms": 393.6,
+      "round": 2,
+      "framework": "before",
+      "count": 10000,
+      "connections": 32,
+      "bytes": 9462696
+    },
+    {
+      "requests_per_sec": 151.06,
+      "raw": "Running 2s test @ http://127.0.0.1:18821\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   197.51ms   78.36ms 412.26ms   67.33%\n    Req/Sec   158.41     56.07   260.00     64.71%\n  Latency Distribution\n     50%  189.14ms\n     75%  256.05ms\n     90%  297.89ms\n     99%  351.75ms\n  303 requests in 2.01s, 2.81GB read\nRequests/sec:    151.06\nTransfer/sec:      1.40GB\n",
+      "p50_ms": 189.14,
+      "p99_ms": 351.75,
+      "round": 0,
+      "framework": "before",
+      "count": 10000,
+      "connections": 32,
+      "bytes": 9462696
+    },
+    {
+      "requests_per_sec": 2229.31,
+      "raw": "Running 2s test @ http://127.0.0.1:17417\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency    14.29ms    2.63ms  30.51ms   95.18%\n    Req/Sec     2.24k    68.21     2.32k    85.71%\n  Latency Distribution\n     50%   13.89ms\n     75%   14.17ms\n     90%   14.45ms\n     99%   28.02ms\n  4682 requests in 2.10s, 4.14GB read\nRequests/sec:   2229.31\nTransfer/sec:      1.97GB\n",
+      "p50_ms": 13.89,
+      "p99_ms": 28.02,
+      "round": 2,
+      "framework": "before",
+      "count": 1000,
+      "connections": 32,
+      "bytes": 949678
+    },
+    {
+      "requests_per_sec": 2407.03,
+      "raw": "Running 2s test @ http://127.0.0.1:20932\n  1 threads and 1 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   414.21us   40.60us   1.01ms   83.89%\n    Req/Sec     2.42k    45.18     2.52k    76.19%\n  Latency Distribution\n     50%  414.00us\n     75%  425.00us\n     90%  448.00us\n     99%  527.00us\n  5055 requests in 2.10s, 380.77MB read\nRequests/sec:   2407.03\nTransfer/sec:    181.31MB\n",
+      "p50_ms": 0.41400000000000003,
+      "p99_ms": 0.527,
+      "round": 1,
+      "framework": "windowed",
+      "count": 10000,
+      "connections": 1,
+      "bytes": 78675
+    },
+    {
+      "requests_per_sec": 3414.65,
+      "raw": "Running 2s test @ http://127.0.0.1:22572\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency     9.34ms    1.65ms  18.82ms   96.41%\n    Req/Sec     3.43k    24.68     3.49k    71.43%\n  Latency Distribution\n     50%    9.06ms\n     75%    9.16ms\n     90%    9.28ms\n     99%   18.25ms\n  7174 requests in 2.10s, 540.38MB read\nRequests/sec:   3414.65\nTransfer/sec:    257.21MB\n",
+      "p50_ms": 9.06,
+      "p99_ms": 18.25,
+      "round": 0,
+      "framework": "windowed",
+      "count": 10000,
+      "connections": 32,
+      "bytes": 78675
+    },
+    {
+      "requests_per_sec": 2380.93,
+      "raw": "Running 2s test @ http://127.0.0.1:15301\n  1 threads and 1 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   419.94us   69.46us   1.96ms   95.41%\n    Req/Sec     2.39k    64.58     2.52k    66.67%\n  Latency Distribution\n     50%  412.00us\n     75%  429.00us\n     90%  459.00us\n     99%  696.00us\n  5001 requests in 2.10s, 376.70MB read\nRequests/sec:   2380.93\nTransfer/sec:    179.34MB\n",
+      "p50_ms": 0.41200000000000003,
+      "p99_ms": 0.6960000000000001,
+      "round": 0,
+      "framework": "windowed",
+      "count": 10000,
+      "connections": 1,
+      "bytes": 78675
+    },
+    {
+      "requests_per_sec": 14475.75,
+      "raw": "Running 2s test @ http://127.0.0.1:23829\n  1 threads and 1 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency    68.09us   13.25us 375.00us   88.65%\n    Req/Sec    14.55k   313.01    14.98k    66.67%\n  Latency Distribution\n     50%   65.00us\n     75%   70.00us\n     90%   83.00us\n     99%  116.00us\n  30393 requests in 2.10s, 1.24GB read\nRequests/sec:  14475.75\nTransfer/sec:    607.00MB\n",
+      "p50_ms": 0.065,
+      "p99_ms": 0.116,
+      "round": 2,
+      "framework": "windowed",
+      "count": 1000,
+      "connections": 1,
+      "bytes": 43660
+    },
+    {
+      "requests_per_sec": 2394.47,
+      "raw": "Running 2s test @ http://127.0.0.1:27669\n  1 threads and 1 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   417.20us   56.23us   2.14ms   95.95%\n    Req/Sec     2.41k    41.43     2.46k    66.67%\n  Latency Distribution\n     50%  416.00us\n     75%  428.00us\n     90%  448.00us\n     99%  542.00us\n  5027 requests in 2.10s, 378.66MB read\nRequests/sec:   2394.47\nTransfer/sec:    180.36MB\n",
+      "p50_ms": 0.41600000000000004,
+      "p99_ms": 0.542,
+      "round": 2,
+      "framework": "windowed",
+      "count": 10000,
+      "connections": 1,
+      "bytes": 78675
+    },
+    {
+      "requests_per_sec": 156.06,
+      "raw": "Running 2s test @ http://127.0.0.1:21495\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   195.18ms   73.15ms 358.43ms   75.08%\n    Req/Sec   160.11     99.37   333.00     61.11%\n  Latency Distribution\n     50%  195.84ms\n     75%  237.80ms\n     90%  273.26ms\n     99%  356.82ms\n  313 requests in 2.01s, 2.85GB read\nRequests/sec:    156.06\nTransfer/sec:      1.42GB\n",
+      "p50_ms": 195.84,
+      "p99_ms": 356.82,
+      "round": 1,
+      "framework": "before",
+      "count": 10000,
+      "connections": 32,
+      "bytes": 9462696
+    },
+    {
+      "requests_per_sec": 22396.43,
+      "raw": "Running 2s test @ http://127.0.0.1:19750\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency     1.43ms  277.09us   3.29ms   95.74%\n    Req/Sec    22.52k   233.33    22.86k    66.67%\n  Latency Distribution\n     50%    1.37ms\n     75%    1.41ms\n     90%    1.47ms\n     99%    2.78ms\n  47049 requests in 2.10s, 1.93GB read\nRequests/sec:  22396.43\nTransfer/sec:      0.92GB\n",
+      "p50_ms": 1.37,
+      "p99_ms": 2.78,
+      "round": 0,
+      "framework": "windowed",
+      "count": 1000,
+      "connections": 32,
+      "bytes": 43660
+    },
+    {
+      "requests_per_sec": 1381.47,
+      "raw": "Running 2s test @ http://127.0.0.1:20422\n  1 threads and 1 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   740.77us  369.93us   9.67ms   98.66%\n    Req/Sec     1.39k    44.45     1.43k    80.95%\n  Latency Distribution\n     50%  703.00us\n     75%  739.00us\n     90%  781.00us\n     99%    1.23ms\n  2901 requests in 2.10s, 2.57GB read\nRequests/sec:   1381.47\nTransfer/sec:      1.22GB\n",
+      "p50_ms": 0.7030000000000001,
+      "p99_ms": 1.23,
+      "round": 1,
+      "framework": "before",
+      "count": 1000,
+      "connections": 1,
+      "bytes": 949678
+    },
+    {
+      "requests_per_sec": 12438.81,
+      "raw": "Running 2s test @ http://127.0.0.1:26952\n  1 threads and 1 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency    86.98us   76.26us   1.65ms   95.80%\n    Req/Sec    12.51k     1.63k   15.05k    66.67%\n  Latency Distribution\n     50%   69.00us\n     75%   85.00us\n     90%  112.00us\n     99%  422.00us\n  26114 requests in 2.10s, 1.07GB read\nRequests/sec:  12438.81\nTransfer/sec:    521.59MB\n",
+      "p50_ms": 0.069,
+      "p99_ms": 0.422,
+      "round": 1,
+      "framework": "windowed",
+      "count": 1000,
+      "connections": 1,
+      "bytes": 43660
+    },
+    {
+      "requests_per_sec": 22308.15,
+      "raw": "Running 2s test @ http://127.0.0.1:27345\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency     1.43ms  277.11us   3.34ms   95.63%\n    Req/Sec    22.44k   229.11    22.94k    76.19%\n  Latency Distribution\n     50%    1.38ms\n     75%    1.41ms\n     90%    1.47ms\n     99%    2.80ms\n  46859 requests in 2.10s, 1.92GB read\nRequests/sec:  22308.15\nTransfer/sec:      0.91GB\n",
+      "p50_ms": 1.38,
+      "p99_ms": 2.8,
+      "round": 1,
+      "framework": "windowed",
+      "count": 1000,
+      "connections": 32,
+      "bytes": 43660
+    },
+    {
+      "requests_per_sec": 131.89,
+      "raw": "Running 2s test @ http://127.0.0.1:15662\n  1 threads and 1 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency     7.56ms  241.86us   8.39ms   73.58%\n    Req/Sec   132.35      4.65   140.00     70.00%\n  Latency Distribution\n     50%    7.52ms\n     75%    7.68ms\n     90%    7.85ms\n     99%    8.16ms\n  265 requests in 2.01s, 2.34GB read\nRequests/sec:    131.89\nTransfer/sec:      1.16GB\n",
+      "p50_ms": 7.52,
+      "p99_ms": 8.16,
+      "round": 2,
+      "framework": "before",
+      "count": 10000,
+      "connections": 1,
+      "bytes": 9462696
+    },
+    {
+      "requests_per_sec": 22114.38,
+      "raw": "Running 2s test @ http://127.0.0.1:22860\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency     1.44ms  287.53us   4.63ms   94.89%\n    Req/Sec    22.25k   435.41    22.80k    85.71%\n  Latency Distribution\n     50%    1.39ms\n     75%    1.42ms\n     90%    1.49ms\n     99%    2.81ms\n  46464 requests in 2.10s, 1.90GB read\nRequests/sec:  22114.38\nTransfer/sec:      0.91GB\n",
+      "p50_ms": 1.39,
+      "p99_ms": 2.81,
+      "round": 2,
+      "framework": "windowed",
+      "count": 1000,
+      "connections": 32,
+      "bytes": 43660
+    },
+    {
+      "requests_per_sec": 2241.31,
+      "raw": "Running 2s test @ http://127.0.0.1:22161\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency    14.22ms    2.78ms  42.41ms   94.63%\n    Req/Sec     2.25k    66.59     2.31k    95.00%\n  Latency Distribution\n     50%   13.80ms\n     75%   14.06ms\n     90%   14.38ms\n     99%   27.80ms\n  4484 requests in 2.00s, 3.97GB read\nRequests/sec:   2241.31\nTransfer/sec:      1.98GB\n",
+      "p50_ms": 13.8,
+      "p99_ms": 27.8,
+      "round": 0,
+      "framework": "before",
+      "count": 1000,
+      "connections": 32,
+      "bytes": 949678
+    },
+    {
+      "requests_per_sec": 128.8,
+      "raw": "Running 2s test @ http://127.0.0.1:24995\n  1 threads and 1 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency     7.76ms  420.99us  11.01ms   85.24%\n    Req/Sec   129.33      5.24   141.00     71.43%\n  Latency Distribution\n     50%    7.69ms\n     75%    7.89ms\n     90%    8.15ms\n     99%    9.48ms\n  271 requests in 2.10s, 2.39GB read\nRequests/sec:    128.80\nTransfer/sec:      1.14GB\n",
+      "p50_ms": 7.69,
+      "p99_ms": 9.48,
+      "round": 0,
+      "framework": "before",
+      "count": 10000,
+      "connections": 1,
+      "bytes": 9462696
+    },
+    {
+      "requests_per_sec": 3403.77,
+      "raw": "Running 2s test @ http://127.0.0.1:21281\n  1 threads and 32 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency     9.37ms    1.65ms  18.75ms   96.42%\n    Req/Sec     3.42k    25.94     3.48k    71.43%\n  Latency Distribution\n     50%    9.10ms\n     75%    9.20ms\n     90%    9.32ms\n     99%   18.30ms\n  7150 requests in 2.10s, 538.57MB read\nRequests/sec:   3403.77\nTransfer/sec:    256.39MB\n",
+      "p50_ms": 9.1,
+      "p99_ms": 18.3,
+      "round": 2,
+      "framework": "windowed",
+      "count": 10000,
+      "connections": 32,
+      "bytes": 78675
+    },
+    {
+      "requests_per_sec": 1384.65,
+      "raw": "Running 2s test @ http://127.0.0.1:20624\n  1 threads and 1 connections\n  Thread Stats   Avg      Stdev     Max   +/- Stdev\n    Latency   722.43us  111.11us   3.55ms   95.99%\n    Req/Sec     1.39k    26.18     1.43k    71.43%\n  Latency Distribution\n     50%  702.00us\n     75%  735.00us\n     90%  778.00us\n     99%    1.10ms\n  2908 requests in 2.10s, 2.57GB read\nRequests/sec:   1384.65\nTransfer/sec:      1.23GB\n",
+      "p50_ms": 0.7020000000000001,
+      "p99_ms": 1.1,
+      "round": 2,
+      "framework": "before",
+      "count": 1000,
+      "connections": 1,
+      "bytes": 949678
+    }
+  ],
+  "binaries": {
+    "before": "d7462ba274a73fdf777f2da369a87590386f4f051983ac790c0f6e36a8475358",
+    "windowed": "0f6082bf1fb42d39280f03c10a58cfef0b677061fcffdbee7082eb166510b274"
+  }
+}

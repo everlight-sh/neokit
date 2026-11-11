@@ -1,0 +1,3 @@
+{"action": "lock", "ok": true, "packages": 9, "root": "realtime-consumer@0.1.0"}
+neoc: /Users/marcoschwartz/Documents/code/neokit/build/realtime/consumer/consumer  graph 8edf57465156640e  obligations 651/793 proven, 142 runtime checks, 17 parallel regions, 0 vectorised sums, 3 calls folded, 0 inlined, build miss
+42

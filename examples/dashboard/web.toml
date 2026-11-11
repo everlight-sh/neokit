@@ -1,0 +1,5 @@
+[site]
+name="NeoKit Tasks"
+[server]
+before="dashboard_before"
+after="dashboard_after"

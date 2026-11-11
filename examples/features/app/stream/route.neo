@@ -1,0 +1,7 @@
+import "../../../../src/stream.neo"
+private effect(fs,net,env,time,process) fn feature_stream_finish(capture:Arr u8 n)->Arr u8 _
+  = let wait=sleep_ms(300) in if !wait.ok then "" else "<p>Slow data ready</p></body></html>"
+effect fn feature_stream(request:WebRequest)->Arr u8 _
+  = let deadline=deadline_after(5000) in
+    let begin=http_render_start(web_html("<!doctype html><html><body><p>Shell ready</p>"),arr(i in 0..1) http_deferred("",function(feature_stream_finish)),deadline.value) in
+    if begin.ok then begin.value else web_encode(web_reply(503,"Async capacity unavailable","text/plain; charset=utf-8"),false)

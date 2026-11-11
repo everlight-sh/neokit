@@ -1,0 +1,6 @@
+import "../../../../src/lib.neo"
+
+type GreetProps = { title: Arr u8 _, name: Arr u8 _, stamp: i64 }
+fn greet_load(request: WebRequest) -> GreetProps
+  = let name=web_query_get(request.query,"name") in
+    GreetProps { title="A little hello",name=if name.present && len(name.value)>0 && len(name.value)<=120 then name.value else "friend",stamp=request.stamp }

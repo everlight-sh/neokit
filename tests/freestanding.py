@@ -18,9 +18,9 @@ def main():
     chroot=shutil.which('chroot')
     assert os.geteuid()==0 and chroot
     audit(args.binary)
-    with tempfile.TemporaryDirectory(prefix='axon-web-empty-root-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='neokit-empty-root-') as temporary:
         root=Path(temporary);shutil.copy2(args.binary,root/'server');port=free_port()
-        process=subprocess.Popen([chroot,str(root),'/server',str(port)],env={'AXON_THREADS':'1'},start_new_session=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+        process=subprocess.Popen([chroot,str(root),'/server',str(port)],env={'NEO_THREADS':'1'},start_new_session=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
         try:
             for _ in range(100):
                 if process.poll() is not None:raise AssertionError(process.stderr.read())

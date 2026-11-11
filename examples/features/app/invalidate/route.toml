@@ -1,0 +1,2 @@
+handler="feature_invalidate"
+methods=["POST"]

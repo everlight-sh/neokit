@@ -1,0 +1,6 @@
+import "../../../../src/lib.neo"
+import "std:http_client"
+effect fn feature_async_api(request:WebRequest)->WebResponse
+  = let port=int_parse(env_get("NEOKIT_ASYNC_HTTP_PORT").value) in
+    let target=web_query_get(request.query,"target") in let result=http_request("127.0.0.1",port.value,"GET",if target.present then target.value else "/slow","",5000,1048576) in
+    if result.ok then web_reply(200,result.body,"text/plain; charset=utf-8") else web_reply(502,"Upstream unavailable","text/plain; charset=utf-8")

@@ -1,0 +1,6 @@
+{
+  "heartbeat_seconds": 15.049361207999027,
+  "shutdown_seconds": 0.28958199999760836,
+  "single_worker": "PASS auth/HEAD/methods, static-over-dynamic stream precedence, async loader/SSE coexistence, matching subscribers, replay, reset, UTF-8, heartbeat, bounds, slow readers, cleanup, shutdown",
+  "two_workers": "PASS same epoch, ID and payload across forked workers"
+}
