@@ -52,10 +52,10 @@ effect(fs,net,env,time,process) fn web_events_step(capture:Arr u8 n)->Arr u8 _
 
 effect(net,time,process) fn web_subscribe_with(request:WebRequest,channel:EventChannel,step:Effect<fs,net,env,time,process>(Arr u8 _)->Arr u8 _)->Arr u8 _
   = let name=event_channel_name(channel) in let latest=event_latest(channel) in let now=monotonic_ms() in
-    if len(name)==0 || !latest.ok || !now.ok then web_encode_close(web_reply(503,"Realtime unavailable","text/plain; charset=utf-8"),false) else
+    if len(name)==0 || !latest.ok || !now.ok then web_encode_close_at(web_reply(503,"Realtime unavailable","text/plain; charset=utf-8"),false,request.stamp) else
     let header=web_request_header(request,"last-event-id") in let query=web_query_get(request.query,"after").value in let cursor=if len(header)>0 then header else query in
     let split=str_find(cursor,".") in let epoch=int_parse(str_slice(cursor,0,split.value)) in let sequence=int_parse(str_slice(cursor,split.value+1,len(cursor))) in
-    if len(cursor)>80 || len(cursor)>0 && (!split.present || !epoch.ok || !sequence.ok || sequence.value<0 || sequence.value>9007199254740991) then web_encode_close(web_reply(400,"Invalid event cursor","text/plain; charset=utf-8"),false) else
+    if len(cursor)>80 || len(cursor)>0 && (!split.present || !epoch.ok || !sequence.ok || sequence.value<0 || sequence.value>9007199254740991) then web_encode_close_at(web_reply(400,"Invalid event cursor","text/plain; charset=utf-8"),false,request.stamp) else
     let after=if len(cursor)==0 then (if latest.latest>0 then latest.latest-1 else 0) else if epoch.value!=latest.epoch then latest.latest+1 else sequence.value in
     let lifetime=now.value+60000 in
     let ready=sse_encode("neokit-ready",concat("{\"channel\":",json_quote(name),",\"latest\":",int_text(latest.latest),"}"),"").value in
@@ -63,6 +63,6 @@ effect(net,time,process) fn web_subscribe_with(request:WebRequest,channel:EventC
     let started=http_async_response(response,"",step,now.value+15000,lifetime) in
     if started.ok then
       let saved=http_async_state_set(HttpAsyncState {word0=event_channel_id(channel),word1=after,word2=latest.epoch,word3=now.value,word4=lifetime,word5=0,word6=0,word7=0}) in
-      let watched=event_watch(channel,after) in started.value else web_encode_close(web_reply(503,"Realtime capacity unavailable","text/plain; charset=utf-8"),false)
+      let watched=event_watch(channel,after) in started.value else web_encode_close_at(web_reply(503,"Realtime capacity unavailable","text/plain; charset=utf-8"),false,request.stamp)
 effect(net,time,process) fn web_subscribe(request:WebRequest,channel:EventChannel)->Arr u8 _
   = web_subscribe_with(request,channel,function(web_events_step))

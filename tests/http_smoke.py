@@ -3,6 +3,7 @@
 import argparse
 import concurrent.futures
 import contextlib
+import email.utils
 import functools
 import hashlib
 import html
@@ -100,6 +101,9 @@ def main():
             assert b'NeoKit' in home and b'Axon Web' not in home
             assert b'data-web-form' in home and b'LIVE SERVER RENDER' in home
             assert headers['Cache-Control']=='no-store' and headers['X-Content-Type-Options']=='nosniff'
+            assert abs(email.utils.parsedate_to_datetime(headers['Date']).timestamp()-time.time())<120,headers
+            assert headers['Content-Security-Policy'].startswith("default-src 'self'")
+            assert 'Date' in request(port,'/about')[1] and 'Date' in request(port,'/missing')[1]
             assert b'Rendered on request' in home
             stamp=int(re.search(rb'Rendered on request[^<]*?([0-9]{10,})',home)[1])
             time.sleep(.02)
@@ -176,7 +180,24 @@ def main():
                     key,value=line.split(b':',1);fields[key.lower()]=value.strip()
                 assert json.loads(stream.read(int(fields[b'content-length'])))['react'] is False
                 assert stream.read(1)==b'';stream.close()
-            print(f'PASS native SSR, fresh data, escaped fragments, dynamic routes, HEAD/pipeline, assets, API, 48 concurrent requests ({workers} workers)',flush=True)
+            # Oversized headers get an answer rather than a silent close.
+            with socket.create_connection(('127.0.0.1',port),timeout=10) as sock:
+                sock.sendall(b'GET / HTTP/1.1\r\nHost: localhost\r\nX-Big: '+b'a'*20000+b'\r\n\r\n')
+                assert sock.makefile('rb').readline().startswith(b'HTTP/1.1 431'),'oversized headers'
+            if workers>1 and sys.platform=='linux':
+                # The supervisor replaces a worker that dies.
+                server=next(p for p in Path('/proc').iterdir() if p.name.isdigit() and (p/'cmdline').read_bytes().split(b'\0')[:2]==[str(binary).encode(),str(port).encode()]
+                            and (p/'stat').read_text().split()[3]==str(os.getpid()))
+                children=lambda:[p.name for p in Path('/proc').iterdir() if p.name.isdigit() and (p/'stat').exists() and (p/'stat').read_text().split()[3]==server.name]
+                before=children();assert len(before)==workers,before
+                os.kill(int(before[0]),signal.SIGKILL)
+                for _ in range(100):
+                    after=children()
+                    if len(after)==workers and before[0] not in after:break
+                    time.sleep(.05)
+                else:raise AssertionError('worker was not replaced')
+                assert all(request(port)[0]==200 for _ in range(8))
+            print(f'PASS native SSR, fresh data, escaped fragments, dynamic routes, HEAD/pipeline, assets, API, 48 concurrent requests, Date/CSP, 431'+(', worker replacement' if workers>1 and sys.platform=='linux' else '')+f' ({workers} workers)',flush=True)
     export=args.out.parent/'test-export'
     subprocess.run([str(ROOT/'neokit'),'export','--out',str(args.out),'--dest',str(export)],cwd=ROOT,check=True)
     home=(export/'index.html').read_bytes()

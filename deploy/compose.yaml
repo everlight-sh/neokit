@@ -11,6 +11,7 @@ services:
         APP: examples/dashboard
     environment:
       NEO_THREADS: ${NEO_THREADS:-2}
+      NEO_HTTP_CONNECTIONS: ${NEO_HTTP_CONNECTIONS:-1024}
       # Only the proxy can reach the app, so its network is trusted to supply
       # X-Forwarded-For; per-client login limits then see the real client.
       NEO_TRUSTED_PROXIES: ${NEOKIT_NETWORK:-172.30.94.0/24}

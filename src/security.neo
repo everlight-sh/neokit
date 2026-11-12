@@ -1,0 +1,7 @@
+import "std:http_server"
+
+; The site's Content-Security-Policy from web.toml [security] csp. A response
+; that already sets its own policy keeps it; a -Report-Only policy does not count.
+fn neokit_policy(response:WebResponse,policy:Arr u8 n) -> WebResponse
+  = if str_find(http_lower(response.headers),"content-security-policy:").present then response
+    else web_with_header(response,"Content-Security-Policy",policy)

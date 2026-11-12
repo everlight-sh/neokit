@@ -18,7 +18,7 @@ bun install --frozen-lockfile
 ./neokit serve --app /path/to/new-app --out build/new-app --no-build
 ```
 
-`./web` remains a compatibility alias. Sources use `.neo`, with `neo.toml` as the package manifest and `web.toml` as framework configuration. `NEO_THREADS` selects native workers: the server uses every CPU by default, and `./neokit dev` runs one. `NEOKIT_LIBRARY_CACHE=off` disables prepared dependency objects; otherwise they are shared under `~/.cache/neokit/native`. Release builds use LLVM O3. Development builds keep application optimization low while retaining type, effect, ownership and runtime checks.
+`./web` remains a compatibility alias. Sources use `.neo`, with `neo.toml` as the package manifest and `web.toml` as framework configuration. `NEO_THREADS` selects native workers: the server uses every CPU by default, and `./neokit dev` runs one. With more than one worker, a supervisor process replaces crashed workers, so `NEO_THREADS=4` runs five processes (256 workers at most). `NEOKIT_LIBRARY_CACHE=off` disables prepared dependency objects; otherwise they are shared under `~/.cache/neokit/native`. Release builds use LLVM O3. Development builds keep application optimization low while retaining type, effect, ownership and runtime checks.
 
 ## Showcase applications
 
@@ -73,9 +73,18 @@ status=308             # 301, 302, 303, 307 or 308; 308 by default
 query=true             # keep the request query string; true by default
 ```
 
+Every response carries a `Date` header and, by default, Neo's Content-Security-Policy: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'self'; frame-ancestors 'none'`. `web.toml` can replace it for the whole site, including guard responses, redirects and error pages:
+
+```toml
+[security]
+csp="default-src 'self'; img-src 'self' https://cdn.example"
+```
+
+A response that sets its own `Content-Security-Policy` keeps it. Exports write the policy to `_headers`, which Netlify and Cloudflare Pages apply. Streamed async pages (`web_stream_page`) still send Neo's default policy and no `Date`, because Neo writes their headers itself.
+
 A buffered `route.toml` can allow cross-origin requests with `cors=["https://app.example"]` or `cors="*"`, optional `cors_headers=["content-type","authorization"]` and `cors_credentials=true` (not with `*`). NeoKit answers the OPTIONS preflight and adds `Vary: Origin`. Typed actions need `csrf=false` and their own authentication before they can be cross-origin.
 
-Endpoints return `WebResponse`; `methods=["POST","PATCH","DELETE","OPTIONS"]` explicitly selects methods. GET automatically permits HEAD, and mismatches return 405 with Allow. Helpers provide status codes, safe response headers, relative redirects, URLencoded forms, cookies and multipart parsing. Native request framing accepts Content-Length or chunked bodies, rejects conflicting framing and limits headers to 16 KiB and total input storage to about 16 MiB. Multipart upload handling is buffered and bounded, rather than a direct-to-storage streaming upload.
+Endpoints return `WebResponse`; `methods=["POST","PATCH","DELETE","OPTIONS"]` explicitly selects methods. GET automatically permits HEAD, and mismatches return 405 with Allow. Helpers provide status codes, safe response headers, relative redirects, URLencoded forms, cookies and multipart parsing. Native request framing accepts Content-Length or chunked bodies and answers conflicting framing with 400, headers over 16 KiB with 431 and input over about 16 MiB with 413. Each worker serves up to `NEO_HTTP_CONNECTIONS` connections (1,024 by default) and answers more with 503 and `Retry-After`. Slow clients are disconnected: headers must arrive within `NEO_HTTP_HEADER_TIMEOUT_MS` of the first byte (10 s, then 408), and the server waits at most `NEO_HTTP_BODY_TIMEOUT_MS` between body reads (30 s), `NEO_HTTP_IDLE_TIMEOUT_MS` between keep-alive requests (60 s) and `NEO_HTTP_WRITE_TIMEOUT_MS` between response writes (30 s). A value of 0 disables that timeout. Multipart upload handling is buffered and bounded, rather than a direct-to-storage streaming upload.
 
 `[server] before="guard"`, `after="decorate"` names functions imported from `app/hooks.neo`. A before hook returns `web_continue()` or a response. After hooks decorate buffered responses. Streaming handlers own the bytes and headers after the before hook; buffered after/error hooks cannot rewrite an already-started stream.
 
@@ -204,7 +213,7 @@ The checked-in Compose example runs the dashboard, persistent volumes, a read-on
 
 ## Remaining gaps
 
-Compared with Next.js and Astro, these are not implemented: Markdown/MDX content collections, i18n routing, an on-demand image server, incremental static regeneration of exported pages, edge or serverless adapters, React/Vue/Svelte component islands, HTTP/2, WebSockets and byte-range responses. Neo 0.2.3 and later let a response replace the default Content-Security-Policy and can send a `Date` header, but NeoKit has no CSP setting yet and its responses carry no `Date`.
+Compared with Next.js and Astro, these are not implemented: Markdown/MDX content collections, i18n routing, an on-demand image server, incremental static regeneration of exported pages, edge or serverless adapters, React/Vue/Svelte component islands, HTTP/2, WebSockets and byte-range responses. Streamed async pages ignore `[security] csp` and send no `Date` header.
 
 ## Reusable foundations and performance
 

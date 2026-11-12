@@ -547,6 +547,11 @@ def build(app=DEFAULT_APP, out=None, *, target='all', profile='release'):
     if dev:
         # The development watcher restarts the server on every rebuild.
         grace=min(grace,1000)
+    security=site_config.get('security',{})
+    if not isinstance(security,dict) or set(security)-{'csp'}:raise BuildError('[security] supports only csp')
+    csp=security.get('csp')
+    if csp is not None and (not isinstance(csp,str) or not 0<len(csp)<=4096 or any(not 32<=ord(c)<127 for c in csp)):
+        raise BuildError('[security] csp must be a Content-Security-Policy value of up to 4096 printable ASCII characters')
     hooks={name:server_config.get(name) for name in ('before','after','startup')}
     for name,handler in hooks.items():
         if handler is not None and (not isinstance(handler,str) or not NAME.fullmatch(handler)):raise BuildError(f'[server] {name} must name a Neo function')
@@ -586,6 +591,7 @@ def build(app=DEFAULT_APP, out=None, *, target='all', profile='release'):
     templates = [*components.values(),*(r['template'] for r in routes),*layouts.values()]
     code = ['import '+literal(str(ROOT/'src/lib.neo')), 'import '+literal(str(ROOT/'src/assets.neo'))]
     if dev:code.append('import '+literal(str(ROOT/'src/dev.neo')))
+    if csp is not None:code.append('import '+literal(str(ROOT/'src/security.neo')))
     if server_config.get('access_log',False) or server_config.get('timing',False):code.append('import "std:http_observability"')
     if any(hooks.values()):code.append('import '+literal(str(app/'app/hooks.neo')))
     error_path=app/'app/not-found.view'
@@ -817,13 +823,15 @@ def build(app=DEFAULT_APP, out=None, *, target='all', profile='release'):
         route={'path':url,'dynamic':'[' in url}
         prior=[route_condition({'path':path,'dynamic':'[' in path}) for path in all_paths if precedence(path)<precedence(url)]
         blocked=' || '.join(prior+['str_equal(request.path,"/healthz")'])
-        stream_dispatch+='if !head && '+route_condition(route)+' && !('+blocked+') then (if !'+allowed_method(allowed)+' then web_encode(web_method_not_allowed('+literal(', '.join(allowed))+'),false) else '+handler+'('+route_request(route)+')) else '
-    guard=('let guard='+hooks['before']+'(request) in if guard.status!=0 then web_encode(guard,head) else ') if hooks['before'] else ''
+        stream_dispatch+='if !head && '+route_condition(route)+' && !('+blocked+') then (if !'+allowed_method(allowed)+' then web_encode_at(web_method_not_allowed('+literal(', '.join(allowed))+'),false,request.stamp) else '+handler+'('+route_request(route)+')) else '
+    policy=(lambda response:'neokit_policy('+response+','+literal(csp)+')') if csp is not None else (lambda response:response)
+    guard=('let guard='+hooks['before']+'(request) in if guard.status!=0 then web_encode_at('+policy('guard')+',head,request.stamp) else ') if hooks['before'] else ''
     dispatch='web_dispatch(request,str_equal(web_header(raw,"x-web-fragment"),"1"))'
     if hooks['after']:dispatch=hooks['after']+'(request,'+dispatch+')'
     if server_error.is_file():
         server.append('fn web_server_error(response:WebResponse) -> WebResponse = if response.status>=500 then response with {body=text_ServerError(response.status,"The server could not complete this request."),content_type="text/html; charset=utf-8"} else response')
         dispatch='web_server_error('+dispatch+')'
+    dispatch=policy(dispatch)
     async_stream_dispatch=''
     for url,handler,allowed,streaming in sorted(api_routes,key=lambda r:precedence(r[0])):
         if not streaming or url not in async_routes:continue
@@ -831,8 +839,8 @@ def build(app=DEFAULT_APP, out=None, *, target='all', profile='release'):
         prior=[route_condition({'path':path,'dynamic':'[' in path}) for path in all_paths if precedence(path)<precedence(url)]
         condition=route_condition(route)
         if prior:condition=condition+' && !('+' || '.join(prior)+')'
-        async_stream_dispatch+='if !head && '+condition+' then (if !'+allowed_method(allowed)+' then web_encode_close(web_method_not_allowed('+literal(', '.join(allowed))+'),false) else '+handler+'('+route_request(route)+')) else '
-    buffered='effect(fs,net,env,time,process) fn web_handle_buffered(raw:Arr u8 n)->Arr u8 _ = let clock=time_unix_ms() in let request=web_request(raw,clock.value) in let head=str_equal(request.method,"HEAD") in '+guard+async_stream_dispatch+'web_encode_close('+dispatch+',head)'
+        async_stream_dispatch+='if !head && '+condition+' then (if !'+allowed_method(allowed)+' then web_encode_close_at(web_method_not_allowed('+literal(', '.join(allowed))+'),false,request.stamp) else '+handler+'('+route_request(route)+')) else '
+    buffered='effect(fs,net,env,time,process) fn web_handle_buffered(raw:Arr u8 n)->Arr u8 _ = let clock=time_unix_ms() in let request=web_request(raw,clock.value) in let head=str_equal(request.method,"HEAD") in '+guard+async_stream_dispatch+'web_encode_close_at('+dispatch+',head,request.stamp)'
     async_dispatch=''
     for url,timeout in sorted(async_routes.items(),key=lambda item:precedence(item[0])):
         route={'path':url,'dynamic':'[' in url}
@@ -841,7 +849,7 @@ def build(app=DEFAULT_APP, out=None, *, target='all', profile='release'):
         prior.append('str_equal(request.path,\"/healthz\")')
         if dev:prior.append('str_equal(request.path,\"/_neokit/dev\")')
         if prior:condition=condition+' && !('+' || '.join(prior)+')'
-        async_dispatch+='if '+condition+' then let timer=deadline_after('+str(timeout)+') in let started=http_response_async(raw,function(web_handle_buffered),timer.value) in if started.ok then started.value else web_encode(web_reply(503,"Async capacity unavailable","text/plain; charset=utf-8"),head) else '
+        async_dispatch+='if '+condition+' then let timer=deadline_after('+str(timeout)+') in let started=http_response_async(raw,function(web_handle_buffered),timer.value) in if started.ok then started.value else web_encode_at(web_reply(503,"Async capacity unavailable","text/plain; charset=utf-8"),head,request.stamp) else '
     if async_routes:
         server.append(buffered)
     observed=server_config.get('access_log',False) or server_config.get('timing',False)
@@ -851,7 +859,7 @@ def build(app=DEFAULT_APP, out=None, *, target='all', profile='release'):
         traced='web_trace(raw,'+measured+',start.value,end.value)' if server_config.get('access_log',False) else measured
         observed_code='effect fn observed_handle(raw:Arr u8 n) -> Arr u8 _ = let start=monotonic_ns() in let wire=web_handle(raw) in let end=monotonic_ns() in '+traced+'\n'
     server.extend([
-        'effect fn web_handle(raw: Arr u8 n) -> Arr u8 _ = let clock=time_unix_ms() in let request=web_request(raw,clock.value) in let head=str_equal(request.method,"HEAD") in '+async_dispatch+guard+stream_dispatch+'web_encode('+dispatch+',head)',
+        'effect fn web_handle(raw: Arr u8 n) -> Arr u8 _ = let clock=time_unix_ms() in let request=web_request(raw,clock.value) in let head=str_equal(request.method,"HEAD") in '+async_dispatch+guard+stream_dispatch+'web_encode_at('+dispatch+',head,request.stamp)',
         observed_code+'effect fn main(port: i64{port>0,port<65536}) -> i64 = let configured=http_server_options('+str(grace)+',true) in check configured.ok in '+(f'let events=events_configure({event_channels},{event_history},{event_payload}) in check events.ok in ' if realtime_routes else '')+('let startup='+hooks['startup']+'() in check startup.ok in ' if hooks['startup'] else '')+'serve_effect(port,'+('observed_handle' if observed else 'web_handle')+')',
     ])
     (generated/'server.neo').write_text('\n'.join(server)+'\n')
@@ -871,6 +879,10 @@ def build(app=DEFAULT_APP, out=None, *, target='all', profile='release'):
         # Netlify and Cloudflare Pages read this file; other hosts need their own rules.
         snapshot_dir.mkdir(parents=True, exist_ok=True)
         (snapshot_dir/'_redirects').write_text(''.join(f'{rule["source"]} {rule["target"]} {rule["status"]}\n' for rule in redirects))
+    if csp is not None and target != 'server':
+        # Netlify and Cloudflare Pages apply this file's headers to every exported path.
+        snapshot_dir.mkdir(parents=True, exist_ok=True)
+        (snapshot_dir/'_headers').write_text(f'/*\n  Content-Security-Policy: {csp}\n')
     for url,data in files.items():
         destination = snapshot_dir/url.lstrip('/')
         destination.parent.mkdir(parents=True, exist_ok=True)

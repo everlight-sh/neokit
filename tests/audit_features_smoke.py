@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Compile and exercise the routing, template, caching and metadata options
 added after the 2026-11 audit in one native application and its export."""
+import http.client
 import json
 from pathlib import Path
 import sys
@@ -13,6 +14,7 @@ from compiler.templates import literal
 from tests.http_smoke import request,running
 
 LIB='import '+literal(str(ROOT/'src/lib.neo'))+'\n'
+CSP="default-src 'self'; img-src 'self' https://cdn.example"
 FILES={
  'web.toml':'''[site]
 url="https://audit.test"
@@ -27,7 +29,12 @@ from="/docs-external"
 to="https://docs.example/start"
 status=301
 query=false
+
+[security]
+csp="default-src 'self'; img-src 'self' https://cdn.example"
 ''',
+ 'app/api/own-policy/route.toml':'handler="audit_own_policy"\n',
+ 'app/api/own-policy/route.neo':LIB+'fn audit_own_policy(request:WebRequest) -> WebResponse = web_with_header(web_json("{}"),"Content-Security-Policy","default-src \'none\'")\n',
  'app/layout.view':'@props(title:text,content:html,client:bool,mode:text,head:html)\n<!doctype html><html><head><title>{{ title }}</title>{{ head }}</head><body><main id="web-page">{{ content }}</main></body></html>',
  'app/not-found.view':'@props()\n<!doctype html><title>Missing</title><h1>Nothing here</h1>',
  'app/page.toml':'loader="audit_home"\n[metadata.props]\ndescription="summary"\njsonld="jsonld"\n',
@@ -123,6 +130,15 @@ def main():
             assert get('/api/data',method='DELETE')[0]==405
             status,headers,_=get('/old?x=1');assert status==308 and headers['Location']=='/pricing?x=1'
             status,headers,_=get('/docs-external?x=1');assert status==301 and headers['Location']=='https://docs.example/start'
+            def policies(path,headers=None):
+                connection=http.client.HTTPConnection('127.0.0.1',port,timeout=10)
+                try:
+                    connection.request('GET',path,headers=headers or {});response=connection.getresponse();response.read()
+                    return response.msg.get_all('Content-Security-Policy'),response.getheader('Date')
+                finally:connection.close()
+            for path in ('/','/account','/pricing','/blog/c','/api/data'):
+                found,date=policies(path);assert found==[CSP] and date,(path,found,date)
+            assert policies('/api/own-policy')[0]==["default-src 'none'"]
             sitemap=get('/sitemap.xml')[2]
             assert all(b'<loc>https://audit.test'+path+b'</loc>' in sitemap for path in (b'/',b'/pricing',b'/blog/a',b'/blog/b')) and b'/account' not in sitemap
         out,manifest=build(app,work/'export',target='static')
@@ -132,9 +148,10 @@ def main():
         assert not (snapshots/'account').exists() and '/account' in manifest['omitted_server_routes']
         assert b'Nothing here' in (snapshots/'404.html').read_bytes()
         assert (snapshots/'_redirects').read_text()=='/old /pricing 308\n/docs-external https://docs.example/start 301\n'
+        assert (snapshots/'_headers').read_text()=='/*\n  Content-Security-Policy: '+CSP+'\n'
         assert b'name="description"' in (snapshots/'index.html').read_bytes()
     print('PASS audit features: records, loop indexes, comparisons, (group) routes, paths_fn static routes, guards, cache_query, '
-          'cache_control, dotted API routes, CORS, redirects, dynamic metadata and JSON-LD, sitemap and export 404/_redirects')
+          'cache_control, dotted API routes, CORS, redirects, CSP and Date headers, dynamic metadata and JSON-LD, sitemap and export 404/_redirects/_headers')
 
 
 if __name__=='__main__':main()

@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Neo 0.2.5: the runtime is compiled once per machine, and SDK releases expect the 0.2.5 archive. The server now times out slow clients, answers bad requests with 400/413/431, restarts crashed workers and reads trusted `X-Forwarded-For`.
+- Responses carry a `Date` header. `[security] csp` in `web.toml` sets the site's Content-Security-Policy, and exports write it to `_headers`. The README lists the `NEO_HTTP_*` connection limit and timeouts.
 - Libraries come from neo-libs 0.1.0 (`../neo-libs`, formerly axon-libs); every package is named `neo-*`. NeoKit no longer looks for a toolchain in `../axon`.
 - Sessions: `web_session_read` takes a revocation directory. The dashboard's logout revokes all of a user's sessions, including copied cookies.
 - Login is rate-limited per client address (`web_rate_limit_client`) with an account-wide ceiling. Set `NEO_TRUSTED_PROXIES` behind a proxy.
