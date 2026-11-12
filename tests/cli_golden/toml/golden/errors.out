@@ -1,0 +1,154 @@
+=== tests/cli_golden/toml/cases/errors.cases duplicate key
+error
+=== tests/cli_golden/toml/cases/errors.cases duplicate key after a comment
+error
+=== tests/cli_golden/toml/cases/errors.cases duplicate table
+error
+=== tests/cli_golden/toml/cases/errors.cases table over a value
+error
+=== tests/cli_golden/toml/cases/errors.cases dotted key into an explicit table
+error
+=== tests/cli_golden/toml/cases/errors.cases table after its dotted keys
+error
+=== tests/cli_golden/toml/cases/errors.cases table after nested dotted keys
+error
+=== tests/cli_golden/toml/cases/errors.cases array of tables over a table
+error
+=== tests/cli_golden/toml/cases/errors.cases table over an array of tables
+error
+=== tests/cli_golden/toml/cases/errors.cases array of tables over a value
+error
+=== tests/cli_golden/toml/cases/errors.cases dotted key through a value
+error
+=== tests/cli_golden/toml/cases/errors.cases dotted key into an inline table
+error
+=== tests/cli_golden/toml/cases/errors.cases table into an inline table
+error
+=== tests/cli_golden/toml/cases/errors.cases inline table declared again
+error
+=== tests/cli_golden/toml/cases/errors.cases array of tables into a static array
+error
+=== tests/cli_golden/toml/cases/errors.cases table into a static array
+error
+=== tests/cli_golden/toml/cases/errors.cases array table under a static array
+error
+=== tests/cli_golden/toml/cases/errors.cases dotted key array table reopened
+error
+=== tests/cli_golden/toml/cases/errors.cases inline table duplicate key
+error
+=== tests/cli_golden/toml/cases/errors.cases inline table frozen member
+error
+=== tests/cli_golden/toml/cases/errors.cases inline table frozen array member
+error
+=== tests/cli_golden/toml/cases/errors.cases inline table overwrite through dotted key
+error
+=== tests/cli_golden/toml/cases/errors.cases inline table duplicate after dotted keys
+error
+=== tests/cli_golden/toml/cases/errors.cases inline table trailing comma
+error
+=== tests/cli_golden/toml/cases/errors.cases inline table across lines
+error
+=== tests/cli_golden/toml/cases/errors.cases unclosed inline table
+error
+=== tests/cli_golden/toml/cases/errors.cases inline table missing comma
+error
+=== tests/cli_golden/toml/cases/errors.cases unclosed array
+error
+=== tests/cli_golden/toml/cases/errors.cases array missing comma
+error
+=== tests/cli_golden/toml/cases/errors.cases array with only a comma
+error
+=== tests/cli_golden/toml/cases/errors.cases unterminated basic string
+error
+=== tests/cli_golden/toml/cases/errors.cases unterminated literal string
+error
+=== tests/cli_golden/toml/cases/errors.cases unterminated literal string at end
+error
+=== tests/cli_golden/toml/cases/errors.cases unterminated multi-line basic string
+error
+=== tests/cli_golden/toml/cases/errors.cases unterminated multi-line literal string
+error
+=== tests/cli_golden/toml/cases/errors.cases six closing quotes
+error
+=== tests/cli_golden/toml/cases/errors.cases six closing apostrophes
+error
+=== tests/cli_golden/toml/cases/errors.cases unknown escape
+error
+=== tests/cli_golden/toml/cases/errors.cases escape before non-ASCII
+error
+=== tests/cli_golden/toml/cases/errors.cases backslash at end
+error
+=== tests/cli_golden/toml/cases/errors.cases short unicode escape
+error
+=== tests/cli_golden/toml/cases/errors.cases unicode escape with a non-hex digit
+error
+=== tests/cli_golden/toml/cases/errors.cases surrogate escape
+error
+=== tests/cli_golden/toml/cases/errors.cases escape beyond Unicode
+error
+=== tests/cli_golden/toml/cases/errors.cases line-ending backslash in a one-line string
+error
+=== tests/cli_golden/toml/cases/errors.cases whitespace escape not ending the line
+error
+=== tests/cli_golden/toml/cases/errors.cases newline in a one-line string
+error
+=== tests/cli_golden/toml/cases/errors.cases missing value
+error
+=== tests/cli_golden/toml/cases/errors.cases missing equals
+error
+=== tests/cli_golden/toml/cases/errors.cases equals first
+error
+=== tests/cli_golden/toml/cases/errors.cases invalid value
+error
+=== tests/cli_golden/toml/cases/errors.cases bad key part
+error
+=== tests/cli_golden/toml/cases/errors.cases key ending with a dot
+error
+=== tests/cli_golden/toml/cases/errors.cases two values
+error
+=== tests/cli_golden/toml/cases/errors.cases text after a header
+error
+=== tests/cli_golden/toml/cases/errors.cases unclosed header
+error
+=== tests/cli_golden/toml/cases/errors.cases unclosed array header
+error
+=== tests/cli_golden/toml/cases/errors.cases array header closed once
+error
+=== tests/cli_golden/toml/cases/errors.cases empty header
+error
+=== tests/cli_golden/toml/cases/errors.cases leading zero
+error
+=== tests/cli_golden/toml/cases/errors.cases hex prefix without digits
+error
+=== tests/cli_golden/toml/cases/errors.cases signed hex
+error
+=== tests/cli_golden/toml/cases/errors.cases double underscore
+error
+=== tests/cli_golden/toml/cases/errors.cases trailing underscore
+error
+=== tests/cli_golden/toml/cases/errors.cases leading underscore
+error
+=== tests/cli_golden/toml/cases/errors.cases true prefix
+error
+=== tests/cli_golden/toml/cases/errors.cases capitalized boolean
+error
+=== tests/cli_golden/toml/cases/errors.cases column after non-ASCII text
+error
+=== tests/cli_golden/toml/cases/errors.cases column after an astral character
+error
+=== tests/cli_golden/toml/cases/errors.cases table declared twice with a non-ASCII key
+error
+=== tests/cli_golden/toml/cases/errors.cases repr of a key with quotes
+error
+=== tests/cli_golden/toml/cases/errors.cases repr of a key with both quotes
+error
+=== tests/cli_golden/toml/cases/errors.cases literal string key cannot escape
+error
+=== tests/cli_golden/toml/cases/errors.cases repr of a key with a backslash
+error
+=== tests/cli_golden/toml/cases/errors.cases multi-line string as a key
+error
+=== tests/cli_golden/toml/cases/errors.cases invalid statement
+error
+=== tests/cli_golden/toml/cases/errors.cases statement starting with a closing bracket
+error

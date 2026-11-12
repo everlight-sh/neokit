@@ -1,0 +1,7 @@
+# CRLF endings, as read_text() converts them
+[site]
+name = "crlf"
+description = """multi
+line"""
+raw = '''a
+b'''

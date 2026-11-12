@@ -1,0 +1,308 @@
+=== audit_features release
+parse 0 Page_7394a2bb76 audit_features/app/(marketing)/pricing/page.view
+props title:text
+body "<h1>{{ title }}</h1>"
+parse 1 Page_441bb226c5 audit_features/app/account/page.view
+props title:text
+body "<h1>{{ title }}</h1>"
+parse 2 Page_ceb8399bd1 audit_features/app/blog/[slug]/page.view
+props title:text slug:text
+body "<h1>Post {{ slug }}</h1>"
+parse 3 Page_8a5edab282 audit_features/app/page.view
+props title:text query:text posts:Post[] summary:text jsonld:text
+type Post title:text href:url views:int
+body "<h1>{{ title }}</h1>{% if query %}<p class=\"q\">Results for {{ query }}</p>{% else %}<p class=\"q\">No query</p>{% endif %}<ul>{% for post, index in posts %}<li data-rank=\"{{ index }}\"><a href=\"{{ post.href }}\">{{ post.title }}</a>{% if post.views >= 1000 %} popular{% elif post.views == 0 %} new{% else %} normal{% endif %}</li>{% endfor %}</ul>{% if query == \"neo\" %}<p>exact</p>{% endif %}"
+parse 4 Page_e99ddf7a8b audit_features/app/private-info/page.view
+props title:text
+body "<h1>{{ title }}</h1>"
+parse 5 Page_6fb5b7787e audit_features/app/search/page.view
+props title:text q:text stamp:int
+body "<p>{{ q }}:{{ stamp }}</p>"
+parse 6 Layout audit_features/app/layout.view
+props title:text content:html client:bool mode:text head:html
+body "<!doctype html><html><head><title>{{ title }}</title>{{ head }}</head><body><main id=\"web-page\">{{ content }}</main></body></html>"
+parse 7 NotFound audit_features/app/not-found.view
+props
+body "<!doctype html><title>Missing</title><h1>Nothing here</h1>"
+compile_all
+code
+fn text_Page_8a5edab282_loop_0(p_title: Arr u8 _,p_query: Arr u8 _,p_posts: Arr Post _,p_summary: Arr u8 _,p_jsonld: Arr u8 _,at:i64,count:i64) -> Arr u8 _ = if count<=0 then "" else if count==1 then check at>=0 && at<len(p_posts) in let item_post=p_posts[at] in let idx_index=at in concat("<li data-rank=\"",int_text(idx_index),"\"><a href=\"",html_escape(item_post.href.value),"\">",html_escape(item_post.title),"</a>",(if (item_post.views>=1000) then " popular" else (if (item_post.views==0) then " new" else " normal")),"</li>") else let half=count/2 in concat(text_Page_8a5edab282_loop_0(p_title,p_query,p_posts,p_summary,p_jsonld,at,half),text_Page_8a5edab282_loop_0(p_title,p_query,p_posts,p_summary,p_jsonld,at+half,count-half))
+fn text_Page_8a5edab282(p_title: Arr u8 _,p_query: Arr u8 _,p_posts: Arr Post _,p_summary: Arr u8 _,p_jsonld: Arr u8 _) -> Arr u8 _ = concat("<h1>",html_escape(p_title),"</h1>",(if len(p_query)>0 then concat("<p class=\"q\">Results for ",html_escape(p_query),"</p>") else "<p class=\"q\">No query</p>"),"<ul>",text_Page_8a5edab282_loop_0(p_title,p_query,p_posts,p_summary,p_jsonld,0,len(p_posts)),"</ul>",(if str_equal(p_query,"neo") then "<p>exact</p>" else ""))
+fn view_Page_8a5edab282(p_title: Arr u8 _,p_query: Arr u8 _,p_posts: Arr Post _,p_summary: Arr u8 _,p_jsonld: Arr u8 _) -> WebHtml = web_html(text_Page_8a5edab282(p_title,p_query,p_posts,p_summary,p_jsonld))
+
+fn text_Page_441bb226c5(p_title: Arr u8 _) -> Arr u8 _ = concat("<h1>",html_escape(p_title),"</h1>")
+fn view_Page_441bb226c5(p_title: Arr u8 _) -> WebHtml = web_html(text_Page_441bb226c5(p_title))
+
+fn text_Page_7394a2bb76(p_title: Arr u8 _) -> Arr u8 _ = concat("<h1>",html_escape(p_title),"</h1>")
+fn view_Page_7394a2bb76(p_title: Arr u8 _) -> WebHtml = web_html(text_Page_7394a2bb76(p_title))
+
+fn text_Page_e99ddf7a8b(p_title: Arr u8 _) -> Arr u8 _ = concat("<h1>",html_escape(p_title),"</h1>")
+fn view_Page_e99ddf7a8b(p_title: Arr u8 _) -> WebHtml = web_html(text_Page_e99ddf7a8b(p_title))
+
+fn text_Page_6fb5b7787e(p_title: Arr u8 _,p_q: Arr u8 _,p_stamp: i64) -> Arr u8 _ = concat("<p>",html_escape(p_q),":",int_text(p_stamp),"</p>")
+fn view_Page_6fb5b7787e(p_title: Arr u8 _,p_q: Arr u8 _,p_stamp: i64) -> WebHtml = web_html(text_Page_6fb5b7787e(p_title,p_q,p_stamp))
+
+fn text_Page_ceb8399bd1(p_title: Arr u8 _,p_slug: Arr u8 _) -> Arr u8 _ = concat("<h1>Post ",html_escape(p_slug),"</h1>")
+fn view_Page_ceb8399bd1(p_title: Arr u8 _,p_slug: Arr u8 _) -> WebHtml = web_html(text_Page_ceb8399bd1(p_title,p_slug))
+
+fn text_Layout(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _,p_head: WebHtml) -> Arr u8 _ = concat("<!doctype html><html><head><title>",html_escape(p_title),"</title>",p_head.bytes,"</head><body><main id=\"web-page\">",p_content.bytes,"</main></body></html>")
+fn view_Layout(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _,p_head: WebHtml) -> WebHtml = web_html(text_Layout(p_title,p_content,p_client,p_mode,p_head))
+
+fn text_NotFound() -> Arr u8 _ = "<!doctype html><title>Missing</title><h1>Nothing here</h1>"
+fn view_NotFound() -> WebHtml = web_html(text_NotFound())
+end code
+expression Page_8a5edab282 "concat(\"<h1>\",html_escape(p_title),\"</h1>\",(if len(p_query)>0 then concat(\"<p class=\\\"q\\\">Results for \",html_escape(p_query),\"</p>\") else \"<p class=\\\"q\\\">No query</p>\"),\"<ul>\",text_Page_8a5edab282_loop_0(p_title,p_query,p_posts,p_summary,p_jsonld,0,len(p_posts)),\"</ul>\",(if str_equal(p_query,\"neo\") then \"<p>exact</p>\" else \"\"))"
+expression Page_441bb226c5 "concat(\"<h1>\",html_escape(p_title),\"</h1>\")"
+expression Page_7394a2bb76 "concat(\"<h1>\",html_escape(p_title),\"</h1>\")"
+expression Page_e99ddf7a8b "concat(\"<h1>\",html_escape(p_title),\"</h1>\")"
+expression Page_6fb5b7787e "concat(\"<p>\",html_escape(p_q),\":\",int_text(p_stamp),\"</p>\")"
+expression Page_ceb8399bd1 "concat(\"<h1>Post \",html_escape(p_slug),\"</h1>\")"
+expression Layout "concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title>\",p_head.bytes,\"</head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main></body></html>\")"
+expression NotFound "\"<!doctype html><title>Missing</title><h1>Nothing here</h1>\""
+deps Page_8a5edab282
+deps Page_441bb226c5
+deps Page_7394a2bb76
+deps Page_e99ddf7a8b
+deps Page_6fb5b7787e
+deps Page_ceb8399bd1
+deps Layout
+deps NotFound
+substitute "concat(\"<!doctype html><html><head><title>\",html_escape(props.title),\"</title>\",concat(\"<meta name=\\\"description\\\" content=\\\"\",html_escape(props.summary),\"\\\">\",\"<script type=\\\"application/ld+json\\\">\",neokit_json_script(props.jsonld),\"</script>\"),\"</head><body><main id=\\\"web-page\\\">\",text_Page_8a5edab282(props.title,props.query,props.posts,props.summary,props.jsonld),\"</main></body></html>\")"
+substitute "concat(\"<!doctype html><html><head><title>\",html_escape(props.title),\"</title>\",\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\",\"</head><body><main id=\\\"web-page\\\">\",text_Page_441bb226c5(props.title),\"</main></body></html>\")"
+substitute "concat(\"<!doctype html><html><head><title>\",html_escape(props.title),\"</title>\",\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\",\"</head><body><main id=\\\"web-page\\\">\",text_Page_7394a2bb76(props.title),\"</main></body></html>\")"
+substitute "concat(\"<!doctype html><html><head><title>\",html_escape(props.title),\"</title>\",\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\",\"</head><body><main id=\\\"web-page\\\">\",text_Page_e99ddf7a8b(props.title),\"</main></body></html>\")"
+substitute "concat(\"<!doctype html><html><head><title>\",html_escape(props.title),\"</title>\",\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\",\"</head><body><main id=\\\"web-page\\\">\",text_Page_6fb5b7787e(props.title,props.q,props.stamp),\"</main></body></html>\")"
+substitute "concat(\"<!doctype html><html><head><title>\",html_escape(props.title),\"</title>\",\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\",\"</head><body><main id=\\\"web-page\\\">\",text_Page_ceb8399bd1(props.title,props.slug),\"</main></body></html>\")"
+=== audit_features dev
+parse 0 Page_7394a2bb76 audit_features/app/(marketing)/pricing/page.view
+props title:text
+body "<h1>{{ title }}</h1>"
+parse 1 Page_441bb226c5 audit_features/app/account/page.view
+props title:text
+body "<h1>{{ title }}</h1>"
+parse 2 Page_ceb8399bd1 audit_features/app/blog/[slug]/page.view
+props title:text slug:text
+body "<h1>Post {{ slug }}</h1>"
+parse 3 Page_8a5edab282 audit_features/app/page.view
+props title:text query:text posts:Post[] summary:text jsonld:text
+type Post title:text href:url views:int
+body "<h1>{{ title }}</h1>{% if query %}<p class=\"q\">Results for {{ query }}</p>{% else %}<p class=\"q\">No query</p>{% endif %}<ul>{% for post, index in posts %}<li data-rank=\"{{ index }}\"><a href=\"{{ post.href }}\">{{ post.title }}</a>{% if post.views >= 1000 %} popular{% elif post.views == 0 %} new{% else %} normal{% endif %}</li>{% endfor %}</ul>{% if query == \"neo\" %}<p>exact</p>{% endif %}"
+parse 4 Page_e99ddf7a8b audit_features/app/private-info/page.view
+props title:text
+body "<h1>{{ title }}</h1>"
+parse 5 Page_6fb5b7787e audit_features/app/search/page.view
+props title:text q:text stamp:int
+body "<p>{{ q }}:{{ stamp }}</p>"
+parse 6 Layout audit_features/app/layout.view
+props title:text content:html client:bool mode:text head:html
+body "<!doctype html><html><head><title>{{ title }}</title>{{ head }}<link rel=\"stylesheet\" href=\"/_web/neokit-dev.css\"></head><body><main id=\"web-page\">{{ content }}</main><script type=\"module\" src=\"/_web/neokit-dev.js\"></script></body></html>"
+parse 7 NotFound audit_features/app/not-found.view
+props
+body "<!doctype html><title>Missing</title><h1>Nothing here</h1>"
+compile_all
+code
+fn text_Page_8a5edab282_loop_0(p_title: Arr u8 _,p_query: Arr u8 _,p_posts: Arr Post _,p_summary: Arr u8 _,p_jsonld: Arr u8 _,at:i64,count:i64) -> Arr u8 _ = if count<=0 then "" else if count==1 then check at>=0 && at<len(p_posts) in let item_post=p_posts[at] in let idx_index=at in concat("<li data-rank=\"",int_text(idx_index),"\"><a href=\"",html_escape(item_post.href.value),"\">",html_escape(item_post.title),"</a>",(if (item_post.views>=1000) then " popular" else (if (item_post.views==0) then " new" else " normal")),"</li>") else let half=count/2 in concat(text_Page_8a5edab282_loop_0(p_title,p_query,p_posts,p_summary,p_jsonld,at,half),text_Page_8a5edab282_loop_0(p_title,p_query,p_posts,p_summary,p_jsonld,at+half,count-half))
+fn text_Page_8a5edab282(p_title: Arr u8 _,p_query: Arr u8 _,p_posts: Arr Post _,p_summary: Arr u8 _,p_jsonld: Arr u8 _) -> Arr u8 _ = concat("<h1>",html_escape(p_title),"</h1>",(if len(p_query)>0 then concat("<p class=\"q\">Results for ",html_escape(p_query),"</p>") else "<p class=\"q\">No query</p>"),"<ul>",text_Page_8a5edab282_loop_0(p_title,p_query,p_posts,p_summary,p_jsonld,0,len(p_posts)),"</ul>",(if str_equal(p_query,"neo") then "<p>exact</p>" else ""))
+fn view_Page_8a5edab282(p_title: Arr u8 _,p_query: Arr u8 _,p_posts: Arr Post _,p_summary: Arr u8 _,p_jsonld: Arr u8 _) -> WebHtml = web_html(text_Page_8a5edab282(p_title,p_query,p_posts,p_summary,p_jsonld))
+
+fn text_Page_441bb226c5(p_title: Arr u8 _) -> Arr u8 _ = concat("<h1>",html_escape(p_title),"</h1>")
+fn view_Page_441bb226c5(p_title: Arr u8 _) -> WebHtml = web_html(text_Page_441bb226c5(p_title))
+
+fn text_Page_7394a2bb76(p_title: Arr u8 _) -> Arr u8 _ = concat("<h1>",html_escape(p_title),"</h1>")
+fn view_Page_7394a2bb76(p_title: Arr u8 _) -> WebHtml = web_html(text_Page_7394a2bb76(p_title))
+
+fn text_Page_e99ddf7a8b(p_title: Arr u8 _) -> Arr u8 _ = concat("<h1>",html_escape(p_title),"</h1>")
+fn view_Page_e99ddf7a8b(p_title: Arr u8 _) -> WebHtml = web_html(text_Page_e99ddf7a8b(p_title))
+
+fn text_Page_6fb5b7787e(p_title: Arr u8 _,p_q: Arr u8 _,p_stamp: i64) -> Arr u8 _ = concat("<p>",html_escape(p_q),":",int_text(p_stamp),"</p>")
+fn view_Page_6fb5b7787e(p_title: Arr u8 _,p_q: Arr u8 _,p_stamp: i64) -> WebHtml = web_html(text_Page_6fb5b7787e(p_title,p_q,p_stamp))
+
+fn text_Page_ceb8399bd1(p_title: Arr u8 _,p_slug: Arr u8 _) -> Arr u8 _ = concat("<h1>Post ",html_escape(p_slug),"</h1>")
+fn view_Page_ceb8399bd1(p_title: Arr u8 _,p_slug: Arr u8 _) -> WebHtml = web_html(text_Page_ceb8399bd1(p_title,p_slug))
+
+fn text_Layout(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _,p_head: WebHtml) -> Arr u8 _ = concat("<!doctype html><html><head><title>",html_escape(p_title),"</title>",p_head.bytes,"<link rel=\"stylesheet\" href=\"/_web/neokit-dev.css\"></head><body><main id=\"web-page\">",p_content.bytes,"</main><script type=\"module\" src=\"/_web/neokit-dev.js\"></script></body></html>")
+fn view_Layout(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _,p_head: WebHtml) -> WebHtml = web_html(text_Layout(p_title,p_content,p_client,p_mode,p_head))
+
+fn text_NotFound() -> Arr u8 _ = "<!doctype html><title>Missing</title><h1>Nothing here</h1>"
+fn view_NotFound() -> WebHtml = web_html(text_NotFound())
+end code
+expression Page_8a5edab282 "concat(\"<h1>\",html_escape(p_title),\"</h1>\",(if len(p_query)>0 then concat(\"<p class=\\\"q\\\">Results for \",html_escape(p_query),\"</p>\") else \"<p class=\\\"q\\\">No query</p>\"),\"<ul>\",text_Page_8a5edab282_loop_0(p_title,p_query,p_posts,p_summary,p_jsonld,0,len(p_posts)),\"</ul>\",(if str_equal(p_query,\"neo\") then \"<p>exact</p>\" else \"\"))"
+expression Page_441bb226c5 "concat(\"<h1>\",html_escape(p_title),\"</h1>\")"
+expression Page_7394a2bb76 "concat(\"<h1>\",html_escape(p_title),\"</h1>\")"
+expression Page_e99ddf7a8b "concat(\"<h1>\",html_escape(p_title),\"</h1>\")"
+expression Page_6fb5b7787e "concat(\"<p>\",html_escape(p_q),\":\",int_text(p_stamp),\"</p>\")"
+expression Page_ceb8399bd1 "concat(\"<h1>Post \",html_escape(p_slug),\"</h1>\")"
+expression Layout "concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title>\",p_head.bytes,\"<link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main><script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")"
+expression NotFound "\"<!doctype html><title>Missing</title><h1>Nothing here</h1>\""
+deps Page_8a5edab282
+deps Page_441bb226c5
+deps Page_7394a2bb76
+deps Page_e99ddf7a8b
+deps Page_6fb5b7787e
+deps Page_ceb8399bd1
+deps Layout
+deps NotFound
+substitute "concat(\"<!doctype html><html><head><title>\",html_escape(props.title),\"</title>\",concat(\"<meta name=\\\"description\\\" content=\\\"\",html_escape(props.summary),\"\\\">\",\"<script type=\\\"application/ld+json\\\">\",neokit_json_script(props.jsonld),\"</script>\"),\"<link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\">\",text_Page_8a5edab282(props.title,props.query,props.posts,props.summary,props.jsonld),\"</main><script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")"
+substitute "concat(\"<!doctype html><html><head><title>\",html_escape(props.title),\"</title>\",\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\",\"<link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\">\",text_Page_441bb226c5(props.title),\"</main><script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")"
+substitute "concat(\"<!doctype html><html><head><title>\",html_escape(props.title),\"</title>\",\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\",\"<link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\">\",text_Page_7394a2bb76(props.title),\"</main><script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")"
+substitute "concat(\"<!doctype html><html><head><title>\",html_escape(props.title),\"</title>\",\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\",\"<link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\">\",text_Page_e99ddf7a8b(props.title),\"</main><script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")"
+substitute "concat(\"<!doctype html><html><head><title>\",html_escape(props.title),\"</title>\",\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\",\"<link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\">\",text_Page_6fb5b7787e(props.title,props.q,props.stamp),\"</main><script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")"
+substitute "concat(\"<!doctype html><html><head><title>\",html_escape(props.title),\"</title>\",\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\",\"<link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\">\",text_Page_ceb8399bd1(props.title,props.slug),\"</main><script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")"
+=== consumer release
+parse 0 Page_8a5edab282 consumer/app/page.view
+props title:text count:int visible:bool
+body "<h1 title=\"{{ title }}\">{{ title }}</h1>{% if visible %}<output>{{ count }}</output>{% endif %}"
+parse 1 Layout consumer/app/layout.view
+props title:text content:html client:bool mode:text
+body "<!doctype html><html lang=\"en\"><head><title>{{ title }}</title></head><body><main id=\"web-page\">{{ content }}</main>{% if client %}<script type=\"module\" src=\"@asset(client.js)\"></script>{% endif %}</body></html>"
+compile_all
+code
+fn text_Page_8a5edab282(p_title: Arr u8 _,p_count: i64,p_visible: bool) -> Arr u8 _ = concat("<h1 title=\"",html_escape(p_title),"\">",html_escape(p_title),"</h1>",(if p_visible then concat("<output>",int_text(p_count),"</output>") else ""))
+fn view_Page_8a5edab282(p_title: Arr u8 _,p_count: i64,p_visible: bool) -> WebHtml = web_html(text_Page_8a5edab282(p_title,p_count,p_visible))
+
+fn text_Layout(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _) -> Arr u8 _ = concat("<!doctype html><html lang=\"en\"><head><title>",html_escape(p_title),"</title></head><body><main id=\"web-page\">",p_content.bytes,"</main>",(if p_client then "<script type=\"module\" src=\"/_web/client-4sj8sgyq.js\"></script>" else ""),"</body></html>")
+fn view_Layout(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _) -> WebHtml = web_html(text_Layout(p_title,p_content,p_client,p_mode))
+end code
+expression Page_8a5edab282 "concat(\"<h1 title=\\\"\",html_escape(p_title),\"\\\">\",html_escape(p_title),\"</h1>\",(if p_visible then concat(\"<output>\",int_text(p_count),\"</output>\") else \"\"))"
+expression Layout "concat(\"<!doctype html><html lang=\\\"en\\\"><head><title>\",html_escape(p_title),\"</title></head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main>\",(if p_client then \"<script type=\\\"module\\\" src=\\\"/_web/client-4sj8sgyq.js\\\"></script>\" else \"\"),\"</body></html>\")"
+deps Page_8a5edab282
+deps Layout
+substitute "concat(\"<!doctype html><html lang=\\\"en\\\"><head><title>\",html_escape(props.title),\"</title></head><body><main id=\\\"web-page\\\">\",text_Page_8a5edab282(props.title,props.count,props.visible),\"</main>\",(if false then \"<script type=\\\"module\\\" src=\\\"/_web/client-4sj8sgyq.js\\\"></script>\" else \"\"),\"</body></html>\")"
+=== consumer dev
+parse 0 Page_8a5edab282 consumer/app/page.view
+props title:text count:int visible:bool
+body "<h1 title=\"{{ title }}\">{{ title }}</h1>{% if visible %}<output>{{ count }}</output>{% endif %}"
+parse 1 Layout consumer/app/layout.view
+props title:text content:html client:bool mode:text
+body "<!doctype html><html lang=\"en\"><head><title>{{ title }}</title><link rel=\"stylesheet\" href=\"/_web/neokit-dev.css\"></head><body><main id=\"web-page\">{{ content }}</main>{% if client %}<script type=\"module\" src=\"@asset(client.js)\"></script>{% endif %}<script type=\"module\" src=\"/_web/neokit-dev.js\"></script></body></html>"
+compile_all
+code
+fn text_Page_8a5edab282(p_title: Arr u8 _,p_count: i64,p_visible: bool) -> Arr u8 _ = concat("<h1 title=\"",html_escape(p_title),"\">",html_escape(p_title),"</h1>",(if p_visible then concat("<output>",int_text(p_count),"</output>") else ""))
+fn view_Page_8a5edab282(p_title: Arr u8 _,p_count: i64,p_visible: bool) -> WebHtml = web_html(text_Page_8a5edab282(p_title,p_count,p_visible))
+
+fn text_Layout(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _) -> Arr u8 _ = concat("<!doctype html><html lang=\"en\"><head><title>",html_escape(p_title),"</title><link rel=\"stylesheet\" href=\"/_web/neokit-dev.css\"></head><body><main id=\"web-page\">",p_content.bytes,"</main>",(if p_client then "<script type=\"module\" src=\"/_web/client.js\"></script>" else ""),"<script type=\"module\" src=\"/_web/neokit-dev.js\"></script></body></html>")
+fn view_Layout(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _) -> WebHtml = web_html(text_Layout(p_title,p_content,p_client,p_mode))
+end code
+expression Page_8a5edab282 "concat(\"<h1 title=\\\"\",html_escape(p_title),\"\\\">\",html_escape(p_title),\"</h1>\",(if p_visible then concat(\"<output>\",int_text(p_count),\"</output>\") else \"\"))"
+expression Layout "concat(\"<!doctype html><html lang=\\\"en\\\"><head><title>\",html_escape(p_title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main>\",(if p_client then \"<script type=\\\"module\\\" src=\\\"/_web/client.js\\\"></script>\" else \"\"),\"<script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")"
+deps Page_8a5edab282
+deps Layout
+substitute "concat(\"<!doctype html><html lang=\\\"en\\\"><head><title>\",html_escape(props.title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\">\",text_Page_8a5edab282(props.title,props.count,props.visible),\"</main>\",(if false then \"<script type=\\\"module\\\" src=\\\"/_web/client.js\\\"></script>\" else \"\"),\"<script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")"
+=== browser_fixture release
+parse 0 Page_0658a2cc64 browser_fixture/app/lab/one/page.view
+props title:text
+body "<h1>{{ title }}</h1><p data-version>Template version one</p><label>Page draft<input id=\"page-draft\" value=\"\"></label><div data-web-widget=\"lab\" data-web-key=\"browser-lab\" data-web-props='{\"initial\":3}'><p>Count: <output data-count>3</output></p><button data-increment>Add one</button><label>Action title<input data-title value=\"valid\"></label><button data-action>Save action</button><p>Action: <output data-pending>idle</output></p><p data-notice role=\"status\"></p><p data-lifecycle></p><p data-widget-version></p></div>"
+parse 1 Page_5ef970ac8e browser_fixture/app/lab/two/page.view
+props title:text
+body "<h1>{{ title }}</h1><p data-version>Template version one</p><label>Page draft<input id=\"page-draft\" value=\"\"></label><div data-web-widget=\"lab\" data-web-key=\"browser-lab\" data-web-props='{\"initial\":3}'><p>Count: <output data-count>3</output></p><button data-increment>Add one</button><label>Action title<input data-title value=\"valid\"></label><button data-action>Save action</button><p>Action: <output data-pending>idle</output></p><p data-notice role=\"status\"></p><p data-lifecycle></p><p data-widget-version></p></div>"
+parse 2 Layout browser_fixture/app/layout.view
+props title:text content:html client:bool mode:text
+body "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>{{ title }}</title><link rel=\"stylesheet\" href=\"/site.css\"></head><body><main id=\"web-page\" tabindex=\"-1\">{{ content }}</main>{% if client %}<script type=\"module\" src=\"@asset(client.js)\"></script>{% endif %}</body></html>"
+parse 3 Layout_5f25a4d395 browser_fixture/app/lab/layout.view
+props title:text content:html client:bool mode:text
+body "<aside data-web-persist=\"sidebar\"><strong>Shared layout</strong><label>Sidebar draft<input id=\"sidebar-draft\" value=\"original\"></label><nav><a href=\"/lab/one\" data-web-link data-web-prefetch>Page one</a> <a href=\"/lab/two\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>{{ content }}</section>"
+compile_all
+code
+fn text_Page_0658a2cc64(p_title: Arr u8 _) -> Arr u8 _ = concat("<h1>",html_escape(p_title),"</h1><p data-version>Template version one</p><label>Page draft<input id=\"page-draft\" value=\"\"></label><div data-web-widget=\"lab\" data-web-key=\"browser-lab\" data-web-props='{\"initial\":3}'><p>Count: <output data-count>3</output></p><button data-increment>Add one</button><label>Action title<input data-title value=\"valid\"></label><button data-action>Save action</button><p>Action: <output data-pending>idle</output></p><p data-notice role=\"status\"></p><p data-lifecycle></p><p data-widget-version></p></div>")
+fn view_Page_0658a2cc64(p_title: Arr u8 _) -> WebHtml = web_html(text_Page_0658a2cc64(p_title))
+
+fn text_Page_5ef970ac8e(p_title: Arr u8 _) -> Arr u8 _ = concat("<h1>",html_escape(p_title),"</h1><p data-version>Template version one</p><label>Page draft<input id=\"page-draft\" value=\"\"></label><div data-web-widget=\"lab\" data-web-key=\"browser-lab\" data-web-props='{\"initial\":3}'><p>Count: <output data-count>3</output></p><button data-increment>Add one</button><label>Action title<input data-title value=\"valid\"></label><button data-action>Save action</button><p>Action: <output data-pending>idle</output></p><p data-notice role=\"status\"></p><p data-lifecycle></p><p data-widget-version></p></div>")
+fn view_Page_5ef970ac8e(p_title: Arr u8 _) -> WebHtml = web_html(text_Page_5ef970ac8e(p_title))
+
+fn text_Layout(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _) -> Arr u8 _ = concat("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>",html_escape(p_title),"</title><link rel=\"stylesheet\" href=\"/site.css\"></head><body><main id=\"web-page\" tabindex=\"-1\">",p_content.bytes,"</main>",(if p_client then "<script type=\"module\" src=\"/_web/client-4sj8sgyq.js\"></script>" else ""),"</body></html>")
+fn view_Layout(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _) -> WebHtml = web_html(text_Layout(p_title,p_content,p_client,p_mode))
+
+fn text_Layout_5f25a4d395(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _) -> Arr u8 _ = concat("<aside data-web-persist=\"sidebar\"><strong>Shared layout</strong><label>Sidebar draft<input id=\"sidebar-draft\" value=\"original\"></label><nav><a href=\"/lab/one\" data-web-link data-web-prefetch>Page one</a> <a href=\"/lab/two\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>",p_content.bytes,"</section>")
+fn view_Layout_5f25a4d395(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _) -> WebHtml = web_html(text_Layout_5f25a4d395(p_title,p_content,p_client,p_mode))
+end code
+expression Page_0658a2cc64 "concat(\"<h1>\",html_escape(p_title),\"</h1><p data-version>Template version one</p><label>Page draft<input id=\\\"page-draft\\\" value=\\\"\\\"></label><div data-web-widget=\\\"lab\\\" data-web-key=\\\"browser-lab\\\" data-web-props='{\\\"initial\\\":3}'><p>Count: <output data-count>3</output></p><button data-increment>Add one</button><label>Action title<input data-title value=\\\"valid\\\"></label><button data-action>Save action</button><p>Action: <output data-pending>idle</output></p><p data-notice role=\\\"status\\\"></p><p data-lifecycle></p><p data-widget-version></p></div>\")"
+expression Page_5ef970ac8e "concat(\"<h1>\",html_escape(p_title),\"</h1><p data-version>Template version one</p><label>Page draft<input id=\\\"page-draft\\\" value=\\\"\\\"></label><div data-web-widget=\\\"lab\\\" data-web-key=\\\"browser-lab\\\" data-web-props='{\\\"initial\\\":3}'><p>Count: <output data-count>3</output></p><button data-increment>Add one</button><label>Action title<input data-title value=\\\"valid\\\"></label><button data-action>Save action</button><p>Action: <output data-pending>idle</output></p><p data-notice role=\\\"status\\\"></p><p data-lifecycle></p><p data-widget-version></p></div>\")"
+expression Layout "concat(\"<!doctype html><html lang=\\\"en\\\"><head><meta charset=\\\"utf-8\\\"><meta name=\\\"viewport\\\" content=\\\"width=device-width,initial-scale=1\\\"><title>\",html_escape(p_title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/site.css\\\"></head><body><main id=\\\"web-page\\\" tabindex=\\\"-1\\\">\",p_content.bytes,\"</main>\",(if p_client then \"<script type=\\\"module\\\" src=\\\"/_web/client-4sj8sgyq.js\\\"></script>\" else \"\"),\"</body></html>\")"
+expression Layout_5f25a4d395 "concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",p_content.bytes,\"</section>\")"
+deps Page_0658a2cc64
+deps Page_5ef970ac8e
+deps Layout
+deps Layout_5f25a4d395
+substitute "concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_0658a2cc64(props.title),\"</div>\"),\"</section>\")"
+substitute "concat(\"<!doctype html><html lang=\\\"en\\\"><head><meta charset=\\\"utf-8\\\"><meta name=\\\"viewport\\\" content=\\\"width=device-width,initial-scale=1\\\"><title>\",html_escape(props.title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/site.css\\\"></head><body><main id=\\\"web-page\\\" tabindex=\\\"-1\\\">\",concat(\"<div data-web-layout=\\\"Layout_5f25a4d395\\\">\",concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_0658a2cc64(props.title),\"</div>\"),\"</section>\"),\"</div>\"),\"</main>\",(if true then \"<script type=\\\"module\\\" src=\\\"/_web/client-4sj8sgyq.js\\\"></script>\" else \"\"),\"</body></html>\")"
+substitute "concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_5ef970ac8e(props.title),\"</div>\"),\"</section>\")"
+substitute "concat(\"<!doctype html><html lang=\\\"en\\\"><head><meta charset=\\\"utf-8\\\"><meta name=\\\"viewport\\\" content=\\\"width=device-width,initial-scale=1\\\"><title>\",html_escape(props.title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/site.css\\\"></head><body><main id=\\\"web-page\\\" tabindex=\\\"-1\\\">\",concat(\"<div data-web-layout=\\\"Layout_5f25a4d395\\\">\",concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_5ef970ac8e(props.title),\"</div>\"),\"</section>\"),\"</div>\"),\"</main>\",(if true then \"<script type=\\\"module\\\" src=\\\"/_web/client-4sj8sgyq.js\\\"></script>\" else \"\"),\"</body></html>\")"
+=== browser_fixture dev
+parse 0 Page_0658a2cc64 browser_fixture/app/lab/one/page.view
+props title:text
+body "<h1>{{ title }}</h1><p data-version>Template version one</p><label>Page draft<input id=\"page-draft\" value=\"\"></label><div data-web-widget=\"lab\" data-web-key=\"browser-lab\" data-web-props='{\"initial\":3}'><p>Count: <output data-count>3</output></p><button data-increment>Add one</button><label>Action title<input data-title value=\"valid\"></label><button data-action>Save action</button><p>Action: <output data-pending>idle</output></p><p data-notice role=\"status\"></p><p data-lifecycle></p><p data-widget-version></p></div>"
+parse 1 Page_5ef970ac8e browser_fixture/app/lab/two/page.view
+props title:text
+body "<h1>{{ title }}</h1><p data-version>Template version one</p><label>Page draft<input id=\"page-draft\" value=\"\"></label><div data-web-widget=\"lab\" data-web-key=\"browser-lab\" data-web-props='{\"initial\":3}'><p>Count: <output data-count>3</output></p><button data-increment>Add one</button><label>Action title<input data-title value=\"valid\"></label><button data-action>Save action</button><p>Action: <output data-pending>idle</output></p><p data-notice role=\"status\"></p><p data-lifecycle></p><p data-widget-version></p></div>"
+parse 2 Layout browser_fixture/app/layout.view
+props title:text content:html client:bool mode:text
+body "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>{{ title }}</title><link rel=\"stylesheet\" href=\"/site.css\"><link rel=\"stylesheet\" href=\"/_web/neokit-dev.css\"></head><body><main id=\"web-page\" tabindex=\"-1\">{{ content }}</main>{% if client %}<script type=\"module\" src=\"@asset(client.js)\"></script>{% endif %}<script type=\"module\" src=\"/_web/neokit-dev.js\"></script></body></html>"
+parse 3 Layout_5f25a4d395 browser_fixture/app/lab/layout.view
+props title:text content:html client:bool mode:text
+body "<aside data-web-persist=\"sidebar\"><strong>Shared layout</strong><label>Sidebar draft<input id=\"sidebar-draft\" value=\"original\"></label><nav><a href=\"/lab/one\" data-web-link data-web-prefetch>Page one</a> <a href=\"/lab/two\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>{{ content }}</section>"
+compile_all
+code
+fn text_Page_0658a2cc64(p_title: Arr u8 _) -> Arr u8 _ = concat("<h1>",html_escape(p_title),"</h1><p data-version>Template version one</p><label>Page draft<input id=\"page-draft\" value=\"\"></label><div data-web-widget=\"lab\" data-web-key=\"browser-lab\" data-web-props='{\"initial\":3}'><p>Count: <output data-count>3</output></p><button data-increment>Add one</button><label>Action title<input data-title value=\"valid\"></label><button data-action>Save action</button><p>Action: <output data-pending>idle</output></p><p data-notice role=\"status\"></p><p data-lifecycle></p><p data-widget-version></p></div>")
+fn view_Page_0658a2cc64(p_title: Arr u8 _) -> WebHtml = web_html(text_Page_0658a2cc64(p_title))
+
+fn text_Page_5ef970ac8e(p_title: Arr u8 _) -> Arr u8 _ = concat("<h1>",html_escape(p_title),"</h1><p data-version>Template version one</p><label>Page draft<input id=\"page-draft\" value=\"\"></label><div data-web-widget=\"lab\" data-web-key=\"browser-lab\" data-web-props='{\"initial\":3}'><p>Count: <output data-count>3</output></p><button data-increment>Add one</button><label>Action title<input data-title value=\"valid\"></label><button data-action>Save action</button><p>Action: <output data-pending>idle</output></p><p data-notice role=\"status\"></p><p data-lifecycle></p><p data-widget-version></p></div>")
+fn view_Page_5ef970ac8e(p_title: Arr u8 _) -> WebHtml = web_html(text_Page_5ef970ac8e(p_title))
+
+fn text_Layout(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _) -> Arr u8 _ = concat("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>",html_escape(p_title),"</title><link rel=\"stylesheet\" href=\"/site.css\"><link rel=\"stylesheet\" href=\"/_web/neokit-dev.css\"></head><body><main id=\"web-page\" tabindex=\"-1\">",p_content.bytes,"</main>",(if p_client then "<script type=\"module\" src=\"/_web/client.js\"></script>" else ""),"<script type=\"module\" src=\"/_web/neokit-dev.js\"></script></body></html>")
+fn view_Layout(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _) -> WebHtml = web_html(text_Layout(p_title,p_content,p_client,p_mode))
+
+fn text_Layout_5f25a4d395(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _) -> Arr u8 _ = concat("<aside data-web-persist=\"sidebar\"><strong>Shared layout</strong><label>Sidebar draft<input id=\"sidebar-draft\" value=\"original\"></label><nav><a href=\"/lab/one\" data-web-link data-web-prefetch>Page one</a> <a href=\"/lab/two\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>",p_content.bytes,"</section>")
+fn view_Layout_5f25a4d395(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _) -> WebHtml = web_html(text_Layout_5f25a4d395(p_title,p_content,p_client,p_mode))
+end code
+expression Page_0658a2cc64 "concat(\"<h1>\",html_escape(p_title),\"</h1><p data-version>Template version one</p><label>Page draft<input id=\\\"page-draft\\\" value=\\\"\\\"></label><div data-web-widget=\\\"lab\\\" data-web-key=\\\"browser-lab\\\" data-web-props='{\\\"initial\\\":3}'><p>Count: <output data-count>3</output></p><button data-increment>Add one</button><label>Action title<input data-title value=\\\"valid\\\"></label><button data-action>Save action</button><p>Action: <output data-pending>idle</output></p><p data-notice role=\\\"status\\\"></p><p data-lifecycle></p><p data-widget-version></p></div>\")"
+expression Page_5ef970ac8e "concat(\"<h1>\",html_escape(p_title),\"</h1><p data-version>Template version one</p><label>Page draft<input id=\\\"page-draft\\\" value=\\\"\\\"></label><div data-web-widget=\\\"lab\\\" data-web-key=\\\"browser-lab\\\" data-web-props='{\\\"initial\\\":3}'><p>Count: <output data-count>3</output></p><button data-increment>Add one</button><label>Action title<input data-title value=\\\"valid\\\"></label><button data-action>Save action</button><p>Action: <output data-pending>idle</output></p><p data-notice role=\\\"status\\\"></p><p data-lifecycle></p><p data-widget-version></p></div>\")"
+expression Layout "concat(\"<!doctype html><html lang=\\\"en\\\"><head><meta charset=\\\"utf-8\\\"><meta name=\\\"viewport\\\" content=\\\"width=device-width,initial-scale=1\\\"><title>\",html_escape(p_title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/site.css\\\"><link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\" tabindex=\\\"-1\\\">\",p_content.bytes,\"</main>\",(if p_client then \"<script type=\\\"module\\\" src=\\\"/_web/client.js\\\"></script>\" else \"\"),\"<script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")"
+expression Layout_5f25a4d395 "concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",p_content.bytes,\"</section>\")"
+deps Page_0658a2cc64
+deps Page_5ef970ac8e
+deps Layout
+deps Layout_5f25a4d395
+substitute "concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_0658a2cc64(props.title),\"</div>\"),\"</section>\")"
+substitute "concat(\"<!doctype html><html lang=\\\"en\\\"><head><meta charset=\\\"utf-8\\\"><meta name=\\\"viewport\\\" content=\\\"width=device-width,initial-scale=1\\\"><title>\",html_escape(props.title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/site.css\\\"><link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\" tabindex=\\\"-1\\\">\",concat(\"<div data-web-layout=\\\"Layout_5f25a4d395\\\">\",concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_0658a2cc64(props.title),\"</div>\"),\"</section>\"),\"</div>\"),\"</main>\",(if true then \"<script type=\\\"module\\\" src=\\\"/_web/client.js\\\"></script>\" else \"\"),\"<script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")"
+substitute "concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_5ef970ac8e(props.title),\"</div>\"),\"</section>\")"
+substitute "concat(\"<!doctype html><html lang=\\\"en\\\"><head><meta charset=\\\"utf-8\\\"><meta name=\\\"viewport\\\" content=\\\"width=device-width,initial-scale=1\\\"><title>\",html_escape(props.title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/site.css\\\"><link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\" tabindex=\\\"-1\\\">\",concat(\"<div data-web-layout=\\\"Layout_5f25a4d395\\\">\",concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_5ef970ac8e(props.title),\"</div>\"),\"</section>\"),\"</div>\"),\"</main>\",(if true then \"<script type=\\\"module\\\" src=\\\"/_web/client.js\\\"></script>\" else \"\"),\"<script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")"
+=== dev_css release
+parse 0 Page_8a5edab282 dev_css/app/page.view
+props title:text
+body "<h1 class=\"p-4\">{{ title }}</h1>"
+parse 1 Layout dev_css/app/layout.view
+props title:text content:html client:bool mode:text
+body "<!doctype html><html><head><title>{{ title }}</title><link rel=\"stylesheet\" href=\"@asset(site.css)\"></head><body>{{ content }}</body></html>"
+compile_all
+code
+fn text_Page_8a5edab282(p_title: Arr u8 _) -> Arr u8 _ = concat("<h1 class=\"p-4\">",html_escape(p_title),"</h1>")
+fn view_Page_8a5edab282(p_title: Arr u8 _) -> WebHtml = web_html(text_Page_8a5edab282(p_title))
+
+fn text_Layout(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _) -> Arr u8 _ = concat("<!doctype html><html><head><title>",html_escape(p_title),"</title><link rel=\"stylesheet\" href=\"/_web/site-89930f067708.css\"></head><body>",p_content.bytes,"</body></html>")
+fn view_Layout(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _) -> WebHtml = web_html(text_Layout(p_title,p_content,p_client,p_mode))
+end code
+expression Page_8a5edab282 "concat(\"<h1 class=\\\"p-4\\\">\",html_escape(p_title),\"</h1>\")"
+expression Layout "concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/_web/site-89930f067708.css\\\"></head><body>\",p_content.bytes,\"</body></html>\")"
+deps Page_8a5edab282
+deps Layout
+substitute "concat(\"<!doctype html><html><head><title>\",html_escape(props.title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/_web/site-89930f067708.css\\\"></head><body>\",text_Page_8a5edab282(props.title),\"</body></html>\")"
+=== dev_css dev
+parse 0 Page_8a5edab282 dev_css/app/page.view
+props title:text
+body "<h1 class=\"p-4\">{{ title }}</h1>"
+parse 1 Layout dev_css/app/layout.view
+props title:text content:html client:bool mode:text
+body "<!doctype html><html><head><title>{{ title }}</title><link rel=\"stylesheet\" href=\"@asset(site.css)\"><link rel=\"stylesheet\" href=\"/_web/neokit-dev.css\"></head><body>{{ content }}<script type=\"module\" src=\"/_web/neokit-dev.js\"></script></body></html>"
+compile_all
+code
+fn text_Page_8a5edab282(p_title: Arr u8 _) -> Arr u8 _ = concat("<h1 class=\"p-4\">",html_escape(p_title),"</h1>")
+fn view_Page_8a5edab282(p_title: Arr u8 _) -> WebHtml = web_html(text_Page_8a5edab282(p_title))
+
+fn text_Layout(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _) -> Arr u8 _ = concat("<!doctype html><html><head><title>",html_escape(p_title),"</title><link rel=\"stylesheet\" href=\"/_web/site.css\"><link rel=\"stylesheet\" href=\"/_web/neokit-dev.css\"></head><body>",p_content.bytes,"<script type=\"module\" src=\"/_web/neokit-dev.js\"></script></body></html>")
+fn view_Layout(p_title: Arr u8 _,p_content: WebHtml,p_client: bool,p_mode: Arr u8 _) -> WebHtml = web_html(text_Layout(p_title,p_content,p_client,p_mode))
+end code
+expression Page_8a5edab282 "concat(\"<h1 class=\\\"p-4\\\">\",html_escape(p_title),\"</h1>\")"
+expression Layout "concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/_web/site.css\\\"><link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body>\",p_content.bytes,\"<script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")"
+deps Page_8a5edab282
+deps Layout
+substitute "concat(\"<!doctype html><html><head><title>\",html_escape(props.title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/_web/site.css\\\"><link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body>\",text_Page_8a5edab282(props.title),\"<script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")"

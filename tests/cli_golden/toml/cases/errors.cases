@@ -1,0 +1,188 @@
+#--- duplicate key
+a = 1
+a = 2
+#--- duplicate key after a comment
+a = 1
+a = 2# comment
+#--- duplicate table
+[a]
+x = 1
+[a]
+#--- table over a value
+a = 1
+[a]
+#--- dotted key into an explicit table
+[a.b]
+c = 1
+[a]
+b.d = 2
+#--- table after its dotted keys
+a.b = 1
+[a]
+#--- table after nested dotted keys
+[t]
+a.b.c = 1
+[t.a.b]
+#--- array of tables over a table
+[a]
+[[a]]
+#--- table over an array of tables
+[[a]]
+[a]
+#--- array of tables over a value
+a = 1
+[[a]]
+#--- dotted key through a value
+a = 1
+a.b = 2
+#--- dotted key into an inline table
+a = {b = 1}
+a.c = 2
+#--- table into an inline table
+a = {b = 1}
+[a.c]
+#--- inline table declared again
+a = {b = 1}
+[a]
+#--- array of tables into a static array
+a = []
+[[a]]
+#--- table into a static array
+a = [{b = 1}]
+[a.c]
+#--- array table under a static array
+a = [1]
+[[a.b]]
+#--- dotted key array table reopened
+[[a]]
+b.c = 1
+[a.b]
+#--- inline table duplicate key
+a = {b = 1, b = 2}
+#--- inline table frozen member
+a = {b = {c = 1}, b.d = 2}
+#--- inline table frozen array member
+a = {b = [1], b.c = 2}
+#--- inline table overwrite through dotted key
+a = {b = 1, b.c = 2}
+#--- inline table duplicate after dotted keys
+a = {b.c = 1, b = 2}
+#--- inline table trailing comma
+a = {b = 1,}
+#--- inline table across lines
+a = {b = 1,
+c = 2}
+#--- unclosed inline table
+a = {b = 1
+#--- inline table missing comma
+a = {b = 1 c = 2}
+#--- unclosed array
+a = [1, 2
+#--- array missing comma
+a = [1 2]
+#--- array with only a comma
+a = [,]
+#--- unterminated basic string
+a = "abc
+b = 1
+#--- unterminated literal string
+a = 'abc
+b = 'x'
+#--- unterminated literal string at end
+a = 'abc
+#--- unterminated multi-line basic string
+a = """abc
+#--- unterminated multi-line literal string
+a = '''abc
+#--- six closing quotes
+a = """x""""""
+#--- six closing apostrophes
+a = '''x''''''
+#--- unknown escape
+a = "\q"
+#--- escape before non-ASCII
+a = "\é"
+#--- backslash at end
+a = "\
+#--- short unicode escape
+a = "\u12"
+#--- unicode escape with a non-hex digit
+a = "\u00g0"
+#--- surrogate escape
+a = "\uD800"
+#--- escape beyond Unicode
+a = "\U00110000"
+#--- line-ending backslash in a one-line string
+a = "abc\
+def"
+#--- whitespace escape not ending the line
+a = """abc\  x
+"""
+#--- newline in a one-line string
+a = "abc
+def"
+#--- missing value
+a =
+#--- missing equals
+a 1
+#--- equals first
+= 1
+#--- invalid value
+a = nope
+#--- bad key part
+a.= 1
+#--- key ending with a dot
+a. = 1
+#--- two values
+a = 1 2
+#--- text after a header
+[a] b = 1
+#--- unclosed header
+[a
+#--- unclosed array header
+[[a]
+#--- array header closed once
+[[a]
+b = 1
+#--- empty header
+[]
+#--- leading zero
+a = 01
+#--- hex prefix without digits
+a = 0x
+#--- signed hex
+a = +0x10
+#--- double underscore
+a = 1__0
+#--- trailing underscore
+a = 1_
+#--- leading underscore
+a = _1
+#--- true prefix
+a = trueish
+#--- capitalized boolean
+a = True
+#--- column after non-ASCII text
+"é" = "ü" x
+#--- column after an astral character
+a = "😀😀" ?
+#--- table declared twice with a non-ASCII key
+[ "é" . "​" ]
+[ "é" . "​" ]
+#--- repr of a key with quotes
+["it's"]
+["it's"]
+#--- repr of a key with both quotes
+["say \"it's\""]
+["say \"it's\""]
+#--- literal string key cannot escape
+['it\'s']
+#--- repr of a key with a backslash
+['a\b']
+['a\b']
+#--- multi-line string as a key
+"""a""" = 1
+#--- invalid statement
+!
+#--- statement starting with a closing bracket
+] = 1

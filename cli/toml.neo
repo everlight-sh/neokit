@@ -1,0 +1,120 @@
+; NeoKit's layer over std:toml: reading configuration files the way
+; compiler/*.py does with tomllib.loads(path.read_text()), and typed lookups
+; that mirror build.py's config.get(key, default) followed by an isinstance
+; or type() check.
+;
+; Parsing is std:toml's toml_parse(text) -> JsonResult (TOML 1.0): tables,
+; inline tables and [[x]] elements are std:json objects with their keys in
+; document order, arrays are arrays, strings and booleans map directly,
+; integers are decimal JSON integers. Floats are JSON numbers with a fraction
+; or exponent (toml_is_float), and dates and times are strings holding the
+; TOML text, so unlike Python's datetime values they pass for strings.
+;
+; For a file's bytes use toml_load: it first applies Path.read_text()'s
+; universal newlines (a lone CR becomes LF, which std:toml alone rejects) and
+; words an error as "PATH: invalid TOML at line N: MESSAGE". Python does not
+; catch TOMLDecodeError there, so that wording is NeoKit's own. Iterate a
+; table in document order with toml_size and toml_key_at/toml_value_at, an
+; array with toml_items.
+import "std:json"
+import "std:option"
+import "std:result"
+import "std:toml"
+import "text.neo"
+
+; The error text toml_load reports for a std:toml error in the file at path.
+fn toml_error_text(borrow path:Arr u8 _, borrow error:Error) -> Arr u8 _
+  = if error.position>0 then concat(path,": invalid TOML at line ",text_int(error.position),": ",error.message)
+    else concat(path,": invalid TOML: ",error.message)
+; tomllib.loads(path.read_text()) for the bytes read from path.
+fn toml_load(borrow path:Arr u8 _, borrow raw:Arr u8 _) -> Result<Json,Arr u8 _>
+  = let parsed=toml_parse(text_universal_newlines(raw)) in
+    if parsed.ok then Ok::<Json,Arr u8 _>(parsed.value) else Err::<Json,Arr u8 _>(toml_error_text(path,parsed.error))
+
+; ---- Kinds and values ----
+
+fn toml_is_table(borrow value:Json) -> bool = value.kind==6
+fn toml_is_array(borrow value:Json) -> bool = value.kind==5
+; isinstance(value, str); also true for a date or time.
+fn toml_is_text(borrow value:Json) -> bool = value.kind==4
+private fn toml_whole(borrow raw:Arr u8 _) -> bool
+  = !text_contains(raw,".") && !text_contains(raw,"e") && !text_contains(raw,"E")
+; type(value) is int: TOML integers only (not booleans, not floats).
+fn toml_is_int(borrow value:Json) -> bool = value.kind==3 && toml_whole(value.raw)
+fn toml_is_float(borrow value:Json) -> bool = value.kind==3 && !toml_whole(value.raw)
+fn toml_is_bool(borrow value:Json) -> bool = value.kind==2
+; The decoded string, or "" for another kind.
+fn toml_text(borrow value:Json) -> Arr u8 _ = if value.kind==4 then json_text(value).value else text_empty()
+; The integer, or 0 for another kind.
+fn toml_int(borrow value:Json) -> i64 = if toml_is_int(value) then json_int(value).value else 0
+fn toml_bool(borrow value:Json) -> bool = value.kind==2 && json_bool(value).value
+; Whether a number's digits before any exponent are all zero.
+private fn toml_zero(borrow raw:Arr u8 _) -> bool
+  = loop (i:i64{i>=0}=0, zero=true, done=false) while !done && zero && i<len(raw)
+      next (i+1, !(raw[i]>=u8(49) && raw[i]<=u8(57)), raw[i]==u8(101) || raw[i]==u8(69)) yield zero
+; Python bool(value): false, 0, 0.0, "", [] and {} are false.
+fn toml_truthy(borrow value:Json) -> bool
+  = if value.kind==2 then json_bool(value).value
+    else if value.kind==3 then !toml_zero(value.raw)
+    else if value.kind==4 then len(value.raw)>2
+    else if value.kind==5 then json_array_len(value)>0
+    else if value.kind==6 then value.count>0 else false
+; Members of a table or elements of an array.
+fn toml_size(borrow value:Json) -> i64 = if value.kind==6 then value.count else if value.kind==5 then json_array_len(value) else 0
+; The i-th key and value of a table, in document order.
+fn toml_key_at(borrow table:Json, i:i64) -> Arr u8 _ = json_object_key_at(table,i).value
+fn toml_value_at(borrow table:Json, i:i64) -> Json = json_object_value_at(table,i).value
+fn toml_keys(borrow table:Json) -> Arr Arr u8 _ _ = json_object_keys(table)
+; The elements of an array ([] for another kind).
+fn toml_items(borrow value:Json) -> Arr Json _ = if value.kind==5 then json_array_values(value) else arr(i in 0..0) json_none().value
+; key in table.
+fn toml_has(borrow table:Json, borrow key:Arr u8 _) -> bool = table.kind==6 && json_get(table,key).present
+; table.get(key).
+fn toml_get(borrow table:Json, borrow key:Arr u8 _) -> Option<Json>
+  = let found=if table.kind==6 then json_get(table,key) else json_none() in
+    if found.present then Some::<Json>(found.value) else None::<Json>()
+
+; ---- Typed lookups ----
+; config.get(key, fallback) for an expected type. present: the key exists.
+; ok: the value has the type (or the key is absent and fallback is used).
+; value: the value, the fallback when absent, or a zero value when not ok.
+type TomlGetText = { present:bool, ok:bool, value:Arr u8 _ }
+type TomlGetInt = { present:bool, ok:bool, value:i64 }
+type TomlGetBool = { present:bool, ok:bool, value:bool }
+; A table value; an absent key gives an empty table.
+type TomlGetTable = { present:bool, ok:bool, value:Json }
+; An array's elements; an absent key gives [].
+type TomlGetArray = { present:bool, ok:bool, items:Arr Json _ }
+; A list of str: ok when the value is an array of strings only.
+type TomlGetTexts = { present:bool, ok:bool, values:Arr Arr u8 _ _ }
+
+fn toml_get_text(borrow table:Json, borrow key:Arr u8 _, borrow fallback:Arr u8 _) -> TomlGetText
+  = let found=if table.kind==6 then json_get(table,key) else json_none() in
+    if !found.present then TomlGetText { present=false, ok=true, value=fallback }
+    else TomlGetText { present=true, ok=found.value.kind==4, value=toml_text(found.value) }
+fn toml_get_int(borrow table:Json, borrow key:Arr u8 _, fallback:i64) -> TomlGetInt
+  = let found=if table.kind==6 then json_get(table,key) else json_none() in
+    if !found.present then TomlGetInt { present=false, ok=true, value=fallback }
+    else TomlGetInt { present=true, ok=toml_is_int(found.value), value=toml_int(found.value) }
+fn toml_get_bool(borrow table:Json, borrow key:Arr u8 _, fallback:bool) -> TomlGetBool
+  = let found=if table.kind==6 then json_get(table,key) else json_none() in
+    if !found.present then TomlGetBool { present=false, ok=true, value=fallback }
+    else TomlGetBool { present=true, ok=found.value.kind==2, value=toml_bool(found.value) }
+private fn toml_empty_table() -> Json = json_value_object(text_words(),arr(i in 0..0) json_none().value).value
+fn toml_get_table(borrow table:Json, borrow key:Arr u8 _) -> TomlGetTable
+  = let found=if table.kind==6 then json_get(table,key) else json_none() in
+    if !found.present then TomlGetTable { present=false, ok=true, value=toml_empty_table() }
+    else if found.value.kind==6 then TomlGetTable { present=true, ok=true, value=found.value }
+    else TomlGetTable { present=true, ok=false, value=toml_empty_table() }
+fn toml_get_array(borrow table:Json, borrow key:Arr u8 _) -> TomlGetArray
+  = let found=if table.kind==6 then json_get(table,key) else json_none() in
+    TomlGetArray { present=found.present, ok=!found.present || found.value.kind==5, items=toml_items(found.value) }
+private fn toml_strings(borrow items:Arr Json _) -> TomlGetTexts
+  = loop (out=TomlGetTexts { present=true, ok=true, values=text_words() }, i:i64{i>=0}=0) while out.ok && i<len(items)
+      next (if items[i].kind==4 then out with { values=push(out.values,toml_text(items[i])) } else TomlGetTexts { present=true, ok=false, values=text_words() }, i+1)
+      yield out
+fn toml_get_texts(borrow table:Json, borrow key:Arr u8 _) -> TomlGetTexts
+  = let found=if table.kind==6 then json_get(table,key) else json_none() in
+    if !found.present then TomlGetTexts { present=false, ok=true, values=text_words() }
+    else if found.value.kind!=5 then TomlGetTexts { present=true, ok=false, values=text_words() }
+    else toml_strings(json_array_values(found.value))

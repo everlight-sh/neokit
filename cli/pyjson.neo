@@ -1,0 +1,91 @@
+; Python's json.dumps for std:json values, byte for byte.
+;
+; pj_dumps_indent2(v) is json.dumps(v, indent=2) and pj_dumps(v) is
+; json.dumps(v): ensure_ascii escaping, Python's separators, members and
+; elements in order. compiler/*.py calls json.dumps only these two ways (and
+; on a lone str, pj_quote); it never passes sort_keys, separators or
+; ensure_ascii=False. Neither function adds the trailing newline the Python
+; writes after a manifest.
+;
+; Numbers: integers print as Python prints int (a parsed "-0" is 0, and
+; integers beyond 64 bits keep their digits). Python floats print with
+; float.__repr__, which is not implemented: a fraction or exponent lexeme is
+; copied as written. pj_supported reports whether a value has none, so its
+; output is exactly Python's. A missing value (kind 0) prints as null.
+import "std:strings"
+import "std:json"
+import "text.neo"
+
+private fn pj_hex_digit(d:i64) -> u8 = u8(if d<10 then 48+d else 87+d)
+private fn pj_hex4(move out:Arr u8 _, code:i64) -> Arr u8 _
+  = loop (o=out, k=3) while k>=0 next (push(o,pj_hex_digit(bit_and(shift_right(code,k*4),15))), k-1) yield o
+; One code point as json.dumps writes it with ensure_ascii: printable ASCII
+; as is, the seven short escapes, everything else as lowercase \uXXXX, with
+; a surrogate pair above U+FFFF.
+private fn pj_escape(move out:Arr u8 _, code:i64) -> Arr u8 _
+  = if code==34 then concat(out,"\\\"")
+    else if code==92 then concat(out,"\\\\")
+    else if code==10 then concat(out,"\\n")
+    else if code==13 then concat(out,"\\r")
+    else if code==9 then concat(out,"\\t")
+    else if code==8 then concat(out,"\\b")
+    else if code==12 then concat(out,"\\f")
+    else if code>=32 && code<127 then push(out,u8(code))
+    else if code<65536 then pj_hex4(concat(out,"\\u"),code)
+    else let v=code-65536 in pj_hex4(concat(pj_hex4(concat(out,"\\u"),55296+shift_right(v,10)),"\\u"),56320+bit_and(v,1023))
+; Append json.dumps(text) for UTF-8 text.
+fn pj_quote_into(move out:Arr u8 _, borrow text:Arr u8 _) -> Arr u8 _
+  = let body=loop (o=push(out,u8(34)), i=0) while i<len(text)
+      next (pj_escape(o,text_code_at(text,i)), i+text_char_width(text,i)) yield o in
+    push(body,u8(34))
+; json.dumps(text) for a str.
+fn pj_quote(borrow text:Arr u8 _) -> Arr u8 _ = pj_quote_into(text_empty(),text)
+
+private fn pj_newline(move out:Arr u8 _, indent:i64, level:i64) -> Arr u8 _
+  = if indent<0 then out else
+    loop (o=push(out,u8(10)), k=0) while k<indent*level next (push(o,u8(32)), k+1) yield o
+private fn pj_separator(move out:Arr u8 _, indent:i64) -> Arr u8 _ = if indent<0 then concat(out,", ") else push(out,u8(44))
+private fn pj_number(move out:Arr u8 _, borrow raw:Arr u8 _) -> Arr u8 _
+  = if text_equal(raw,"-0") then push(out,u8(48)) else concat(out,raw)
+private fn pj_member(move out:Arr u8 _, borrow value:Json, i:i64, indent:i64, level:i64) -> Arr u8 _
+  = let start=pj_newline(if i==0 then out else pj_separator(out,indent),indent,level+1) in
+    let keyed=concat(pj_quote_into(start,json_object_key_at(value,i).value),": ") in
+    pj_write(keyed,json_object_value_at(value,i).value,indent,level+1)
+private fn pj_object(move out:Arr u8 _, borrow value:Json, indent:i64, level:i64) -> Arr u8 _
+  = if value.count<=0 then concat(out,"{}") else
+    let body=loop (o=push(out,u8(123)), i=0) while i<value.count next (pj_member(o,value,i,indent,level), i+1) yield o in
+    push(pj_newline(body,indent,level),u8(125))
+private fn pj_array(move out:Arr u8 _, borrow value:Json, indent:i64, level:i64) -> Arr u8 _
+  = let items=json_array_values(value) in
+    if len(items)==0 then concat(out,"[]") else
+    let body=loop (o=push(out,u8(91)), i:i64{i>=0}=0) while i<len(items)
+      next (pj_write(pj_newline(if i==0 then o else pj_separator(o,indent),indent,level+1),items[i],indent,level+1), i+1) yield o in
+    push(pj_newline(body,indent,level),u8(93))
+; Append value serialized as json.dumps does: indent<0 for the compact form
+; (", " and ": "), otherwise that many spaces per level ("," and ": ").
+fn pj_write(move out:Arr u8 _, borrow value:Json, indent:i64, level:i64) -> Arr u8 _
+  = if value.kind==6 then pj_object(out,value,indent,level)
+    else if value.kind==5 then pj_array(out,value,indent,level)
+    else if value.kind==4 then pj_quote_into(out,json_text(value).value)
+    else if value.kind==3 then pj_number(out,value.raw)
+    else if value.kind==2 || value.kind==1 then concat(out,value.raw)
+    else concat(out,"null")
+; json.dumps(value, indent=2).
+fn pj_dumps_indent2(borrow value:Json) -> Arr u8 _ = pj_write(text_empty(),value,2,0)
+; json.dumps(value).
+fn pj_dumps(borrow value:Json) -> Arr u8 _ = pj_write(text_empty(),value,-1,0)
+
+private fn pj_integer(borrow raw:Arr u8 _) -> bool
+  = !text_contains(raw,".") && !text_contains(raw,"e") && !text_contains(raw,"E")
+private fn pj_members_supported(borrow value:Json) -> bool
+  = loop (i=0, ok=true) while ok && i<value.count next (i+1, pj_supported(json_object_value_at(value,i).value)) yield ok
+private fn pj_items_supported(borrow value:Json) -> bool
+  = let items=json_array_values(value) in
+    loop (i:i64{i>=0}=0, ok=true) while ok && i<len(items) next (i+1, pj_supported(items[i])) yield ok
+; Whether value holds no float lexemes and no missing values, so that the
+; dumps functions match Python exactly.
+fn pj_supported(borrow value:Json) -> bool
+  = if value.kind==6 then pj_members_supported(value)
+    else if value.kind==5 then pj_items_supported(value)
+    else if value.kind==3 then pj_integer(value.raw)
+    else value.kind>0

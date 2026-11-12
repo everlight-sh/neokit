@@ -1,0 +1,372 @@
+=== tests/cli_golden/toml/cases/valid.cases empty document
+{}
+=== tests/cli_golden/toml/cases/valid.cases comments and blank lines only
+{}
+=== tests/cli_golden/toml/cases/valid.cases basic strings
+{
+  "plain": "hello",
+  "escapes": "tab\there\nnewline \"quoted\" back\\slash \b\f\r",
+  "unicode": "caf\u00e9 \u4e2d \ud83d\ude00 \u0000 \u001f \u007f \u00a0",
+  "raw": "caf\u00e9 \u4e2d\u6587 \ud83d\ude00 \u00f1",
+  "empty": "",
+  "hash": "# not a comment"
+}
+=== tests/cli_golden/toml/cases/valid.cases literal strings
+{
+  "path": "C:\\Users\\nobody",
+  "quoted": "say \"hi\"",
+  "empty": "",
+  "hash": "# still text"
+}
+=== tests/cli_golden/toml/cases/valid.cases multi-line basic strings
+{
+  "a": "line one\nline two",
+  "b": "joined words ",
+  "c": "quote \"inside\" and \"\"two\"\" ",
+  "d": "four\"",
+  "e": "five\"\"",
+  "f": "tab\tok\n",
+  "g": "\u00e9\ud83c\udf89",
+  "h": "trailingspace"
+}
+=== tests/cli_golden/toml/cases/valid.cases multi-line literal strings
+{
+  "a": "raw \\n text\n",
+  "b": "it's",
+  "c": "four'",
+  "d": "five''",
+  "e": ""
+}
+=== tests/cli_golden/toml/cases/valid.cases keys
+{
+  "bare_key-1": 1,
+  "quoted key": 2,
+  "literal key": 3,
+  "": 4,
+  "\u043a\u043b\u044e\u0447": 5,
+  "a": {
+    "b": {
+      "c": 6
+    },
+    "d": 7
+  },
+  "x.y": {
+    "z": 8
+  },
+  "1234": 9,
+  "-key": 10,
+  "escA\t": 11
+}
+=== tests/cli_golden/toml/cases/valid.cases integers
+{
+  "dec": 42,
+  "pos": 17,
+  "neg": -5,
+  "zero": 0,
+  "plus_zero": 0,
+  "minus_zero": 0,
+  "under": 1000000,
+  "hex": 3735928559,
+  "hex_lower": 255,
+  "oct": 493,
+  "bin": 214,
+  "max": 9223372036854775807,
+  "min": -9223372036854775808,
+  "hex_max": 9223372036854775807
+}
+=== tests/cli_golden/toml/cases/valid.cases booleans
+{
+  "yes": true,
+  "no": false
+}
+=== tests/cli_golden/toml/cases/valid.cases arrays
+{
+  "empty": [],
+  "ints": [
+    1,
+    2,
+    3
+  ],
+  "mixed": [
+    1,
+    "two",
+    true,
+    [
+      3
+    ],
+    {
+      "four": 4
+    }
+  ],
+  "nested": [
+    [
+      1,
+      2
+    ],
+    [],
+    [
+      [
+        3
+      ]
+    ]
+  ],
+  "multi": [
+    1,
+    2,
+    3
+  ],
+  "strings": [
+    "a",
+    "b",
+    "c",
+    "d"
+  ],
+  "trailing": [
+    1,
+    2
+  ],
+  "spaced": [
+    1,
+    2
+  ],
+  "empty_lines": []
+}
+=== tests/cli_golden/toml/cases/valid.cases inline tables
+{
+  "empty": {},
+  "spaced_empty": {},
+  "point": {
+    "x": 1,
+    "y": 2
+  },
+  "nested": {
+    "a": {
+      "b": {
+        "c": 1
+      }
+    },
+    "d": [
+      1,
+      2
+    ]
+  },
+  "dotted": {
+    "a": {
+      "b": 1,
+      "c": 2
+    }
+  },
+  "quoted": {
+    "k k": 1,
+    "l": 2
+  },
+  "array_of_inline": [
+    {
+      "a": 1
+    },
+    {
+      "a": 2
+    }
+  ]
+}
+=== tests/cli_golden/toml/cases/valid.cases tables
+{
+  "site": {
+    "name": "x"
+  },
+  "server": {
+    "timing": true
+  },
+  "a": {
+    "b": {
+      "c": {
+        "d": 1
+      },
+      "f": 3
+    },
+    "e": 2
+  },
+  "quoted": {
+    "key": {
+      "g": 4
+    }
+  },
+  "empty": {}
+}
+=== tests/cli_golden/toml/cases/valid.cases dotted keys then tables
+{
+  "a": {
+    "b": {
+      "c": 1
+    },
+    "d": 2
+  },
+  "x": {
+    "y": {
+      "z": 3,
+      "w": 4
+    },
+    "v": {}
+  }
+}
+=== tests/cli_golden/toml/cases/valid.cases implicit table made explicit later
+{
+  "a": {
+    "b": {
+      "c": 1
+    },
+    "d": 2
+  }
+}
+=== tests/cli_golden/toml/cases/valid.cases arrays of tables
+{
+  "redirects": [
+    {
+      "from": "/old",
+      "to": "/new"
+    },
+    {
+      "from": "/a",
+      "to": "https://example.com/b",
+      "status": 301,
+      "query": false
+    }
+  ],
+  "fruit": [
+    {
+      "name": "apple",
+      "physical": {
+        "color": "red"
+      },
+      "variety": [
+        {
+          "name": "red delicious"
+        },
+        {
+          "name": "granny smith"
+        }
+      ]
+    },
+    {
+      "name": "banana",
+      "variety": [
+        {
+          "name": "plantain"
+        }
+      ]
+    }
+  ]
+}
+=== tests/cli_golden/toml/cases/valid.cases array of tables reopens dotted keys
+{
+  "a": [
+    {
+      "b": {
+        "c": 1
+      }
+    },
+    {
+      "b": {
+        "c": 2,
+        "d": {}
+      }
+    }
+  ]
+}
+=== tests/cli_golden/toml/cases/valid.cases empty arrays of tables
+{
+  "a": [
+    {},
+    {}
+  ],
+  "b": {
+    "c": [
+      {}
+    ]
+  }
+}
+=== tests/cli_golden/toml/cases/valid.cases key order is source order
+{
+  "zebra": 1,
+  "apple": 2,
+  "middle": 3,
+  "mango": {
+    "b": 1,
+    "a": 2
+  },
+  "banana": {}
+}
+=== tests/cli_golden/toml/cases/valid.cases whitespace and comments everywhere
+{
+  "key": "value",
+  "table": {
+    "tabbed": 1
+  },
+  "list": [
+    {
+      "x": 1
+    }
+  ]
+}
+=== tests/cli_golden/toml/cases/valid.cases non-ASCII text for ensure_ascii
+{
+  "\u00e9": "\u00fc",
+  "emoji": "\ud83d\ude00\ud83c\udf89",
+  "astral": "\ud83d\ude00\udbff\udfff",
+  "bmp": "\uffff\u2028\u2029\ue000",
+  "controls": "\u0001\b\u000b\u001b",
+  "quote_mix": "it's \"x\"",
+  "del": "\u007f",
+  "latin": "\u0080\u009f\u00ad\u00ff",
+  "cjk": {
+    "\u65e5\u672c": "\u6771\u4eac"
+  }
+}
+=== tests/cli_golden/toml/cases/valid.cases deep nesting
+{
+  "a": [
+    [
+      [
+        [
+          [
+            [
+              [
+                [
+                  [
+                    [
+                      1
+                    ]
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ]
+      ]
+    ]
+  ],
+  "b": {
+    "c": {
+      "d": {
+        "e": {
+          "f": {
+            "g": 1
+          }
+        }
+      }
+    }
+  },
+  "x": {
+    "y": {
+      "z": {
+        "w": {
+          "v": {
+            "u": {
+              "t": true
+            }
+          }
+        }
+      }
+    }
+  }
+}

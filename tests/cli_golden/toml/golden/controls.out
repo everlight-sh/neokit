@@ -1,0 +1,19 @@
+=== tests/cli_golden/toml/cases/controls.cases control in basic string
+error
+=== tests/cli_golden/toml/cases/controls.cases delete in literal string
+error
+=== tests/cli_golden/toml/cases/controls.cases bell in comment
+error
+=== tests/cli_golden/toml/cases/controls.cases nul in multiline literal
+error
+=== tests/cli_golden/toml/cases/controls.cases escape in multiline basic
+error
+=== tests/cli_golden/toml/cases/controls.cases tab is fine
+{
+  "a": "x\ty",
+  "b": "\t"
+}
+=== tests/cli_golden/toml/cases/controls.cases control in key
+error
+=== tests/cli_golden/toml/cases/controls.cases control after value
+error

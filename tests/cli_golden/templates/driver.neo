@@ -1,0 +1,97 @@
+; Golden driver for cli/templates.neo; make_goldens.py records the inputs
+; from real builds and writes the expected output with compiler/templates.py.
+;
+; For every inputs/*.json file named on the command line (relative to the
+; repository root under `neo test`, else to the working directory) it runs
+; tpl_parse on each recorded parse, tpl_compile_all (and tpl_compile_template
+; for the dependencies) on the recorded templates, components and assets, and
+; tpl_substitute on each recorded layout substitution, printing the results
+; in the format make_goldens.py documents.
+import "std:io"
+import "std:json"
+import "../../../cli/templates.neo"
+
+fn golden_empty() -> Arr u8 _ = ""
+fn golden_text(borrow value:Json) -> Arr u8 _ = json_text(value).value
+fn golden_field(borrow value:Json, borrow name:Arr u8 _) -> Json = json_get(value,name).value
+fn golden_item(borrow values:Arr Json _, i:i64) -> Json
+  = if i>=0 && i<len(values) then values[i] else json_get(json_parse("{}").value,"x").value
+fn golden_index(borrow values:Arr Json _, i:i64) -> i64 = json_int(golden_item(values,i)).value
+; [[key, value], ...] as dict entries in order.
+fn golden_pairs(borrow value:Json) -> Arr TplPair _
+  = let items=json_array_values(value) in
+    loop (o=tpl_no_pairs(), i=0) while i<len(items)
+      next (let pair=json_array_values(golden_item(items,i)) in
+            push(o,TplPair { key=golden_text(golden_item(pair,0)), value=golden_text(golden_item(pair,1)) }), i+1) yield o
+fn golden_kinds(borrow pairs:Arr TplPair _) -> Arr u8 _
+  = loop (o=golden_empty(), i=0) while i<len(pairs)
+      next (if i>=0 && i<len(pairs) then concat(o," ",pairs[i].key,":",pairs[i].value) else o, i+1) yield o
+
+type GoldenParsed = { out:Arr u8 _, templates:Arr TplTemplate _, ok:Arr bool _ }
+fn golden_template_at(borrow templates:Arr TplTemplate _, i:i64) -> TplTemplate
+  = if i>=0 && i<len(templates) then templates[i]
+    else TplTemplate { name=golden_empty(), props=tpl_no_pairs(), body=golden_empty(), path=golden_empty(), types=tpl_no_types() }
+fn golden_ok_at(borrow ok:Arr bool _, i:i64) -> bool = i>=0 && i<len(ok) && ok[i]
+fn golden_types(borrow types:Arr TplType _) -> Arr u8 _
+  = loop (o=golden_empty(), i=0) while i<len(types)
+      next (if i>=0 && i<len(types) then concat(o,"type ",types[i].name,golden_kinds(types[i].fields),"\n") else o, i+1) yield o
+fn golden_parse(move s:GoldenParsed, borrow entry:Json, i:i64) -> GoldenParsed
+  = let fields=json_array_values(entry) in
+    let name=golden_text(golden_item(fields,0)) in let path=golden_text(golden_item(fields,2)) in
+    let head=concat(s.out,"parse ",int_text(i)," ",name," ",path,"\n") in
+    match tpl_parse(name,golden_text(golden_item(fields,1)),path) {
+      Err(e) => GoldenParsed { out=concat(head,"error ",e,"\n"), templates=push(s.templates,golden_template_at(s.templates,-1)), ok=push(s.ok,false) },
+      Ok(template) => GoldenParsed { out=concat(head,"props",golden_kinds(template.props),"\n",golden_types(template.types),"body ",tpl_literal(template.body),"\n"),
+                                     templates=push(s.templates,template), ok=push(s.ok,true) } }
+
+fn golden_pick(borrow templates:Arr TplTemplate _, borrow indexes:Arr Json _) -> Arr TplTemplate _
+  = loop (o=tpl_no_templates(), i=0) while i<len(indexes) next (push(o,golden_template_at(templates,golden_index(indexes,i))), i+1) yield o
+fn golden_all_ok(borrow ok:Arr bool _, borrow indexes:Arr Json _) -> bool
+  = loop (i=0, all=true) while all && i<len(indexes) next (i+1, golden_ok_at(ok,golden_index(indexes,i))) yield all
+fn golden_expressions(borrow pairs:Arr TplPair _) -> Arr u8 _
+  = loop (o=golden_empty(), i=0) while i<len(pairs)
+      next (if i>=0 && i<len(pairs) then concat(o,"expression ",pairs[i].key," ",tpl_literal(pairs[i].value),"\n") else o, i+1) yield o
+fn golden_deps(borrow templates:Arr TplTemplate _, borrow components:Arr TplTemplate _, borrow assets:Arr TplPair _) -> Arr u8 _
+  = loop (o=golden_empty(), i=0) while i<len(templates)
+      next (let template=golden_template_at(templates,i) in
+            let deps=match tpl_compile_template(template,components,assets) { Ok(compiled) => compiled.deps, Err(e) => tpl_no_words() } in
+            let names=loop (n=golden_empty(), k=0) while k<len(deps) next (if k>=0 && k<len(deps) then concat(n," ",deps[k]) else n, k+1) yield n in
+            concat(o,"deps ",template.name,names,"\n"), i+1) yield o
+fn golden_compile(borrow case:Json, borrow parsed:GoldenParsed) -> Arr u8 _
+  = let indexes=json_array_values(golden_field(case,"templates")) in
+    let component_indexes=json_array_values(golden_field(case,"components")) in
+    if len(indexes)==0 || !golden_all_ok(parsed.ok,indexes) || !golden_all_ok(parsed.ok,component_indexes) then golden_empty() else
+    let templates=golden_pick(parsed.templates,indexes) in
+    let components=golden_pick(parsed.templates,component_indexes) in
+    let assets=golden_pairs(golden_field(case,"assets")) in
+    match tpl_compile_all(templates,components,assets) {
+      Err(e) => concat("compile_all\nerror ",e,"\n"),
+      Ok(all) => concat("compile_all\ncode\n",all.code,"end code\n",golden_expressions(all.expressions),golden_deps(templates,components,assets)) }
+
+fn golden_substitutes(borrow case:Json) -> Arr u8 _
+  = let calls=json_array_values(golden_field(case,"substitutes")) in
+    loop (o=golden_empty(), i=0) while i<len(calls)
+      next (let call=json_array_values(golden_item(calls,i)) in
+            concat(o,"substitute ",tpl_literal(tpl_substitute(golden_text(golden_item(call,0)),golden_pairs(golden_item(call,1)))),"\n"), i+1) yield o
+
+fn golden_case(borrow case:Json) -> Arr u8 _
+  = let entries=json_array_values(golden_field(case,"parses")) in
+    let parsed=loop (s=GoldenParsed { out=concat("=== ",golden_text(golden_field(case,"name")),"\n"), templates=tpl_no_templates(), ok=arr(i in 0..0) false }, i=0)
+      while i<len(entries) next (golden_parse(s,golden_item(entries,i),i), i+1) yield s in
+    concat(parsed.out,golden_compile(case,parsed),golden_substitutes(case))
+
+effect(env) fn golden_root() -> Arr u8 _
+  = let source=env_get("NEO_TEST_SOURCE") in let suffix="tests/cli_golden/templates/driver.neo" in
+    if source.present && len(source.value)>=len(suffix) && bytes_match_at(source.value,len(source.value)-len(suffix),suffix)
+    then byte_slice(source.value,0,len(source.value)-len(suffix)) else golden_empty()
+effect(fs) fn golden_file(borrow root:Arr u8 _, borrow file:Arr u8 _) -> Arr u8 _
+  = let raw=fs_read(concat(root,file)) in
+    if !raw.ok then concat("unreadable ",file,": ",raw.error.message,"\n") else
+    let parsed=json_parse(raw.value) in
+    if !parsed.ok then concat("invalid JSON ",file,": ",parsed.error.message,"\n") else
+    let cases=json_array_values(golden_field(parsed.value,"cases")) in
+    loop (o=golden_empty(), i=0) while i<len(cases) next (concat(o,golden_case(golden_item(cases,i))), i+1) yield o
+effect(fs,env) fn main() -> unit
+  = let root=golden_root() in
+    let out=loop (i=1, out=golden_empty()) while cli_arg(i).present next (i+1, concat(out,golden_file(root,cli_arg(i).value))) yield out in
+    let written=print_out(out) in noop()

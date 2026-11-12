@@ -1,0 +1,114 @@
+; Unit tests for cli/toml.neo, NeoKit's configuration layer over std:toml.
+; std:toml ships with Neo 0.2.6: until then run with the branch build
+; (NEO_HOME=/root/neo-dev/neo-feat on the test box).
+import "std:json"
+import "std:option"
+import "std:result"
+import "../cli/toml.neo"
+
+fn loaded(borrow raw:Arr u8 _) -> Json = match toml_load("web.toml",raw) { Ok(value) => value, Err(message) => json_none().value }
+fn failure(borrow raw:Arr u8 _) -> Arr u8 _ = match toml_load("app/page.toml",raw) { Ok(value) => text_empty(), Err(message) => message }
+fn at(borrow table:Json, borrow key:Arr u8 _) -> Json = json_get(table,key).value
+fn nth(borrow items:Arr Json _, i:i64) -> Json = if i>=0 && i<len(items) then items[i] else json_none().value
+fn same(actual:Arr u8 _, expected:Arr u8 _) -> bool = text_equal(actual,expected)
+
+fn test_document_order() -> bool
+  = let t=loaded("zebra = 1\napple = 2\n[mango]\nb = 1\na = 2\n[[list]]\nx = 1\n[[list]]\n") in
+    toml_is_table(t) && toml_size(t)==4 && same(text_join(toml_keys(t),","),"zebra,apple,mango,list")
+    && same(toml_key_at(t,1),"apple") && toml_int(toml_value_at(t,1))==2
+    && same(text_join(toml_keys(toml_value_at(t,2)),","),"b,a")
+    && toml_is_array(at(t,"list")) && toml_size(at(t,"list"))==2 && len(toml_items(at(t,"list")))==2
+    && toml_int(at(nth(toml_items(at(t,"list")),0),"x"))==1 && toml_is_table(nth(toml_items(at(t,"list")),1))
+    && toml_size(nth(toml_items(at(t,"list")),1))==0
+
+fn test_universal_newlines() -> bool
+  = let t=loaded("a = 1\r\nb = '''x\ry'''\r\nc = \"\"\"p\r\nq\"\"\"\n") in
+    toml_int(at(t,"a"))==1 && same(toml_text(at(t,"b")),"x\ny") && same(toml_text(at(t,"c")),"p\nq")
+
+fn test_error_wording() -> bool
+  = same(failure("a = 1\na = 2\n"),"app/page.toml: invalid TOML at line 2: duplicate key \"a\"")
+    && same(failure("[a]\n[a]\n"),"app/page.toml: invalid TOML at line 2: table \"a\" is defined more than once")
+    && same(failure("\xef\xbb\xbfa = 1\n"),"app/page.toml: invalid TOML at line 1: expected a key")
+    && same(failure("a = \"\xff\"\n"),"app/page.toml: invalid TOML at line 1: TOML document is not valid UTF-8")
+    && same(failure("a = 9223372036854775808\n"),"app/page.toml: invalid TOML at line 1: integer does not fit in 64 bits")
+    && text_starts(failure("a = \"x\ry\"\n"),"app/page.toml: invalid TOML at line 1: ")
+    && same(toml_error_text("web.toml",Error { code=1, message="bad", position=0 }),"web.toml: invalid TOML: bad")
+
+fn test_numbers() -> bool
+  = let t=loaded("a = -0\nb = +17\nc = 0xff\nd = 1.5\ne = 1e3\nf = -0.0\ng = true\nh = 0\ni = -9223372036854775808\n") in
+    toml_is_int(at(t,"a")) && toml_int(at(t,"a"))==0 && toml_int(at(t,"b"))==17 && toml_int(at(t,"c"))==255
+    && toml_int(at(t,"i"))== -9223372036854775807-1
+    && !toml_is_int(at(t,"d")) && toml_is_float(at(t,"d")) && toml_int(at(t,"d"))==0 && toml_is_float(at(t,"e"))
+    && !toml_is_int(at(t,"g")) && !toml_is_float(at(t,"g")) && toml_is_bool(at(t,"g")) && !toml_is_float(at(t,"h"))
+
+fn test_truthy_is_python_bool() -> bool
+  = let t=loaded("s = \"\"\nt = \"x\"\na = []\nb = [0]\nz = 0\no = 1\nf = false\ny = true\nd = 1.5\nn = -0.0\ne = 0e5\n[empty]\n[full]\nk = 1\n") in
+    !toml_truthy(at(t,"s")) && toml_truthy(at(t,"t")) && !toml_truthy(at(t,"a")) && toml_truthy(at(t,"b"))
+    && !toml_truthy(at(t,"z")) && toml_truthy(at(t,"o")) && !toml_truthy(at(t,"f")) && toml_truthy(at(t,"y"))
+    && toml_truthy(at(t,"d")) && !toml_truthy(at(t,"n")) && !toml_truthy(at(t,"e"))
+    && !toml_truthy(at(t,"empty")) && toml_truthy(at(t,"full")) && !toml_truthy(json_none().value)
+
+fn config() -> Json
+  = loaded("loader = \"load\"\nmode = 1\nclient = true\nttl = 30\nflag = \"yes\"\nratio = 2.5\npaths = [\"/a\", \"/b\"]\nmixed = [\"/a\", 1]\nempty = []\n[metadata]\nrobots = \"index\"\n")
+
+fn test_get_text() -> bool
+  = let found=toml_get_text(config(),"loader","none") in
+    let absent=toml_get_text(config(),"missing","none") in
+    let wrong=toml_get_text(config(),"mode","none") in
+    found.present && found.ok && same(found.value,"load")
+    && !absent.present && absent.ok && same(absent.value,"none")
+    && wrong.present && !wrong.ok && same(wrong.value,"")
+    && !toml_get_text(at(config(),"paths"),"loader","x").present
+
+fn test_get_int() -> bool
+  = let found=toml_get_int(config(),"ttl",60) in
+    let absent=toml_get_int(config(),"async_timeout_ms",10000) in
+    let boolean=toml_get_int(config(),"client",5) in
+    let float=toml_get_int(config(),"ratio",5) in
+    let text=toml_get_int(config(),"loader",5) in
+    found.present && found.ok && found.value==30 && !absent.present && absent.ok && absent.value==10000
+    && boolean.present && !boolean.ok && float.present && !float.ok && !text.ok && text.value==0
+
+fn test_get_bool() -> bool
+  = let found=toml_get_bool(config(),"client",false) in
+    let absent=toml_get_bool(config(),"export",true) in
+    let wrong=toml_get_bool(config(),"flag",true) in
+    let number=toml_get_bool(config(),"mode",true) in
+    found.present && found.ok && found.value && !absent.present && absent.ok && absent.value
+    && wrong.present && !wrong.ok && !wrong.value && !number.ok
+
+fn test_get_table() -> bool
+  = let found=toml_get_table(config(),"metadata") in
+    let absent=toml_get_table(config(),"css") in
+    let wrong=toml_get_table(config(),"loader") in
+    found.present && found.ok && same(toml_text(at(found.value,"robots")),"index")
+    && !absent.present && absent.ok && toml_is_table(absent.value) && toml_size(absent.value)==0
+    && wrong.present && !wrong.ok && toml_size(wrong.value)==0
+
+fn test_get_array() -> bool
+  = let found=toml_get_array(config(),"mixed") in
+    let absent=toml_get_array(config(),"cache_query") in
+    let wrong=toml_get_array(config(),"loader") in
+    found.present && found.ok && len(found.items)==2 && toml_int(nth(found.items,1))==1
+    && !absent.present && absent.ok && len(absent.items)==0 && wrong.present && !wrong.ok && len(wrong.items)==0
+
+fn test_get_texts() -> bool
+  = let found=toml_get_texts(config(),"paths") in
+    let mixed=toml_get_texts(config(),"mixed") in
+    let empty=toml_get_texts(config(),"empty") in
+    let absent=toml_get_texts(config(),"cors") in
+    let wrong=toml_get_texts(config(),"loader") in
+    found.present && found.ok && same(text_join(found.values,","),"/a,/b")
+    && mixed.present && !mixed.ok && len(mixed.values)==0 && empty.present && empty.ok && len(empty.values)==0
+    && !absent.present && absent.ok && wrong.present && !wrong.ok
+
+fn test_has_and_get() -> bool
+  = toml_has(config(),"loader") && !toml_has(config(),"robots") && !toml_has(at(config(),"paths"),"loader")
+    && (match toml_get(config(),"ttl") { Some(v) => toml_int(v)==30, None => false })
+    && (match toml_get(config(),"nope") { Some(v) => false, None => true })
+    && (match toml_get(at(config(),"paths"),"0") { Some(v) => false, None => true })
+
+; Dates and times arrive as strings, unlike Python's datetime values.
+fn test_dates_are_strings() -> bool
+  = let t=loaded("day = 1979-05-27\nclock = 07:32:00\n") in
+    same(toml_get_text(t,"day","").value,"1979-05-27") && toml_get_text(t,"clock","").ok

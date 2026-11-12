@@ -1,0 +1,1036 @@
+{
+"cases": [
+{
+"name": "audit_features release",
+"parses": [
+[
+"Page_7394a2bb76",
+"@props(title:text)\n<h1>{{ title }}</h1>",
+"audit_features/app/(marketing)/pricing/page.view"
+],
+[
+"Page_441bb226c5",
+"@props(title:text)\n<h1>{{ title }}</h1>",
+"audit_features/app/account/page.view"
+],
+[
+"Page_ceb8399bd1",
+"@props(title:text, slug:text)\n<h1>Post {{ slug }}</h1>",
+"audit_features/app/blog/[slug]/page.view"
+],
+[
+"Page_8a5edab282",
+"@props(title:text, query:text, posts:Post[], summary:text, jsonld:text)\n@type Post(title:text, href:url, views:int)\n<h1>{{ title }}</h1>{% if query %}<p class=\"q\">Results for {{ query }}</p>{% else %}<p class=\"q\">No query</p>{% endif %}<ul>{% for post, index in posts %}<li data-rank=\"{{ index }}\"><a href=\"{{ post.href }}\">{{ post.title }}</a>{% if post.views >= 1000 %} popular{% elif post.views == 0 %} new{% else %} normal{% endif %}</li>{% endfor %}</ul>{% if query == \"neo\" %}<p>exact</p>{% endif %}",
+"audit_features/app/page.view"
+],
+[
+"Page_e99ddf7a8b",
+"@props(title:text)\n<h1>{{ title }}</h1>",
+"audit_features/app/private-info/page.view"
+],
+[
+"Page_6fb5b7787e",
+"@props(title:text, q:text, stamp:int)\n<p>{{ q }}:{{ stamp }}</p>",
+"audit_features/app/search/page.view"
+],
+[
+"Layout",
+"@props(title:text,content:html,client:bool,mode:text,head:html)\n<!doctype html><html><head><title>{{ title }}</title>{{ head }}</head><body><main id=\"web-page\">{{ content }}</main></body></html>",
+"audit_features/app/layout.view"
+],
+[
+"NotFound",
+"@props()\n<!doctype html><title>Missing</title><h1>Nothing here</h1>",
+"audit_features/app/not-found.view"
+]
+],
+"templates": [
+3,
+1,
+0,
+4,
+5,
+2,
+6,
+7
+],
+"components": [],
+"assets": [
+[
+"client.js",
+"/_web/client-4sj8sgyq.js"
+]
+],
+"substitutes": [
+[
+"concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title>\",p_head.bytes,\"</head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main></body></html>\")",
+[
+[
+"p_content.bytes",
+"text_Page_8a5edab282(props.title,props.query,props.posts,props.summary,props.jsonld)"
+],
+[
+"p_content",
+"web_html(text_Page_8a5edab282(props.title,props.query,props.posts,props.summary,props.jsonld))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"false"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+],
+[
+"p_head.bytes",
+"concat(\"<meta name=\\\"description\\\" content=\\\"\",html_escape(props.summary),\"\\\">\",\"<script type=\\\"application/ld+json\\\">\",neokit_json_script(props.jsonld),\"</script>\")"
+],
+[
+"p_head",
+"web_html(concat(\"<meta name=\\\"description\\\" content=\\\"\",html_escape(props.summary),\"\\\">\",\"<script type=\\\"application/ld+json\\\">\",neokit_json_script(props.jsonld),\"</script>\"))"
+]
+]
+],
+[
+"concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title>\",p_head.bytes,\"</head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main></body></html>\")",
+[
+[
+"p_content.bytes",
+"text_Page_441bb226c5(props.title)"
+],
+[
+"p_content",
+"web_html(text_Page_441bb226c5(props.title))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"false"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+],
+[
+"p_head.bytes",
+"\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\""
+],
+[
+"p_head",
+"web_html(\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\")"
+]
+]
+],
+[
+"concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title>\",p_head.bytes,\"</head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main></body></html>\")",
+[
+[
+"p_content.bytes",
+"text_Page_7394a2bb76(props.title)"
+],
+[
+"p_content",
+"web_html(text_Page_7394a2bb76(props.title))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"false"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+],
+[
+"p_head.bytes",
+"\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\""
+],
+[
+"p_head",
+"web_html(\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\")"
+]
+]
+],
+[
+"concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title>\",p_head.bytes,\"</head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main></body></html>\")",
+[
+[
+"p_content.bytes",
+"text_Page_e99ddf7a8b(props.title)"
+],
+[
+"p_content",
+"web_html(text_Page_e99ddf7a8b(props.title))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"false"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+],
+[
+"p_head.bytes",
+"\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\""
+],
+[
+"p_head",
+"web_html(\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\")"
+]
+]
+],
+[
+"concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title>\",p_head.bytes,\"</head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main></body></html>\")",
+[
+[
+"p_content.bytes",
+"text_Page_6fb5b7787e(props.title,props.q,props.stamp)"
+],
+[
+"p_content",
+"web_html(text_Page_6fb5b7787e(props.title,props.q,props.stamp))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"false"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+],
+[
+"p_head.bytes",
+"\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\""
+],
+[
+"p_head",
+"web_html(\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\")"
+]
+]
+],
+[
+"concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title>\",p_head.bytes,\"</head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main></body></html>\")",
+[
+[
+"p_content.bytes",
+"text_Page_ceb8399bd1(props.title,props.slug)"
+],
+[
+"p_content",
+"web_html(text_Page_ceb8399bd1(props.title,props.slug))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"false"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+],
+[
+"p_head.bytes",
+"\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\""
+],
+[
+"p_head",
+"web_html(\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\")"
+]
+]
+]
+]
+},
+{
+"name": "audit_features dev",
+"parses": [
+[
+"Page_7394a2bb76",
+"@props(title:text)\n<h1>{{ title }}</h1>",
+"audit_features/app/(marketing)/pricing/page.view"
+],
+[
+"Page_441bb226c5",
+"@props(title:text)\n<h1>{{ title }}</h1>",
+"audit_features/app/account/page.view"
+],
+[
+"Page_ceb8399bd1",
+"@props(title:text, slug:text)\n<h1>Post {{ slug }}</h1>",
+"audit_features/app/blog/[slug]/page.view"
+],
+[
+"Page_8a5edab282",
+"@props(title:text, query:text, posts:Post[], summary:text, jsonld:text)\n@type Post(title:text, href:url, views:int)\n<h1>{{ title }}</h1>{% if query %}<p class=\"q\">Results for {{ query }}</p>{% else %}<p class=\"q\">No query</p>{% endif %}<ul>{% for post, index in posts %}<li data-rank=\"{{ index }}\"><a href=\"{{ post.href }}\">{{ post.title }}</a>{% if post.views >= 1000 %} popular{% elif post.views == 0 %} new{% else %} normal{% endif %}</li>{% endfor %}</ul>{% if query == \"neo\" %}<p>exact</p>{% endif %}",
+"audit_features/app/page.view"
+],
+[
+"Page_e99ddf7a8b",
+"@props(title:text)\n<h1>{{ title }}</h1>",
+"audit_features/app/private-info/page.view"
+],
+[
+"Page_6fb5b7787e",
+"@props(title:text, q:text, stamp:int)\n<p>{{ q }}:{{ stamp }}</p>",
+"audit_features/app/search/page.view"
+],
+[
+"Layout",
+"@props(title:text,content:html,client:bool,mode:text,head:html)\n<!doctype html><html><head><title>{{ title }}</title>{{ head }}<link rel=\"stylesheet\" href=\"/_web/neokit-dev.css\"></head><body><main id=\"web-page\">{{ content }}</main><script type=\"module\" src=\"/_web/neokit-dev.js\"></script></body></html>",
+"audit_features/app/layout.view"
+],
+[
+"NotFound",
+"@props()\n<!doctype html><title>Missing</title><h1>Nothing here</h1>",
+"audit_features/app/not-found.view"
+]
+],
+"templates": [
+3,
+1,
+0,
+4,
+5,
+2,
+6,
+7
+],
+"components": [],
+"assets": [
+[
+"client.js",
+"/_web/client.js"
+]
+],
+"substitutes": [
+[
+"concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title>\",p_head.bytes,\"<link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main><script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")",
+[
+[
+"p_content.bytes",
+"text_Page_8a5edab282(props.title,props.query,props.posts,props.summary,props.jsonld)"
+],
+[
+"p_content",
+"web_html(text_Page_8a5edab282(props.title,props.query,props.posts,props.summary,props.jsonld))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"false"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+],
+[
+"p_head.bytes",
+"concat(\"<meta name=\\\"description\\\" content=\\\"\",html_escape(props.summary),\"\\\">\",\"<script type=\\\"application/ld+json\\\">\",neokit_json_script(props.jsonld),\"</script>\")"
+],
+[
+"p_head",
+"web_html(concat(\"<meta name=\\\"description\\\" content=\\\"\",html_escape(props.summary),\"\\\">\",\"<script type=\\\"application/ld+json\\\">\",neokit_json_script(props.jsonld),\"</script>\"))"
+]
+]
+],
+[
+"concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title>\",p_head.bytes,\"<link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main><script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")",
+[
+[
+"p_content.bytes",
+"text_Page_441bb226c5(props.title)"
+],
+[
+"p_content",
+"web_html(text_Page_441bb226c5(props.title))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"false"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+],
+[
+"p_head.bytes",
+"\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\""
+],
+[
+"p_head",
+"web_html(\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\")"
+]
+]
+],
+[
+"concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title>\",p_head.bytes,\"<link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main><script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")",
+[
+[
+"p_content.bytes",
+"text_Page_7394a2bb76(props.title)"
+],
+[
+"p_content",
+"web_html(text_Page_7394a2bb76(props.title))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"false"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+],
+[
+"p_head.bytes",
+"\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\""
+],
+[
+"p_head",
+"web_html(\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\")"
+]
+]
+],
+[
+"concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title>\",p_head.bytes,\"<link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main><script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")",
+[
+[
+"p_content.bytes",
+"text_Page_e99ddf7a8b(props.title)"
+],
+[
+"p_content",
+"web_html(text_Page_e99ddf7a8b(props.title))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"false"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+],
+[
+"p_head.bytes",
+"\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\""
+],
+[
+"p_head",
+"web_html(\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\")"
+]
+]
+],
+[
+"concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title>\",p_head.bytes,\"<link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main><script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")",
+[
+[
+"p_content.bytes",
+"text_Page_6fb5b7787e(props.title,props.q,props.stamp)"
+],
+[
+"p_content",
+"web_html(text_Page_6fb5b7787e(props.title,props.q,props.stamp))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"false"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+],
+[
+"p_head.bytes",
+"\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\""
+],
+[
+"p_head",
+"web_html(\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\")"
+]
+]
+],
+[
+"concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title>\",p_head.bytes,\"<link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main><script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")",
+[
+[
+"p_content.bytes",
+"text_Page_ceb8399bd1(props.title,props.slug)"
+],
+[
+"p_content",
+"web_html(text_Page_ceb8399bd1(props.title,props.slug))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"false"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+],
+[
+"p_head.bytes",
+"\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\""
+],
+[
+"p_head",
+"web_html(\"<meta name=\\\"description\\\" content=\\\"Audit site\\\">\")"
+]
+]
+]
+]
+},
+{
+"name": "consumer release",
+"parses": [
+[
+"Page_8a5edab282",
+"@props(title:text,count:int,visible:bool)\n<h1 title=\"{{ title }}\">{{ title }}</h1>{% if visible %}<output>{{ count }}</output>{% endif %}",
+"consumer/app/page.view"
+],
+[
+"Layout",
+"@props(title:text,content:html,client:bool,mode:text)\n<!doctype html><html lang=\"en\"><head><title>{{ title }}</title></head><body><main id=\"web-page\">{{ content }}</main>{% if client %}<script type=\"module\" src=\"@asset(client.js)\"></script>{% endif %}</body></html>",
+"consumer/app/layout.view"
+]
+],
+"templates": [
+0,
+1
+],
+"components": [],
+"assets": [
+[
+"client.js",
+"/_web/client-4sj8sgyq.js"
+]
+],
+"substitutes": [
+[
+"concat(\"<!doctype html><html lang=\\\"en\\\"><head><title>\",html_escape(p_title),\"</title></head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main>\",(if p_client then \"<script type=\\\"module\\\" src=\\\"/_web/client-4sj8sgyq.js\\\"></script>\" else \"\"),\"</body></html>\")",
+[
+[
+"p_content.bytes",
+"text_Page_8a5edab282(props.title,props.count,props.visible)"
+],
+[
+"p_content",
+"web_html(text_Page_8a5edab282(props.title,props.count,props.visible))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"false"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+]
+]
+]
+]
+},
+{
+"name": "consumer dev",
+"parses": [
+[
+"Page_8a5edab282",
+"@props(title:text,count:int,visible:bool)\n<h1 title=\"{{ title }}\">{{ title }}</h1>{% if visible %}<output>{{ count }}</output>{% endif %}",
+"consumer/app/page.view"
+],
+[
+"Layout",
+"@props(title:text,content:html,client:bool,mode:text)\n<!doctype html><html lang=\"en\"><head><title>{{ title }}</title><link rel=\"stylesheet\" href=\"/_web/neokit-dev.css\"></head><body><main id=\"web-page\">{{ content }}</main>{% if client %}<script type=\"module\" src=\"@asset(client.js)\"></script>{% endif %}<script type=\"module\" src=\"/_web/neokit-dev.js\"></script></body></html>",
+"consumer/app/layout.view"
+]
+],
+"templates": [
+0,
+1
+],
+"components": [],
+"assets": [
+[
+"client.js",
+"/_web/client.js"
+]
+],
+"substitutes": [
+[
+"concat(\"<!doctype html><html lang=\\\"en\\\"><head><title>\",html_escape(p_title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\">\",p_content.bytes,\"</main>\",(if p_client then \"<script type=\\\"module\\\" src=\\\"/_web/client.js\\\"></script>\" else \"\"),\"<script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")",
+[
+[
+"p_content.bytes",
+"text_Page_8a5edab282(props.title,props.count,props.visible)"
+],
+[
+"p_content",
+"web_html(text_Page_8a5edab282(props.title,props.count,props.visible))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"false"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+]
+]
+]
+]
+},
+{
+"name": "browser_fixture release",
+"parses": [
+[
+"Page_0658a2cc64",
+"@props(title:text)\n<h1>{{ title }}</h1><p data-version>Template version one</p><label>Page draft<input id=\"page-draft\" value=\"\"></label><div data-web-widget=\"lab\" data-web-key=\"browser-lab\" data-web-props='{\"initial\":3}'><p>Count: <output data-count>3</output></p><button data-increment>Add one</button><label>Action title<input data-title value=\"valid\"></label><button data-action>Save action</button><p>Action: <output data-pending>idle</output></p><p data-notice role=\"status\"></p><p data-lifecycle></p><p data-widget-version></p></div>",
+"browser_fixture/app/lab/one/page.view"
+],
+[
+"Page_5ef970ac8e",
+"@props(title:text)\n<h1>{{ title }}</h1><p data-version>Template version one</p><label>Page draft<input id=\"page-draft\" value=\"\"></label><div data-web-widget=\"lab\" data-web-key=\"browser-lab\" data-web-props='{\"initial\":3}'><p>Count: <output data-count>3</output></p><button data-increment>Add one</button><label>Action title<input data-title value=\"valid\"></label><button data-action>Save action</button><p>Action: <output data-pending>idle</output></p><p data-notice role=\"status\"></p><p data-lifecycle></p><p data-widget-version></p></div>",
+"browser_fixture/app/lab/two/page.view"
+],
+[
+"Layout",
+"@props(title:text,content:html,client:bool,mode:text)\n<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>{{ title }}</title><link rel=\"stylesheet\" href=\"/site.css\"></head><body><main id=\"web-page\" tabindex=\"-1\">{{ content }}</main>{% if client %}<script type=\"module\" src=\"@asset(client.js)\"></script>{% endif %}</body></html>",
+"browser_fixture/app/layout.view"
+],
+[
+"Layout_5f25a4d395",
+"@props(title:text,content:html,client:bool,mode:text)\n<aside data-web-persist=\"sidebar\"><strong>Shared layout</strong><label>Sidebar draft<input id=\"sidebar-draft\" value=\"original\"></label><nav><a href=\"/lab/one\" data-web-link data-web-prefetch>Page one</a> <a href=\"/lab/two\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>{{ content }}</section>",
+"browser_fixture/app/lab/layout.view"
+]
+],
+"templates": [
+0,
+1,
+2,
+3
+],
+"components": [],
+"assets": [
+[
+"client.js",
+"/_web/client-4sj8sgyq.js"
+]
+],
+"substitutes": [
+[
+"concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",p_content.bytes,\"</section>\")",
+[
+[
+"p_content.bytes",
+"concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_0658a2cc64(props.title),\"</div>\")"
+],
+[
+"p_content",
+"web_html(concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_0658a2cc64(props.title),\"</div>\"))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"true"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+]
+]
+],
+[
+"concat(\"<!doctype html><html lang=\\\"en\\\"><head><meta charset=\\\"utf-8\\\"><meta name=\\\"viewport\\\" content=\\\"width=device-width,initial-scale=1\\\"><title>\",html_escape(p_title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/site.css\\\"></head><body><main id=\\\"web-page\\\" tabindex=\\\"-1\\\">\",p_content.bytes,\"</main>\",(if p_client then \"<script type=\\\"module\\\" src=\\\"/_web/client-4sj8sgyq.js\\\"></script>\" else \"\"),\"</body></html>\")",
+[
+[
+"p_content.bytes",
+"concat(\"<div data-web-layout=\\\"Layout_5f25a4d395\\\">\",concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_0658a2cc64(props.title),\"</div>\"),\"</section>\"),\"</div>\")"
+],
+[
+"p_content",
+"web_html(concat(\"<div data-web-layout=\\\"Layout_5f25a4d395\\\">\",concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_0658a2cc64(props.title),\"</div>\"),\"</section>\"),\"</div>\"))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"true"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+]
+]
+],
+[
+"concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",p_content.bytes,\"</section>\")",
+[
+[
+"p_content.bytes",
+"concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_5ef970ac8e(props.title),\"</div>\")"
+],
+[
+"p_content",
+"web_html(concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_5ef970ac8e(props.title),\"</div>\"))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"true"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+]
+]
+],
+[
+"concat(\"<!doctype html><html lang=\\\"en\\\"><head><meta charset=\\\"utf-8\\\"><meta name=\\\"viewport\\\" content=\\\"width=device-width,initial-scale=1\\\"><title>\",html_escape(p_title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/site.css\\\"></head><body><main id=\\\"web-page\\\" tabindex=\\\"-1\\\">\",p_content.bytes,\"</main>\",(if p_client then \"<script type=\\\"module\\\" src=\\\"/_web/client-4sj8sgyq.js\\\"></script>\" else \"\"),\"</body></html>\")",
+[
+[
+"p_content.bytes",
+"concat(\"<div data-web-layout=\\\"Layout_5f25a4d395\\\">\",concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_5ef970ac8e(props.title),\"</div>\"),\"</section>\"),\"</div>\")"
+],
+[
+"p_content",
+"web_html(concat(\"<div data-web-layout=\\\"Layout_5f25a4d395\\\">\",concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_5ef970ac8e(props.title),\"</div>\"),\"</section>\"),\"</div>\"))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"true"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+]
+]
+]
+]
+},
+{
+"name": "browser_fixture dev",
+"parses": [
+[
+"Page_0658a2cc64",
+"@props(title:text)\n<h1>{{ title }}</h1><p data-version>Template version one</p><label>Page draft<input id=\"page-draft\" value=\"\"></label><div data-web-widget=\"lab\" data-web-key=\"browser-lab\" data-web-props='{\"initial\":3}'><p>Count: <output data-count>3</output></p><button data-increment>Add one</button><label>Action title<input data-title value=\"valid\"></label><button data-action>Save action</button><p>Action: <output data-pending>idle</output></p><p data-notice role=\"status\"></p><p data-lifecycle></p><p data-widget-version></p></div>",
+"browser_fixture/app/lab/one/page.view"
+],
+[
+"Page_5ef970ac8e",
+"@props(title:text)\n<h1>{{ title }}</h1><p data-version>Template version one</p><label>Page draft<input id=\"page-draft\" value=\"\"></label><div data-web-widget=\"lab\" data-web-key=\"browser-lab\" data-web-props='{\"initial\":3}'><p>Count: <output data-count>3</output></p><button data-increment>Add one</button><label>Action title<input data-title value=\"valid\"></label><button data-action>Save action</button><p>Action: <output data-pending>idle</output></p><p data-notice role=\"status\"></p><p data-lifecycle></p><p data-widget-version></p></div>",
+"browser_fixture/app/lab/two/page.view"
+],
+[
+"Layout",
+"@props(title:text,content:html,client:bool,mode:text)\n<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>{{ title }}</title><link rel=\"stylesheet\" href=\"/site.css\"><link rel=\"stylesheet\" href=\"/_web/neokit-dev.css\"></head><body><main id=\"web-page\" tabindex=\"-1\">{{ content }}</main>{% if client %}<script type=\"module\" src=\"@asset(client.js)\"></script>{% endif %}<script type=\"module\" src=\"/_web/neokit-dev.js\"></script></body></html>",
+"browser_fixture/app/layout.view"
+],
+[
+"Layout_5f25a4d395",
+"@props(title:text,content:html,client:bool,mode:text)\n<aside data-web-persist=\"sidebar\"><strong>Shared layout</strong><label>Sidebar draft<input id=\"sidebar-draft\" value=\"original\"></label><nav><a href=\"/lab/one\" data-web-link data-web-prefetch>Page one</a> <a href=\"/lab/two\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>{{ content }}</section>",
+"browser_fixture/app/lab/layout.view"
+]
+],
+"templates": [
+0,
+1,
+2,
+3
+],
+"components": [],
+"assets": [
+[
+"client.js",
+"/_web/client.js"
+]
+],
+"substitutes": [
+[
+"concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",p_content.bytes,\"</section>\")",
+[
+[
+"p_content.bytes",
+"concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_0658a2cc64(props.title),\"</div>\")"
+],
+[
+"p_content",
+"web_html(concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_0658a2cc64(props.title),\"</div>\"))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"true"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+]
+]
+],
+[
+"concat(\"<!doctype html><html lang=\\\"en\\\"><head><meta charset=\\\"utf-8\\\"><meta name=\\\"viewport\\\" content=\\\"width=device-width,initial-scale=1\\\"><title>\",html_escape(p_title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/site.css\\\"><link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\" tabindex=\\\"-1\\\">\",p_content.bytes,\"</main>\",(if p_client then \"<script type=\\\"module\\\" src=\\\"/_web/client.js\\\"></script>\" else \"\"),\"<script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")",
+[
+[
+"p_content.bytes",
+"concat(\"<div data-web-layout=\\\"Layout_5f25a4d395\\\">\",concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_0658a2cc64(props.title),\"</div>\"),\"</section>\"),\"</div>\")"
+],
+[
+"p_content",
+"web_html(concat(\"<div data-web-layout=\\\"Layout_5f25a4d395\\\">\",concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_0658a2cc64(props.title),\"</div>\"),\"</section>\"),\"</div>\"))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"true"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+]
+]
+],
+[
+"concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",p_content.bytes,\"</section>\")",
+[
+[
+"p_content.bytes",
+"concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_5ef970ac8e(props.title),\"</div>\")"
+],
+[
+"p_content",
+"web_html(concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_5ef970ac8e(props.title),\"</div>\"))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"true"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+]
+]
+],
+[
+"concat(\"<!doctype html><html lang=\\\"en\\\"><head><meta charset=\\\"utf-8\\\"><meta name=\\\"viewport\\\" content=\\\"width=device-width,initial-scale=1\\\"><title>\",html_escape(p_title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/site.css\\\"><link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body><main id=\\\"web-page\\\" tabindex=\\\"-1\\\">\",p_content.bytes,\"</main>\",(if p_client then \"<script type=\\\"module\\\" src=\\\"/_web/client.js\\\"></script>\" else \"\"),\"<script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")",
+[
+[
+"p_content.bytes",
+"concat(\"<div data-web-layout=\\\"Layout_5f25a4d395\\\">\",concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_5ef970ac8e(props.title),\"</div>\"),\"</section>\"),\"</div>\")"
+],
+[
+"p_content",
+"web_html(concat(\"<div data-web-layout=\\\"Layout_5f25a4d395\\\">\",concat(\"<aside data-web-persist=\\\"sidebar\\\"><strong>Shared layout</strong><label>Sidebar draft<input id=\\\"sidebar-draft\\\" value=\\\"original\\\"></label><nav><a href=\\\"/lab/one\\\" data-web-link data-web-prefetch>Page one</a> <a href=\\\"/lab/two\\\" data-web-link data-web-prefetch>Page two</a></nav></aside><section>\",concat(\"<div data-web-outlet=\\\"Layout_5f25a4d395\\\">\",text_Page_5ef970ac8e(props.title),\"</div>\"),\"</section>\"),\"</div>\"))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"true"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+]
+]
+]
+]
+},
+{
+"name": "dev_css release",
+"parses": [
+[
+"Page_8a5edab282",
+"@props(title:text)\n<h1 class=\"p-4\">{{ title }}</h1>",
+"dev_css/app/page.view"
+],
+[
+"Layout",
+"@props(title:text,content:html,client:bool,mode:text)\n<!doctype html><html><head><title>{{ title }}</title><link rel=\"stylesheet\" href=\"@asset(site.css)\"></head><body>{{ content }}</body></html>",
+"dev_css/app/layout.view"
+]
+],
+"templates": [
+0,
+1
+],
+"components": [],
+"assets": [
+[
+"client.js",
+"/_web/client-4sj8sgyq.js"
+],
+[
+"detail.css",
+"/_web/detail-992a3bd02a4b.css"
+],
+[
+"site.css",
+"/_web/site-89930f067708.css"
+]
+],
+"substitutes": [
+[
+"concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/_web/site-89930f067708.css\\\"></head><body>\",p_content.bytes,\"</body></html>\")",
+[
+[
+"p_content.bytes",
+"text_Page_8a5edab282(props.title)"
+],
+[
+"p_content",
+"web_html(text_Page_8a5edab282(props.title))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"false"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+]
+]
+]
+]
+},
+{
+"name": "dev_css dev",
+"parses": [
+[
+"Page_8a5edab282",
+"@props(title:text)\n<h1 class=\"p-4\">{{ title }}</h1>",
+"dev_css/app/page.view"
+],
+[
+"Layout",
+"@props(title:text,content:html,client:bool,mode:text)\n<!doctype html><html><head><title>{{ title }}</title><link rel=\"stylesheet\" href=\"@asset(site.css)\"><link rel=\"stylesheet\" href=\"/_web/neokit-dev.css\"></head><body>{{ content }}<script type=\"module\" src=\"/_web/neokit-dev.js\"></script></body></html>",
+"dev_css/app/layout.view"
+]
+],
+"templates": [
+0,
+1
+],
+"components": [],
+"assets": [
+[
+"client.js",
+"/_web/client.js"
+],
+[
+"detail.css",
+"/_web/detail.css"
+],
+[
+"site.css",
+"/_web/site.css"
+]
+],
+"substitutes": [
+[
+"concat(\"<!doctype html><html><head><title>\",html_escape(p_title),\"</title><link rel=\\\"stylesheet\\\" href=\\\"/_web/site.css\\\"><link rel=\\\"stylesheet\\\" href=\\\"/_web/neokit-dev.css\\\"></head><body>\",p_content.bytes,\"<script type=\\\"module\\\" src=\\\"/_web/neokit-dev.js\\\"></script></body></html>\")",
+[
+[
+"p_content.bytes",
+"text_Page_8a5edab282(props.title)"
+],
+[
+"p_content",
+"web_html(text_Page_8a5edab282(props.title))"
+],
+[
+"p_title",
+"props.title"
+],
+[
+"p_client",
+"false"
+],
+[
+"p_mode",
+"(if request.server then \"native SSR\" else \"static export\")"
+]
+]
+]
+]
+}
+]
+}

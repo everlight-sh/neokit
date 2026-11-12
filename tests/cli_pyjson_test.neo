@@ -1,0 +1,47 @@
+; Unit tests for cli/pyjson.neo: Python's json.dumps byte for byte. Every
+; expected string was printed by Python 3.12's json on the test box.
+import "std:json"
+import "../cli/pyjson.neo"
+
+fn parsed(borrow text:Arr u8 _) -> Json = json_parse(text).value
+fn same(actual:Arr u8 _, expected:Arr u8 _) -> bool = text_equal(actual,expected)
+fn sample() -> Json = parsed("{\"a\":[1,{\"b\":null}],\"c\":{},\"d\":[],\"e\":true,\"f\":false}")
+
+fn test_indent2_nested() -> bool
+  = same(pj_dumps_indent2(sample()),
+      "{\n  \"a\": [\n    1,\n    {\n      \"b\": null\n    }\n  ],\n  \"c\": {},\n  \"d\": [],\n  \"e\": true,\n  \"f\": false\n}")
+    && same(pj_dumps_indent2(parsed("{\"k\":{\"x\":[{}]}}")),"{\n  \"k\": {\n    \"x\": [\n      {}\n    ]\n  }\n}")
+
+fn test_compact_nested() -> bool
+  = same(pj_dumps(sample()),"{\"a\": [1, {\"b\": null}], \"c\": {}, \"d\": [], \"e\": true, \"f\": false}")
+
+fn test_nested_arrays() -> bool
+  = let v=parsed("[[1,[2]],[]]") in
+    same(pj_dumps_indent2(v),"[\n  [\n    1,\n    [\n      2\n    ]\n  ],\n  []\n]") && same(pj_dumps(v),"[[1, [2]], []]")
+
+fn test_scalars_and_empty_containers() -> bool
+  = same(pj_dumps(parsed("\"\"")),"\"\"") && same(pj_dumps(parsed("3")),"3") && same(pj_dumps(parsed("null")),"null")
+    && same(pj_dumps(parsed("true")),"true") && same(pj_dumps(parsed("[]")),"[]") && same(pj_dumps(parsed("{}")),"{}")
+    && same(pj_dumps_indent2(parsed("[]")),"[]") && same(pj_dumps_indent2(parsed("{}")),"{}")
+    && same(pj_dumps_indent2(parsed("\"x\"")),"\"x\"")
+
+fn test_ensure_ascii() -> bool
+  = same(pj_quote("\xc3\xa9\xf0\x9f\x98\x80\x7f\x01\x08\x0c\n\x0d\t\"\\/ ~"),
+      "\"\\u00e9\\ud83d\\ude00\\u007f\\u0001\\b\\f\\n\\r\\t\\\"\\\\/ ~\"")
+    && same(pj_dumps_indent2(parsed("{\"\xc3\xa9\":\"\xe2\x80\xa8\xc2\xa0\xef\xbf\xbf\"}")),"{\n  \"\\u00e9\": \"\\u2028\\u00a0\\uffff\"\n}")
+    && same(pj_quote(""),"\"\"")
+    && same(pj_quote_into("x=","\xf4\x8f\xbf\xbf"),"x=\"\\udbff\\udfff\"")
+
+fn test_integers() -> bool
+  = same(pj_dumps(parsed("[-0,12345678901234567890,-7]")),"[0, 12345678901234567890, -7]")
+    && same(pj_dumps(json_value_int(-42)),"-42")
+
+fn test_builders_keep_member_order() -> bool
+  = let keys=push(push(push(text_words(),"zebra"),"apple"),"mango") in
+    let values=push(push(push(arr(i in 0..0) json_none().value,json_value_int(1)),json_value_bool(false)),json_value_string("x").value) in
+    same(pj_dumps(json_value_object(keys,values).value),"{\"zebra\": 1, \"apple\": false, \"mango\": \"x\"}")
+
+fn test_supported() -> bool
+  = pj_supported(parsed("{\"a\":[1,-2,{\"b\":\"x\"}],\"c\":null,\"d\":true}"))
+    && !pj_supported(parsed("[1.5]")) && !pj_supported(parsed("{\"a\":{\"b\":1e3}}")) && !pj_supported(parsed("[2E1]"))
+    && !pj_supported(json_none().value) && same(pj_dumps(json_none().value),"null")

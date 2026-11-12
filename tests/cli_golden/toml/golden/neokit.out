@@ -1,0 +1,194 @@
+=== tests/cli_golden/toml/cases/neokit.cases audit web.toml
+{
+  "site": {
+    "url": "https://audit.test",
+    "description": "Audit site"
+  },
+  "redirects": [
+    {
+      "from": "/old",
+      "to": "/pricing"
+    },
+    {
+      "from": "/docs-external",
+      "to": "https://docs.example/start",
+      "status": 301,
+      "query": false
+    }
+  ],
+  "security": {
+    "csp": "default-src 'self'; img-src 'self' https://cdn.example"
+  }
+}
+=== tests/cli_golden/toml/cases/neokit.cases full web.toml
+{
+  "site": {
+    "name": "NeoKit starter",
+    "url": "https://example.com/",
+    "description": "Typed routes & native pages <fast>",
+    "og_title": "Starter",
+    "og_image": "https://example.com/og.png",
+    "canonical": "https://example.com/"
+  },
+  "server": {
+    "access_log": true,
+    "timing": false,
+    "shutdown_grace_ms": 250,
+    "before": "guard",
+    "after": "decorate",
+    "startup": "boot",
+    "migrate": "migrate"
+  },
+  "css": {
+    "tailwind": [
+      "site.css",
+      "admin.css"
+    ]
+  },
+  "security": {
+    "csp": "default-src 'self'; script-src 'self'"
+  },
+  "realtime": {
+    "channels": 16,
+    "history": 128,
+    "max_event_bytes": 4096
+  },
+  "images": {
+    "files": [
+      "hero.jpg",
+      "photos/team.png"
+    ],
+    "widths": [
+      320,
+      640,
+      1280
+    ],
+    "formats": [
+      "webp",
+      "jpeg"
+    ]
+  },
+  "redirects": [
+    {
+      "from": "/old-pricing",
+      "to": "/pricing",
+      "status": 308,
+      "query": true
+    }
+  ]
+}
+=== tests/cli_golden/toml/cases/neokit.cases page.toml with metadata
+{
+  "loader": "lab_load_home",
+  "client": true,
+  "export": true,
+  "cache_ttl": 30,
+  "metadata": {
+    "description": "Home description",
+    "robots": "index, follow",
+    "props": {
+      "description": "summary",
+      "jsonld": "jsonld"
+    }
+  }
+}
+=== tests/cli_golden/toml/cases/neokit.cases page.toml with every option
+{
+  "loader": "load",
+  "mode": "static",
+  "client": false,
+  "export": true,
+  "async": false,
+  "async_timeout_ms": 2000,
+  "cache_ttl": 60,
+  "stale_ttl": 10,
+  "cache_tag": "features",
+  "cache_query": [
+    "q",
+    "page"
+  ],
+  "guard": "signed_in",
+  "paths_fn": "all_posts",
+  "paths": [
+    "/blog/a",
+    "/blog/b-c",
+    "/blog/d_e.html"
+  ]
+}
+=== tests/cli_golden/toml/cases/neokit.cases typed action route.toml
+{
+  "handler": "feature_typed",
+  "input_type": "TypedInput",
+  "methods": [
+    "POST"
+  ],
+  "csrf": false,
+  "input": {
+    "title": {
+      "type": "text",
+      "min": 1,
+      "max": 50
+    },
+    "count": {
+      "type": "int",
+      "min": 0,
+      "max": 100,
+      "required": false
+    },
+    "enabled": "bool"
+  }
+}
+=== tests/cli_golden/toml/cases/neokit.cases cors route.toml
+{
+  "handler": "audit_data",
+  "methods": [
+    "GET",
+    "POST"
+  ],
+  "cors": [
+    "https://app.example"
+  ],
+  "cors_headers": [
+    "content-type",
+    "x-token"
+  ],
+  "cors_credentials": false,
+  "csrf": false
+}
+=== tests/cli_golden/toml/cases/neokit.cases realtime route.toml
+{
+  "handler": "workspace_events",
+  "methods": [
+    "GET"
+  ],
+  "realtime": true,
+  "stream": true
+}
+=== tests/cli_golden/toml/cases/neokit.cases scaffolded neo.toml
+{
+  "package": {
+    "name": "my-app",
+    "version": "0.1.0",
+    "entry": "app/page.neo"
+  },
+  "dependencies": {
+    "neokit": {
+      "path": "../neokit",
+      "version": "0.1.0-alpha.1"
+    }
+  }
+}
+=== tests/cli_golden/toml/cases/neokit.cases config with wrong types that build.py rejects later
+{
+  "loader": 1,
+  "mode": [
+    "ssr"
+  ],
+  "client": "yes",
+  "cache_query": "q",
+  "css": {
+    "tailwind": "site.css"
+  }
+}
+=== tests/cli_golden/toml/cases/neokit.cases route.toml with an invalid TOML key
+error

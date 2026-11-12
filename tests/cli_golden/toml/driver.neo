@@ -1,0 +1,48 @@
+; Golden driver for std:toml as NeoKit reads configs (cli/toml.neo) and
+; cli/pyjson.neo; generate.py writes the expected output with Python's
+; tomllib and json. Needs Neo 0.2.6 (std:toml).
+;
+; For every file named on the command line (relative to the repository root
+; under `neo test`, else to the working directory) it prints "=== FILE" and
+; json.dumps(tomllib.loads(path.read_text()), indent=2) plus a newline, or
+; "error" for a rejected document (std:toml's messages and, for unterminated
+; strings and arrays, its error lines differ from tomllib's). A .cases file
+; holds several documents, each after a line "#--- NAME", printed as
+; "=== FILE NAME".
+import "std:io"
+import "std:toml"
+import "../../../cli/toml.neo"
+import "../../../cli/pyjson.neo"
+
+fn golden_result(borrow text:Arr u8 _) -> Arr u8 _
+  = let parsed=toml_parse(text) in
+    if parsed.ok then concat(pj_dumps_indent2(parsed.value),"\n") else text_from("error\n",0)
+
+type GoldenChunk = { out:Arr u8 _, name:Arr u8 _, body:Arr u8 _, open:bool }
+fn golden_close(move c:GoldenChunk, borrow file:Arr u8 _) -> Arr u8 _
+  = if !c.open then c.out else concat(c.out,"=== ",file," ",c.name,"\n",golden_result(c.body))
+fn golden_line(move c:GoldenChunk, borrow file:Arr u8 _, borrow line:Arr u8 _, last:bool) -> GoldenChunk
+  = if !last && text_starts(line,"#--- ") then
+      let name=text_from(line,5) in
+      GoldenChunk { out=golden_close(c,file), name=name, body=text_empty(), open=true }
+    else if !c.open then c
+    else c with { body=if last then concat(c.body,line) else concat(c.body,line,"\n") }
+fn golden_chunks(borrow file:Arr u8 _, borrow text:Arr u8 _) -> Arr u8 _
+  = let lines=text_split_byte(text,10) in
+    let c=loop (c=GoldenChunk { out=text_empty(), name=text_empty(), body=text_empty(), open=false }, i:i64{i>=0}=0)
+      while i<len(lines) next (golden_line(c,file,lines[i],i==len(lines)-1), i+1) yield c in
+    golden_close(c,file)
+
+effect(env) fn golden_root() -> Arr u8 _
+  = let source=env_get("NEO_TEST_SOURCE") in let suffix="tests/cli_golden/toml/driver.neo" in
+    if source.present && text_ends(source.value,suffix) then text_slice(source.value,0,len(source.value)-len(suffix)) else text_empty()
+effect(fs) fn golden_file(borrow root:Arr u8 _, borrow file:Arr u8 _) -> Arr u8 _
+  = let raw=fs_read(concat(root,file)) in
+    if !raw.ok then concat("=== ",file,"\nunreadable: ",raw.error.message,"\n") else
+    ; Path.read_text()'s universal newlines, as toml_load applies them.
+    let text=text_universal_newlines(raw.value) in
+    if text_ends(file,".cases") then golden_chunks(file,text) else concat("=== ",file,"\n",golden_result(text))
+effect(fs,env) fn main() -> unit
+  = let root=golden_root() in
+    let out=loop (i=1, out=text_empty()) while cli_arg(i).present next (i+1, concat(out,golden_file(root,cli_arg(i).value))) yield out in
+    let written=print_out(out) in noop()

@@ -1,0 +1,130 @@
+; Unit tests for cli/text.neo: Python str semantics. Run by `neo test`.
+import "../cli/text.neo"
+
+fn words2(a:Arr u8 _, b:Arr u8 _) -> Arr Arr u8 _ _ = push(push(text_words(),a),b)
+fn words3(a:Arr u8 _, b:Arr u8 _, c:Arr u8 _) -> Arr Arr u8 _ _ = push(words2(a,b),c)
+fn words4(a:Arr u8 _, b:Arr u8 _, c:Arr u8 _, d:Arr u8 _) -> Arr Arr u8 _ _ = push(words3(a,b,c),d)
+; The words joined with | and bracketed, so empty fields stay visible.
+fn show(words:Arr Arr u8 _ _) -> Arr u8 _ = concat("<",text_join(words,"|"),">")
+fn same(actual:Arr u8 _, expected:Arr u8 _) -> bool = text_equal(actual,expected)
+
+fn test_equal_and_order() -> bool
+  = text_equal("abc","abc") && !text_equal("abc","abd") && !text_equal("ab","abc")
+    && text_less("a","b") && text_less("ab","abc") && !text_less("abc","ab") && !text_less("x","x")
+    && text_less("Z","a") && text_less("z","\xc3\xa9") && text_less("\xc3\xa9","\xe2\x82\xac")
+    && text_compare("a","b")== -1 && text_compare("b","a")==1 && text_compare("q","q")==0
+
+fn test_sort_is_python_sorted() -> bool
+  = same(show(text_sort(words4("pear","Apple","\xc3\xa9t\xc3\xa9","apple"))),"<Apple|apple|pear|\xc3\xa9t\xc3\xa9>")
+    && same(show(text_sort(text_words())),"<>")
+    && same(show(text_sort(words3("b","a","b"))),"<a|b|b>")
+
+fn test_sort_order_is_stable() -> bool
+  = let order=text_sort_order(words4("b","a","b","a")) in
+    len(order)==4 && order[0]==1 && order[1]==3 && order[2]==0 && order[3]==2
+
+fn test_member_and_distinct() -> bool
+  = text_member(words2("GET","POST"),"POST") && !text_member(words2("GET","POST"),"PUT")
+    && text_distinct(words3("a","b","c")) && !text_distinct(words3("a","b","a")) && text_distinct(text_words())
+
+fn test_split_keeps_empty_fields() -> bool
+  = same(show(text_split("a,,b",",")),"<a||b>")
+    && same(show(text_split("",",")),"<>") && len(text_split("",","))==1
+    && same(show(text_split(",a,",",")),"<|a|>")
+    && same(show(text_split("a::b::c","::")),"<a|b|c>")
+    && same(show(text_split_byte("/docs/a/b",47)),"<|docs|a|b>")
+
+fn test_split_whitespace() -> bool
+  = same(show(text_split_ws("  for  item in\titems \n")),"<for|item|in|items>")
+    && len(text_split_ws(""))==0 && len(text_split_ws(" \t\n "))==0
+    && same(show(text_split_ws("a\xc2\xa0b\xe3\x80\x80c\x1fd")),"<a|b|c|d>")
+    && same(show(text_split_ws("a\xe2\x80\x8bb")),"<a\xe2\x80\x8bb>")
+
+fn test_splitlines() -> bool
+  = same(show(text_splitlines("a\nb\r\nc\rd")),"<a|b|c|d>")
+    && same(show(text_splitlines("a\n\nb\n")),"<a||b>")
+    && len(text_splitlines(""))==0
+    && same(show(text_splitlines("x\x0by\xe2\x80\xa8z")),"<x|y|z>")
+
+fn test_partition() -> bool
+  = let p=text_partition("key=value=x","=") in
+    let q=text_partition("plain","=") in
+    let r=text_rpartition("a/b/c.txt","/") in
+    let s=text_rpartition("plain","/") in
+    p.found && same(p.before,"key") && same(p.after,"value=x")
+    && !q.found && same(q.before,"plain") && same(q.after,"")
+    && r.found && same(r.before,"a/b") && same(r.after,"c.txt")
+    && !s.found && same(s.before,"") && same(s.after,"plain")
+
+fn test_join_and_repeat() -> bool
+  = same(text_join(words3("GET","HEAD","POST"),", "),"GET, HEAD, POST")
+    && same(text_join(text_words(),","),"") && same(text_repeat("ab",3),"ababab") && same(text_repeat("ab",0),"")
+
+fn test_search() -> bool
+  = text_starts("/_web/x","/_web/") && !text_starts("/_we","/_web/") && text_starts("x","")
+    && text_ends("site.css",".css") && !text_ends("css",".css") && text_ends("x","")
+    && text_find("abcabc","bc",0)==1 && text_find("abcabc","bc",2)==4 && text_find("abc","x",0)== -1
+    && text_find("abc","",3)==3 && text_find("abc","",4)== -1 && text_find("abcabc","c",-2)==5
+    && text_rfind("abcabc","bc")==4 && text_rfind("abc","")==3 && text_rfind("abc","x")== -1
+    && text_contains("{{ x }}","{{") && !text_contains("{ x }","{{")
+    && text_count("a,b,,c",",")==3 && text_count("aaaa","aa")==2 && text_count("ab","")==3
+
+fn test_slice_is_python_slice() -> bool
+  = same(text_slice("abcdef",0,3),"abc") && same(text_slice("abcdef",3,100),"def")
+    && same(text_slice("text[]",0,-2),"text") && same(text_slice("og_title",3,8),"title")
+    && same(text_slice("abc",2,1),"") && same(text_slice("abc",-10,1),"a") && same(text_from("abcdef",4),"ef")
+
+fn test_replace() -> bool
+  = same(text_replace("a.b.c",".","::"),"a::b::c") && same(text_replace("aaa","aa","b"),"ba")
+    && same(text_replace_first("</head></head>","</head>","X</head>"),"X</head></head>")
+    && same(text_replace("abc","x","y"),"abc") && same(text_replace("ab","","-"),"-a-b-")
+    && same(text_replace_count("abc","","-",2),"-a-bc") && same(text_replace("\xc3\xa9","","|"),"|\xc3\xa9|")
+    && same(text_replace("a\r\nb\r\n","\r\n","\n"),"a\nb\n")
+
+fn test_case() -> bool
+  = same(text_lower("REFRESH Mixed.JPG"),"refresh mixed.jpg") && same(text_lower("\xc3\x89"),"\xc3\x89")
+    && same(text_upper("abc-Z"),"ABC-Z")
+
+fn test_strip_python_whitespace() -> bool
+  = same(text_strip("  a b \t\n"),"a b") && same(text_strip(""),"") && same(text_strip(" \n "),"")
+    && same(text_lstrip("  a "),"a ") && same(text_rstrip("  a "),"  a")
+    && same(text_strip("\xc2\xa0\xe2\x80\x83x\xe3\x80\x80\x1c"),"x")
+    && same(text_strip("\xe2\x80\x8bx"),"\xe2\x80\x8bx")
+    && same(text_strip("\xc3\xa9 "),"\xc3\xa9")
+
+fn test_strip_chars() -> bool
+  = same(text_strip_chars("/docs/","/"),"docs") && same(text_rstrip_chars("https://a.example//","/"),"https://a.example")
+    && same(text_lstrip_chars("//x/","/"),"x/") && same(text_strip_chars("///","/"),"") && same(text_strip_chars("ab","/"),"ab")
+
+fn test_identifier() -> bool
+  = text_is_identifier("load") && text_is_identifier("_x9") && text_is_identifier("Page_1")
+    && !text_is_identifier("") && !text_is_identifier("9x") && !text_is_identifier("not valid")
+    && !text_is_identifier("a-b") && !text_is_identifier("load\n") && !text_is_identifier("\xc3\xa9")
+
+fn test_character_class() -> bool
+  = text_only("site-main_2.css","A-Za-z0-9_.-") && !text_only("a b","A-Za-z0-9_.-")
+    && text_only("x-token","A-Za-z0-9-") && !text_only("\xc3\xa9","A-Za-z")
+    && text_only("public, max-age=30"," -~") && !text_only("a\tb"," -~") && text_only("","a-z")
+
+fn test_numbers() -> bool
+  = same(text_int(0),"0") && same(text_int(-42),"-42") && same(text_int(9223372036854775807),"9223372036854775807")
+    && same(text_hex(10,2),"0a") && same(text_hex(255,2),"ff") && same(text_hex(4096,2),"1000") && same(text_hex(0,4),"0000")
+    && same(text_hex(-26,0),"-1a")
+
+fn test_char_count() -> bool
+  = text_char_count("")==0 && text_char_count("abc")==3 && text_char_count("\xc3\xa9t\xf0\x9f\x98\x80")==3
+
+fn test_repr_matches_python() -> bool
+  = same(text_repr("abc"),"'abc'") && same(text_repr("it's"),"\"it's\"") && same(text_repr("both ' and \""),"'both \\' and \"'")
+    && same(text_repr("a\\b"),"'a\\\\b'") && same(text_repr("\t\n\r\x00\x7f"),"'\\t\\n\\r\\x00\\x7f'")
+    && same(text_repr("\xc3\xa9\xe2\x82\xac"),"'\xc3\xa9\xe2\x82\xac'") && same(text_repr("\xc2\xa0\xc2\x85"),"'\\xa0\\x85'")
+    && same(text_repr("\xe2\x80\x8b\xf3\xa0\x80\x81"),"'\\u200b\\U000e0001'")
+
+fn test_repr_list_and_tuple() -> bool
+  = same(text_repr_list(words2("title","x")),"['title', 'x']") && same(text_repr_list(text_words()),"[]")
+    && same(text_repr_tuple(push(text_words(),"site")),"('site',)") && same(text_repr_tuple(words2("a","b c")),"('a', 'b c')")
+    && same(text_repr_tuple(text_words()),"()")
+
+fn test_universal_newlines() -> bool
+  = same(text_universal_newlines("a\r\nb\rc\n"),"a\nb\nc\n") && same(text_universal_newlines("plain\n"),"plain\n")
+    && same(text_universal_newlines("\r\r\n"),"\n\n")

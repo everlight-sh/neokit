@@ -1,0 +1,54 @@
+=== tests/cli_golden/toml/cases/bom.toml
+error
+=== tests/cli_golden/toml/cases/crlf.toml
+{
+  "site": {
+    "name": "crlf",
+    "description": "multi\nline",
+    "raw": "a\nb"
+  }
+}
+=== tests/cli_golden/toml/cases/eof-after-escape.toml
+error
+=== tests/cli_golden/toml/cases/eof-array-header.toml
+error
+=== tests/cli_golden/toml/cases/eof-backslash.toml
+error
+=== tests/cli_golden/toml/cases/eof-comment-control.toml
+error
+=== tests/cli_golden/toml/cases/eof-comment.toml
+{
+  "a": 1
+}
+=== tests/cli_golden/toml/cases/eof-duplicate-key.toml
+error
+=== tests/cli_golden/toml/cases/eof-escaped-whitespace.toml
+error
+=== tests/cli_golden/toml/cases/eof-header.toml
+error
+=== tests/cli_golden/toml/cases/eof-key.toml
+error
+=== tests/cli_golden/toml/cases/eof-missing-value.toml
+error
+=== tests/cli_golden/toml/cases/eof-short-escape.toml
+error
+=== tests/cli_golden/toml/cases/eof-unclosed-array.toml
+error
+=== tests/cli_golden/toml/cases/eof-unclosed-inline.toml
+error
+=== tests/cli_golden/toml/cases/eof-unterminated-basic.toml
+error
+=== tests/cli_golden/toml/cases/eof-unterminated-literal.toml
+error
+=== tests/cli_golden/toml/cases/eof-unterminated-multiline-literal.toml
+error
+=== tests/cli_golden/toml/cases/eof-unterminated-multiline.toml
+error
+=== tests/cli_golden/toml/cases/lone-cr.toml
+error
+=== tests/cli_golden/toml/cases/no-final-newline.toml
+{
+  "site": {
+    "name": "end"
+  }
+}

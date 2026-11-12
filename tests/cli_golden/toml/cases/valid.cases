@@ -1,0 +1,186 @@
+#--- empty document
+#--- comments and blank lines only
+# just a comment
+   # indented comment	with a tab
+
+
+#--- basic strings
+plain = "hello"
+escapes = "tab\there\nnewline \"quoted\" back\\slash \b\f\r"
+unicode = "caf\u00e9 \u4e2d \U0001F600 \u0000 \u001f \u007f \u00A0"
+raw = "café 中文 😀 ñ"
+empty = ""
+hash = "# not a comment"
+#--- literal strings
+path = 'C:\Users\nobody'
+quoted = 'say "hi"'
+empty = ''
+hash = '# still text'
+#--- multi-line basic strings
+a = """
+line one
+line two"""
+b = """\
+    joined \
+    words \
+    """
+c = """quote "inside" and ""two"" """
+d = """four""""
+e = """five"""""
+f = """tab	ok
+"""
+g = """\u00e9\
+  \U0001F389"""
+h = """trailing\
+   space"""
+#--- multi-line literal strings
+a = '''
+raw \n text
+'''
+b = '''it's'''
+c = '''four''''
+d = '''five'''''
+e = '''
+'''
+#--- keys
+bare_key-1 = 1
+"quoted key" = 2
+'literal key' = 3
+"" = 4
+"ключ" = 5
+a.b.c = 6
+a . d = 7
+"x.y".z = 8
+1234 = 9
+-key = 10
+"esc\u0041\t" = 11
+#--- integers
+dec = 42
+pos = +17
+neg = -5
+zero = 0
+plus_zero = +0
+minus_zero = -0
+under = 1_000_000
+hex = 0xDEAD_beef
+hex_lower = 0xff
+oct = 0o755
+bin = 0b1101_0110
+max = 9223372036854775807
+min = -9223372036854775808
+hex_max = 0x7fffffffffffffff
+#--- booleans
+yes = true
+no = false
+#--- arrays
+empty = []
+ints = [1, 2, 3]
+mixed = [1, "two", true, [3], {four = 4}]
+nested = [[1, 2], [], [[3]]]
+multi = [
+  1, # one
+  2,
+  # a comment line
+
+  3,
+]
+strings = ["a", 'b', """c""", '''d''']
+trailing = [1,2,]
+spaced = [ 1 , 2 ]
+empty_lines = [
+
+]
+#--- inline tables
+empty = {}
+spaced_empty = {   }
+point = { x = 1, y = 2 }
+nested = { a = { b = { c = 1 } }, d = [1, 2] }
+dotted = { a.b = 1, a.c = 2 }
+quoted = { "k k" = 1, 'l' = 2 }
+array_of_inline = [ { a = 1 }, { a = 2 } ]
+#--- tables
+[site]
+name = "x"
+[server]
+timing = true
+[a.b.c]
+d = 1
+[a]
+e = 2
+[a.b]
+f = 3
+[ "quoted" . 'key' ]
+g = 4
+[empty]
+#--- dotted keys then tables
+a.b.c = 1
+a.d = 2
+[x]
+y.z = 3
+y.w = 4
+[x.v]
+#--- implicit table made explicit later
+[a.b]
+c = 1
+[a]
+d = 2
+#--- arrays of tables
+[[redirects]]
+from = "/old"
+to = "/new"
+[[redirects]]
+from = "/a"
+to = "https://example.com/b"
+status = 301
+query = false
+[[fruit]]
+name = "apple"
+[fruit.physical]
+color = "red"
+[[fruit.variety]]
+name = "red delicious"
+[[fruit.variety]]
+name = "granny smith"
+[[fruit]]
+name = "banana"
+[[fruit.variety]]
+name = "plantain"
+#--- array of tables reopens dotted keys
+[[a]]
+b.c = 1
+[[a]]
+b.c = 2
+[a.b.d]
+#--- empty arrays of tables
+[[a]]
+[[a]]
+[[b.c]]
+#--- key order is source order
+zebra = 1
+apple = 2
+middle = 3
+[mango]
+b = 1
+a = 2
+[banana]
+#--- whitespace and comments everywhere
+  key = "value"   # trailing comment
+[ table ] # comment
+	tabbed = 1
+[[ list ]] # comment
+x=1#tight
+#--- non-ASCII text for ensure_ascii
+"é" = "ü"
+emoji = "😀🎉"
+astral = "\U0001F600\U0010FFFF"
+bmp = "\uFFFF\u2028\u2029\uE000"
+controls = "\u0001\u0008\u000b\u001b"
+quote_mix = "it's \"x\""
+del = "\u007f"
+latin = "\u0080\u009f\u00ad\u00ff"
+cjk = { "日本" = "東京" }
+#--- deep nesting
+a = [[[[[[[[[[1]]]]]]]]]]
+b = {c = {d = {e = {f = {g = 1}}}}}
+[x.y.z.w.v.u]
+t = true

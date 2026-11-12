@@ -1,0 +1,318 @@
+; String toolbox for the native NeoKit CLI: Python str operations on UTF-8
+; byte arrays, with the semantics compiler/*.py relies on.
+;
+; Offsets and lengths are byte offsets. Python counts code points; the two
+; agree for ASCII, which is all NeoKit's paths, names and keys accept.
+; text_char_count gives Python's len() for any valid UTF-8 text.
+import "std:strings"
+
+fn text_empty() -> Arr u8 _ = ""
+fn text_words() -> Arr Arr u8 _ _ = arr(i in 0..0) text_empty()
+; The byte at i, or -1 outside the text.
+fn text_byte(borrow text:Arr u8 _, i:i64) -> i64 = if i>=0 && i<len(text) then i64(text[i]) else -1
+; words[i], or "" outside the list.
+fn text_word(borrow words:Arr Arr u8 _ _, i:i64) -> Arr u8 _ = if i>=0 && i<len(words) then words[i] else text_empty()
+private fn text_index(borrow values:Arr i64 _, i:i64) -> i64 = if i>=0 && i<len(values) then values[i] else 0
+
+; ---- UTF-8 code points (input is assumed valid; invalid bytes never loop) ----
+
+; Byte width of the character starting at i (1 past the end).
+fn text_char_width(borrow text:Arr u8 _, i:i64) -> i64
+  = let a=text_byte(text,i) in if a<192 then 1 else if a<224 then 2 else if a<240 then 3 else 4
+; The code point starting at i, or -1 past the end.
+fn text_code_at(borrow text:Arr u8 _, i:i64) -> i64
+  = let a=text_byte(text,i) in
+    if a<192 then a
+    else if a<224 then (a-192)*64+text_byte(text,i+1)-128
+    else if a<240 then ((a-224)*64+text_byte(text,i+1)-128)*64+text_byte(text,i+2)-128
+    else (((a-240)*64+text_byte(text,i+1)-128)*64+text_byte(text,i+2)-128)*64+text_byte(text,i+3)-128
+; Python len(): the number of code points.
+fn text_char_count(borrow text:Arr u8 _) -> i64
+  = loop (i:i64{i>=0}=0, count=0) while i<len(text) next (i+1, if bit_and(i64(text[i]),192)==128 then count else count+1) yield count
+
+; ---- Comparison and sorting ----
+
+fn text_equal(borrow a:Arr u8 _, borrow b:Arr u8 _) -> bool = len(a)==len(b) && bytes_match_at(a,0,b)
+; Python's str order: code point order, which is UTF-8 byte order.
+fn text_less(borrow a:Arr u8 _, borrow b:Arr u8 _) -> bool
+  = let i=loop (i:i64{i>=0}=0) while i<len(a) && i<len(b) && a[i]==b[i] next (i+1) yield i in
+    if i<len(a) && i<len(b) then text_byte(a,i)<text_byte(b,i) else len(a)<len(b)
+; -1, 0 or 1.
+fn text_compare(borrow a:Arr u8 _, borrow b:Arr u8 _) -> i64
+  = if text_less(a,b) then -1 else if text_less(b,a) then 1 else 0
+
+type TextMerge = { out:Arr i64 _, i:i64, j:i64 }
+private fn text_merge_step(move m:TextMerge, borrow keys:Arr Arr u8 _ _, borrow order:Arr i64 _, mid:i64, end:i64) -> TextMerge
+  = let left=m.i<mid && (m.j>=end || !text_less(text_word(keys,text_index(order,m.j)),text_word(keys,text_index(order,m.i)))) in
+    if left then TextMerge { out=push(m.out,text_index(order,m.i)), i=m.i+1, j=m.j }
+    else TextMerge { out=push(m.out,text_index(order,m.j)), i=m.i, j=m.j+1 }
+private fn text_merge_run(move out:Arr i64 _, borrow keys:Arr Arr u8 _ _, borrow order:Arr i64 _, start:i64, width:i64) -> Arr i64 _
+  = let n=len(order) in
+    let mid=if width<n-start then start+width else n in
+    let end=if width<n-mid then mid+width else n in
+    let merged=loop (m=TextMerge { out=out, i=start, j=mid }) while m.i<mid || m.j<end next (text_merge_step(m,keys,order,mid,end)) yield m in
+    merged.out
+private fn text_merge_pass(borrow keys:Arr Arr u8 _ _, borrow order:Arr i64 _, width:i64) -> Arr i64 _
+  = loop (out=arr(i in 0..0) 0, start=0) while start<len(order)
+      next (text_merge_run(out,keys,order,start,width), if width<len(order)-start then start+2*width else len(order))
+      yield out
+; The stable order of keys under text_less: Python
+; sorted(range(len(keys)), key=lambda i: keys[i]). Sort records by building
+; their key strings (any encoding whose byte order is the wanted order).
+fn text_sort_order(borrow keys:Arr Arr u8 _ _) -> Arr i64 _
+  = loop (order=arr(i in 0..len(keys)) i, width=1) while width<len(order)
+      next (text_merge_pass(keys,order,width), width*2) yield order
+; Python sorted() of a list of str.
+fn text_sort(borrow words:Arr Arr u8 _ _) -> Arr Arr u8 _ _
+  = let order=text_sort_order(words) in
+    loop (out=text_words(), i:i64{i>=0}=0) while i<len(order) next (push(out,text_word(words,order[i])), i+1) yield out
+; Python `word in words`.
+fn text_member(borrow words:Arr Arr u8 _ _, borrow word:Arr u8 _) -> bool
+  = loop (i:i64{i>=0}=0, found=false) while !found && i<len(words) next (i+1, text_equal(words[i],word)) yield found
+; Python len(set(words))==len(words).
+fn text_distinct(borrow words:Arr Arr u8 _ _) -> bool
+  = let sorted=text_sort(words) in
+    loop (i=1, ok=true) while ok && i<len(sorted) next (i+1, !text_equal(text_word(sorted,i-1),text_word(sorted,i))) yield ok
+
+; ---- Searching ----
+
+fn text_starts(borrow text:Arr u8 _, borrow prefix:Arr u8 _) -> bool = bytes_match_at(text,0,prefix)
+fn text_ends(borrow text:Arr u8 _, borrow suffix:Arr u8 _) -> bool
+  = len(suffix)<=len(text) && bytes_match_at(text,len(text)-len(suffix),suffix)
+; Python's start index: negative counts from the end, then clamps to 0.
+private fn text_clamp(index:i64, n:i64) -> i64
+  = if index<0 then (if n+index<0 then 0 else n+index) else if index>n then n else index
+; Python str.find(sub, start): the first offset at or after start, or -1.
+fn text_find(borrow text:Arr u8 _, borrow sub:Arr u8 _, start:i64) -> i64
+  = let first=if start>len(text) then start else text_clamp(start,len(text)) in
+    loop (i=first, found= -1) while found<0 && i>=0 && i<=len(text)-len(sub)
+      next (i+1, if bytes_match_at(text,i,sub) then i else -1) yield found
+; Python str.rfind(sub): the last offset, or -1.
+fn text_rfind(borrow text:Arr u8 _, borrow sub:Arr u8 _) -> i64
+  = loop (i=len(text)-len(sub), found= -1) while found<0 && i>=0
+      next (i-1, if bytes_match_at(text,i,sub) then i else -1) yield found
+; Python `sub in text`.
+fn text_contains(borrow text:Arr u8 _, borrow sub:Arr u8 _) -> bool = text_find(text,sub,0)>=0
+; Python str.count(sub): non-overlapping occurrences; "" counts len(text)+1.
+fn text_count(borrow text:Arr u8 _, borrow sub:Arr u8 _) -> i64
+  = if len(sub)==0 then text_char_count(text)+1 else
+    loop (at=text_find(text,sub,0), count=0) while at>=0 next (text_find(text,sub,at+len(sub)), count+1) yield count
+; Python text[start:end] on byte offsets: negative indices count from the
+; end, out-of-range indices clamp, and end<=start gives "".
+fn text_slice(borrow text:Arr u8 _, start:i64, end:i64) -> Arr u8 _
+  = let s=text_clamp(start,len(text)) in let e=text_clamp(end,len(text)) in
+    if e<=s then text_empty() else byte_slice(text,s,e)
+; Python text[start:].
+fn text_from(borrow text:Arr u8 _, start:i64) -> Arr u8 _ = text_slice(text,start,len(text))
+
+; ---- Splitting and joining ----
+
+; Python str.split(sep) for a non-empty sep: every field, including empty
+; ones ("a,,b" gives three, "" gives [""]). Python raises on an empty sep;
+; here it gives [text].
+fn text_split(borrow text:Arr u8 _, borrow sep:Arr u8 _) -> Arr Arr u8 _ _
+  = if len(sep)==0 then push(text_words(),text) else
+    loop (out=text_words(), start=0, at=text_find(text,sep,0)) while at>=0
+      next (push(out,text_slice(text,start,at)), at+len(sep), text_find(text,sep,at+len(sep)))
+      yield push(out,text_from(text,start))
+; Python str.split(chr(byte)).
+fn text_split_byte(borrow text:Arr u8 _, byte:i64) -> Arr Arr u8 _ _ = text_split(text,push(text_empty(),u8(byte)))
+; Python str.split(sep, 1) and str.rsplit(sep, 1) as before/after parts.
+type TextParts = { found:bool, before:Arr u8 _, after:Arr u8 _ }
+; Python str.partition(sep): (before, sep, after); without sep, (text, "", "").
+fn text_partition(borrow text:Arr u8 _, borrow sep:Arr u8 _) -> TextParts
+  = let at=if len(sep)==0 then -1 else text_find(text,sep,0) in
+    if at<0 then TextParts { found=false, before=text, after=text_empty() }
+    else TextParts { found=true, before=text_slice(text,0,at), after=text_from(text,at+len(sep)) }
+; Python str.rpartition(sep): (before, sep, after); without sep, ("", "", text).
+fn text_rpartition(borrow text:Arr u8 _, borrow sep:Arr u8 _) -> TextParts
+  = let at=if len(sep)==0 then -1 else text_rfind(text,sep) in
+    if at<0 then TextParts { found=false, before=text_empty(), after=text }
+    else TextParts { found=true, before=text_slice(text,0,at), after=text_from(text,at+len(sep)) }
+
+; Python str.isspace() for one code point: Unicode White_Space plus the
+; information separators U+001C..U+001F, which Python also counts.
+fn text_is_space(code:i64) -> bool
+  = (code>=9 && code<=13) || (code>=28 && code<=32) || code==133 || code==160 || code==5760
+    || (code>=8192 && code<=8202) || code==8232 || code==8233 || code==8239 || code==8287 || code==12288
+; Byte width of the whitespace character at i, or 0.
+fn text_space_at(borrow text:Arr u8 _, i:i64) -> i64
+  = let a=text_byte(text,i) in
+    if a<128 then (if text_is_space(a) then 1 else 0)
+    else if a!=194 && a!=225 && a!=226 && a!=227 then 0
+    else if text_is_space(text_code_at(text,i)) then text_char_width(text,i) else 0
+; Byte width of the whitespace character ending at end, or 0.
+private fn text_space_before(borrow text:Arr u8 _, end:i64) -> i64
+  = if end<1 then 0 else if text_space_at(text,end-1)==1 then 1
+    else if end>=2 && text_space_at(text,end-2)==2 then 2
+    else if end>=3 && text_space_at(text,end-3)==3 then 3 else 0
+type TextFields = { out:Arr Arr u8 _ _, i:i64, start:i64 }
+private fn text_field_step(move s:TextFields, borrow text:Arr u8 _) -> TextFields
+  = let w=text_space_at(text,s.i) in
+    if w>0 then TextFields { out=if s.start>=0 then push(s.out,text_slice(text,s.start,s.i)) else s.out, i=s.i+w, start= -1 }
+    else TextFields { out=s.out, i=s.i+text_char_width(text,s.i), start=if s.start<0 then s.i else s.start }
+; Python str.split(): runs of whitespace separate fields; no empty fields.
+fn text_split_ws(borrow text:Arr u8 _) -> Arr Arr u8 _ _
+  = let s=loop (s=TextFields { out=text_words(), i=0, start= -1 }) while s.i<len(text) next (text_field_step(s,text)) yield s in
+    if s.start>=0 then push(s.out,text_from(text,s.start)) else s.out
+; Byte width of the line boundary at i (\r\n counts 2), or 0. Python's
+; boundaries: \n \r \v \f \x1c \x1d \x1e \x85 U+2028 U+2029.
+fn text_line_break_at(borrow text:Arr u8 _, i:i64) -> i64
+  = let a=text_byte(text,i) in
+    if a==13 then (if text_byte(text,i+1)==10 then 2 else 1)
+    else if a==10 || a==11 || a==12 || a==28 || a==29 || a==30 then 1
+    else if a==194 && text_byte(text,i+1)==133 then 2
+    else if a==226 && text_byte(text,i+1)==128 && (text_byte(text,i+2)==168 || text_byte(text,i+2)==169) then 3 else 0
+private fn text_line_step(move s:TextFields, borrow text:Arr u8 _) -> TextFields
+  = let w=text_line_break_at(text,s.i) in
+    if w>0 then TextFields { out=push(s.out,text_slice(text,s.start,s.i)), i=s.i+w, start=s.i+w }
+    else s with { i=s.i+text_char_width(text,s.i) }
+; Python str.splitlines(): lines without their endings; a final line
+; ending adds no empty line, and "" gives [].
+fn text_splitlines(borrow text:Arr u8 _) -> Arr Arr u8 _ _
+  = let s=loop (s=TextFields { out=text_words(), i=0, start=0 }) while s.i<len(text) next (text_line_step(s,text)) yield s in
+    if s.start<len(text) then push(s.out,text_from(text,s.start)) else s.out
+; Python sep.join(parts).
+fn text_join(borrow parts:Arr Arr u8 _ _, borrow sep:Arr u8 _) -> Arr u8 _
+  = loop (out=text_empty(), i:i64{i>=0}=0) while i<len(parts)
+      next (if i==0 then concat(out,parts[i]) else concat(out,sep,parts[i]), i+1) yield out
+; Python text*count.
+fn text_repeat(borrow text:Arr u8 _, count:i64) -> Arr u8 _
+  = loop (out=text_empty(), i=0) while i<count next (concat(out,text), i+1) yield out
+
+; ---- Replacing and case ----
+
+type TextReplace = { out:Arr u8 _, i:i64, done:i64 }
+private fn text_replace_step(move s:TextReplace, borrow text:Arr u8 _, borrow old:Arr u8 _, borrow new:Arr u8 _, count:i64) -> TextReplace
+  = let at=if count>=0 && s.done>=count then -1 else text_find(text,old,s.i) in
+    if at<0 then TextReplace { out=concat(s.out,text_from(text,s.i)), i=len(text)+1, done=s.done }
+    else TextReplace { out=concat(s.out,text_slice(text,s.i,at),new), i=at+len(old), done=s.done+1 }
+private fn text_insert_step(move s:TextReplace, borrow text:Arr u8 _, borrow new:Arr u8 _, count:i64) -> TextReplace
+  = let insert=count<0 || s.done<count in
+    let out=if insert then concat(s.out,new) else s.out in
+    if s.i>=len(text) then TextReplace { out=out, i=s.i+1, done=s.done }
+    else let w=text_char_width(text,s.i) in
+      TextReplace { out=concat(out,text_slice(text,s.i,s.i+w)), i=s.i+w, done=s.done+(if insert then 1 else 0) }
+; Python str.replace(old, new, count); count<0 replaces every occurrence.
+; An empty old inserts new around every character, as Python does.
+fn text_replace_count(borrow text:Arr u8 _, borrow old:Arr u8 _, borrow new:Arr u8 _, count:i64) -> Arr u8 _
+  = let start=TextReplace { out=text_empty(), i=0, done=0 } in
+    let done=if len(old)==0 then loop (s=start) while s.i<=len(text) next (text_insert_step(s,text,new,count)) yield s
+      else loop (s=start) while s.i<=len(text) next (text_replace_step(s,text,old,new,count)) yield s in
+    done.out
+; Python str.replace(old, new).
+fn text_replace(borrow text:Arr u8 _, borrow old:Arr u8 _, borrow new:Arr u8 _) -> Arr u8 _ = text_replace_count(text,old,new,-1)
+; Python str.replace(old, new, 1).
+fn text_replace_first(borrow text:Arr u8 _, borrow old:Arr u8 _, borrow new:Arr u8 _) -> Arr u8 _ = text_replace_count(text,old,new,1)
+; str.lower() for ASCII letters; other bytes are unchanged. Python also
+; lowers non-ASCII capitals; NeoKit lowers only ASCII names and suffixes.
+fn text_lower(borrow text:Arr u8 _) -> Arr u8 _
+  = arr(i in 0..len(text)) check i>=0 && i<len(text) in if text[i]>=u8(65) && text[i]<=u8(90) then u8(i64(text[i])+32) else text[i]
+; str.upper() for ASCII letters, likewise.
+fn text_upper(borrow text:Arr u8 _) -> Arr u8 _
+  = arr(i in 0..len(text)) check i>=0 && i<len(text) in if text[i]>=u8(97) && text[i]<=u8(122) then u8(i64(text[i])-32) else text[i]
+
+; ---- Stripping (Python whitespace, exact for any valid UTF-8) ----
+
+private fn text_strip_start(borrow text:Arr u8 _) -> i64
+  = loop (i=0) while text_space_at(text,i)>0 next (i+text_space_at(text,i)) yield i
+private fn text_strip_end(borrow text:Arr u8 _, start:i64) -> i64
+  = loop (e=len(text)) while e>start && text_space_before(text,e)>0 next (e-text_space_before(text,e)) yield e
+; Python str.strip(), str.lstrip() and str.rstrip() with no argument.
+fn text_strip(borrow text:Arr u8 _) -> Arr u8 _
+  = let s=text_strip_start(text) in text_slice(text,s,text_strip_end(text,s))
+fn text_lstrip(borrow text:Arr u8 _) -> Arr u8 _ = text_from(text,text_strip_start(text))
+fn text_rstrip(borrow text:Arr u8 _) -> Arr u8 _ = text_slice(text,0,text_strip_end(text,0))
+private fn text_has_byte(borrow chars:Arr u8 _, byte:i64) -> bool
+  = loop (i:i64{i>=0}=0, found=false) while !found && i<len(chars) next (i+1, i64(chars[i])==byte) yield found
+private fn text_chars_start(borrow text:Arr u8 _, borrow chars:Arr u8 _) -> i64
+  = loop (i=0) while i<len(text) && text_has_byte(chars,text_byte(text,i)) next (i+1) yield i
+private fn text_chars_end(borrow text:Arr u8 _, borrow chars:Arr u8 _, start:i64) -> i64
+  = loop (e=len(text)) while e>start && text_has_byte(chars,text_byte(text,e-1)) next (e-1) yield e
+; Python str.strip(chars), lstrip(chars), rstrip(chars) for ASCII chars.
+fn text_strip_chars(borrow text:Arr u8 _, borrow chars:Arr u8 _) -> Arr u8 _
+  = let s=text_chars_start(text,chars) in text_slice(text,s,text_chars_end(text,chars,s))
+fn text_lstrip_chars(borrow text:Arr u8 _, borrow chars:Arr u8 _) -> Arr u8 _ = text_from(text,text_chars_start(text,chars))
+fn text_rstrip_chars(borrow text:Arr u8 _, borrow chars:Arr u8 _) -> Arr u8 _ = text_slice(text,0,text_chars_end(text,chars,0))
+
+; ---- Character classes ----
+
+private fn text_alpha(c:i64) -> bool = (c>=65 && c<=90) || (c>=97 && c<=122)
+private fn text_digit(c:i64) -> bool = c>=48 && c<=57
+; NAME.fullmatch(text) for NAME = [A-Za-z_][A-Za-z0-9_]*.
+fn text_is_identifier(borrow text:Arr u8 _) -> bool
+  = len(text)>0 && (text_alpha(text_byte(text,0)) || text_byte(text,0)==95) &&
+    loop (i:i64{i>=0}=1, ok=true) while ok && i<len(text)
+      next (i+1, let c=i64(text[i]) in text_alpha(c) || text_digit(c) || c==95) yield ok
+private fn text_class_has(borrow spec:Arr u8 _, c:i64) -> bool
+  = loop (i=0, found=false) while !found && i<len(spec)
+      next (if text_byte(spec,i+1)==45 && i+2<len(spec) then i+3 else i+1,
+            if text_byte(spec,i+1)==45 && i+2<len(spec) then c>=text_byte(spec,i) && c<=text_byte(spec,i+2) else c==text_byte(spec,i))
+      yield found
+; re.fullmatch('[spec]*', text) for an ASCII character class: spec lists
+; characters and a-z style ranges; a '-' first or last is literal. Non-ASCII
+; text never matches, as with Python's ASCII classes. Check lengths apart.
+fn text_only(borrow text:Arr u8 _, borrow spec:Arr u8 _) -> bool
+  = loop (i:i64{i>=0}=0, ok=true) while ok && i<len(text) next (i+1, text_class_has(spec,i64(text[i]))) yield ok
+
+; ---- Numbers ----
+
+; Python str(value).
+fn text_int(value:i64) -> Arr u8 _ = int_text(value)
+private fn text_hex_digit(d:i64) -> u8 = u8(if d<10 then 48+d else 87+d)
+; Python f'{value:0{digits}x}': lowercase hex, zero-padded to at least
+; digits places. value must not be the minimum i64.
+fn text_hex(value:i64, digits:i64) -> Arr u8 _
+  = if value<0 then concat("-",text_hex(0-value,digits)) else
+    let needed=loop (v=value, count=1) while v>=16 next (v/16, count+1) yield count in
+    let width=if digits>needed then digits else needed in
+    loop (out=text_empty(), k=width-1) while k>=0
+      next (push(out,text_hex_digit(bit_and(shift_right(value,k*4),15))), k-1) yield out
+
+; ---- Python repr() ----
+
+; Python's str.isprintable() for one code point above U+007E: false for
+; the Other and Separator categories. Exact for Latin-1; above it, covers the
+; format, separator, surrogate and private-use code points, but unassigned
+; code points count as printable (Python escapes them).
+fn text_printable(code:i64) -> bool
+  = if code<=160 then false
+    else if code<=255 then code!=173
+    else !(code==1564 || code==5760 || code==6158 || (code>=8192 && code<=8207) || (code>=8232 && code<=8239)
+           || (code>=8287 && code<=8292) || (code>=8294 && code<=8303) || code==12288 || (code>=55296 && code<=63743)
+           || code==65279 || (code>=65529 && code<=65531) || code==65534 || code==65535 || code==69821
+           || (code>=119155 && code<=119162) || code==917505 || (code>=917536 && code<=917631) || code>=983040)
+private fn text_repr_char(move out:Arr u8 _, code:i64, quote:i64) -> Arr u8 _
+  = if code==quote || code==92 then push(push(out,u8(92)),u8(code))
+    else if code==9 then concat(out,"\\t")
+    else if code==10 then concat(out,"\\n")
+    else if code==13 then concat(out,"\\r")
+    else if code<32 || code==127 then concat(out,"\\x",text_hex(code,2))
+    else if code<127 then push(out,u8(code))
+    else if text_printable(code) then concat(out,utf8_encode(code).value)
+    else if code<=255 then concat(out,"\\x",text_hex(code,2))
+    else if code<=65535 then concat(out,"\\u",text_hex(code,4))
+    else concat(out,"\\U",text_hex(code,8))
+; Python repr() of a str.
+fn text_repr(borrow text:Arr u8 _) -> Arr u8 _
+  = let quote=if text_has_byte(text,39) && !text_has_byte(text,34) then 34 else 39 in
+    let body=loop (o=push(text_empty(),u8(quote)), i=0) while i<len(text)
+      next (text_repr_char(o,text_code_at(text,i),quote), i+text_char_width(text,i)) yield o in
+    push(body,u8(quote))
+; Python repr() of a list of str: ['a', 'b'].
+fn text_repr_list(borrow words:Arr Arr u8 _ _) -> Arr u8 _
+  = concat("[",text_join(arr(i in 0..len(words)) text_repr(text_word(words,i)),", "),"]")
+; Python repr() of a tuple of str: ('a',) or ('a', 'b').
+fn text_repr_tuple(borrow words:Arr Arr u8 _ _) -> Arr u8 _
+  = concat("(",text_join(arr(i in 0..len(words)) text_repr(text_word(words,i)),", "),if len(words)==1 then ",)" else ")")
+
+; ---- Files as text ----
+
+; Python's universal newlines, as Path.read_text() applies them: \r\n and a
+; lone \r both read as \n.
+fn text_universal_newlines(borrow text:Arr u8 _) -> Arr u8 _
+  = if !text_has_byte(text,13) then text else
+    loop (o=text_empty(), i:i64{i>=0}=0) while i<len(text)
+      next (push(o,if text[i]==u8(13) then u8(10) else text[i]),
+            if text[i]==u8(13) && text_byte(text,i+1)==10 then i+2 else i+1)
+      yield o

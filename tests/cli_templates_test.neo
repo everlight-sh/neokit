@@ -1,0 +1,204 @@
+; Unit tests for cli/templates.neo, ported from tests/test_templates.py and
+; the template cases of tests/test_features.py. Expected code and messages
+; are compiler/templates.py's output for the same input. Run by `neo test`.
+import "../cli/templates.neo"
+
+fn tt_same(borrow actual:Arr u8 _, borrow expected:Arr u8 _) -> bool = len(actual)==len(expected) && bytes_match_at(actual,0,expected)
+fn tt_assets() -> Arr TplPair _ = tpl_put(tpl_no_pairs(),"site.css","/_web/site-123.css")
+
+; The parsed template, or one named "!" holding the error as its body.
+fn tt_parse(borrow name:Arr u8 _, borrow source:Arr u8 _) -> TplTemplate
+  = match tpl_parse(name,source,"<template>") {
+      Ok(template) => template,
+      Err(e) => TplTemplate { name="!", props=tpl_no_pairs(), body=e, path="", types=tpl_no_types() } }
+fn tt_one(borrow name:Arr u8 _, borrow source:Arr u8 _) -> Arr TplTemplate _ = push(tpl_no_templates(),tt_parse(name,source))
+
+; parse plus compile_template: the code, or "error: " and the BuildError.
+fn tt_code(borrow template:TplTemplate, borrow components:Arr TplTemplate _, borrow assets:Arr TplPair _) -> Arr u8 _
+  = match tpl_compile_template(template,components,assets) { Ok(compiled) => compiled.code, Err(e) => concat("error: ",e) }
+fn tt_with(borrow source:Arr u8 _, borrow components:Arr TplTemplate _) -> Arr u8 _
+  = match tpl_parse("Test",source,"<template>") {
+      Ok(template) => tt_code(template,components,tt_assets()),
+      Err(e) => concat("error: ",e) }
+fn tt_compile(borrow source:Arr u8 _) -> Arr u8 _ = tt_with(source,tpl_no_templates())
+fn tt_error(borrow source:Arr u8 _, borrow message:Arr u8 _) -> bool = tt_same(tt_compile(source),concat("error: <template>: ",message))
+fn tt_parse_error(borrow source:Arr u8 _, borrow message:Arr u8 _) -> bool
+  = match tpl_parse("Test",source,"<template>") { Ok(template) => false, Err(e) => tt_same(e,concat("<template>: ",message)) }
+fn tt_value_error(borrow body:Arr u8 _, borrow message:Arr u8 _) -> bool = tt_error(concat("@props(value:text)\n",body),message)
+
+fn test_text_int_bool_html_have_distinct_emission() -> bool
+  = tt_same(tt_compile("@props(name: text, count: int, active: bool, content: html)\n<p title=\"{{ name }}\">{{ name }} {{ count }} {{ active }} {{ content }}</p>"),
+      "fn text_Test(p_name: Arr u8 _,p_count: i64,p_active: bool,p_content: WebHtml) -> Arr u8 _ = concat(\"<p title=\\\"\",html_escape(p_name),\"\\\">\",html_escape(p_name),\" \",int_text(p_count),\" \",(if p_active then \"true\" else \"false\"),\" \",p_content.bytes,\"</p>\")\nfn view_Test(p_name: Arr u8 _,p_count: i64,p_active: bool,p_content: WebHtml) -> WebHtml = web_html(text_Test(p_name,p_count,p_active,p_content))\n")
+
+fn test_nested_conditions_and_typed_component() -> bool
+  = tt_same(tt_with("@props(name: text, active: bool)\n{% if active %}{% include Badge label=name %}{% else %}{% if !active %}off{% endif %}{% endif %}",
+                    tt_one("Badge","@props(label: text)\n<strong>{{ label }}</strong>")),
+      "fn text_Test(p_name: Arr u8 _,p_active: bool) -> Arr u8 _ = (if p_active then view_Badge(p_name).bytes else (if !p_active then \"off\" else \"\"))\nfn view_Test(p_name: Arr u8 _,p_active: bool) -> WebHtml = web_html(text_Test(p_name,p_active))\n")
+
+fn test_assets_are_resolved_at_build_time() -> bool
+  = tt_same(tt_compile("@props()\n<link rel=\"stylesheet\" href=\"@asset(site.css)\">"),
+      "fn text_Test() -> Arr u8 _ = \"<link rel=\\\"stylesheet\\\" href=\\\"/_web/site-123.css\\\">\"\nfn view_Test() -> WebHtml = web_html(text_Test())\n")
+    && tt_error("@props()\n<script src=\"@asset(missing.js)\"></script>","missing asset missing.js")
+
+fn test_unknown_and_invalid_props_rejected() -> bool
+  = let help="; types: text, int, bool, html, url, text[], int[], bool[], html[], and @type records" in
+    tt_error("@props()\n{{ missing }}","unknown prop 'missing'")
+    && tt_error("@props(x: string)\nhello",concat("invalid/duplicate prop 'x: string'",help))
+    && tt_error("@props(x:text,x:int)\nhello",concat("invalid/duplicate prop 'x:int'",help))
+    && tt_error("hello","first line must be @props(name: text, ...)")
+    && tt_error("@props(x:int)\n{% if x %}yes{% endif %}","if requires a bool, text or list value; compare other values explicitly")
+    && tt_error("@props(x:text)\n{% if x > 3 %}yes{% endif %}","x is not an int")
+    && tt_error("@props(x:int)\n{% if x == \"a\" %}yes{% endif %}","compare text with == or !=")
+    && tt_error("@props(x:int,y:text)\n{% if x == y %}yes{% endif %}","incompatible comparison 'x == y'")
+    && tt_error("@props(x:bool)\n{% if !x == 1 %}yes{% endif %}","use != instead of ! with a comparison")
+    && tt_error("@props(x:int)\n{% if x + 1 > 2 %}yes{% endif %}","unsupported condition 'x + 1 > 2'")
+
+fn test_truthiness_comparisons_and_elif() -> bool
+  = tt_same(tt_compile(concat("@props(name:text, tags:text[], count:int, mode:text)\n",
+                              "{% if name %}named{% endif %}{% if !tags %}untagged{% endif %}",
+                              "{% if count >= -2 %}a{% elif mode == \"dark\" %}b{% elif mode != name %}c{% else %}d{% endif %}")),
+      "fn text_Test(p_name: Arr u8 _,p_tags: Arr Arr u8 _ _,p_count: i64,p_mode: Arr u8 _) -> Arr u8 _ = concat((if len(p_name)>0 then \"named\" else \"\"),(if !(len(p_tags)>0) then \"untagged\" else \"\"),(if (p_count>=(0-2)) then \"a\" else (if str_equal(p_mode,\"dark\") then \"b\" else (if !str_equal(p_mode,p_name) then \"c\" else \"d\"))))\nfn view_Test(p_name: Arr u8 _,p_tags: Arr Arr u8 _ _,p_count: i64,p_mode: Arr u8 _) -> WebHtml = web_html(text_Test(p_name,p_tags,p_count,p_mode))\n")
+
+fn tt_record(borrow body:Arr u8 _) -> Arr u8 _ = tt_code(tt_parse("Test",concat("@props(people:Person[])\n@type Person(name:text)\n",body)),tpl_no_templates(),tpl_no_pairs())
+fn test_loop_index_and_records() -> bool
+  = let template=tt_parse("Test",concat("@props(people:Person[], title:text)\n@type Person(name:text, age:int)\n",
+      "<h1>{{ title }}</h1>{% for person, at in people %}<p data-i=\"{{ at }}\">{{ person.name }} {{ person.age }}</p>{% endfor %}")) in
+    let fields=if len(template.types)==1 then template.types[0].fields else tpl_no_pairs() in
+    len(template.types)==1 && tt_same(template.types[0].name,"Person") && len(fields)==2
+    && tt_same(fields[0].key,"name") && tt_same(fields[0].value,"text") && tt_same(fields[1].key,"age") && tt_same(fields[1].value,"int")
+    && tt_same(tt_code(template,tpl_no_templates(),tpl_no_pairs()),
+      "fn text_Test_loop_0(p_people: Arr Person _,p_title: Arr u8 _,at:i64,count:i64) -> Arr u8 _ = if count<=0 then \"\" else if count==1 then check at>=0 && at<len(p_people) in let item_person=p_people[at] in let idx_at=at in concat(\"<p data-i=\\\"\",int_text(idx_at),\"\\\">\",html_escape(item_person.name),\" \",int_text(item_person.age),\"</p>\") else let half=count/2 in concat(text_Test_loop_0(p_people,p_title,at,half),text_Test_loop_0(p_people,p_title,at+half,count-half))\nfn text_Test(p_people: Arr Person _,p_title: Arr u8 _) -> Arr u8 _ = concat(\"<h1>\",html_escape(p_title),\"</h1>\",text_Test_loop_0(p_people,p_title,0,len(p_people)))\nfn view_Test(p_people: Arr Person _,p_title: Arr u8 _) -> WebHtml = web_html(text_Test(p_people,p_title))\n")
+    && tt_same(tt_record("{{ people }}"),"error: <template>: render list props with a for loop")
+    && tt_same(tt_record("{% for person in people %}{{ person }}{% endfor %}"),"error: <template>: render record fields, not the record")
+    && tt_same(tt_record("{% for person in people %}{{ person.missing }}{% endfor %}"),"error: <template>: 'person.missing' has no field 'missing'")
+    && tt_parse_error("@props()\n@type person(name:text)\nhi","@type person must be a new name starting with a capital letter")
+    && tt_parse_error("@props()\n@type Person(name:Person)\nhi",
+         "invalid/duplicate prop 'name:Person'; types: text, int, bool, html, url, text[], int[], bool[], html[], and @type records")
+    && tt_parse_error("@props()\n@type Person(name:text)\n@type Person(age:int)\nhi","@type Person must be a new name starting with a capital letter")
+
+fn test_layout_substitution_never_rewrites_literals() -> bool
+  = let mapping=tpl_put(tpl_put(tpl_put(tpl_no_pairs(),"p_title","props.title"),"p_content.bytes","body()"),"p_content","web_html(body())") in
+    tt_same(tpl_substitute("concat(\"<p>p_title and p_content.bytes</p>\",html_escape(p_title),p_content.bytes,p_titles)",mapping),
+      "concat(\"<p>p_title and p_content.bytes</p>\",html_escape(props.title),body(),p_titles)")
+
+fn test_substitution_boundaries_and_unterminated_strings() -> bool
+  = let mapping=tpl_put(tpl_put(tpl_no_pairs(),"p_x","A"),"p_x.y","B") in
+    tt_same(tpl_substitute("f(\"p_x\\\"p_x\",p_x)+p_x.y+q.p_x+p_xy+p_x.z",mapping),"f(\"p_x\\\"p_x\",A)+B+q.p_x+p_xy+A.z")
+    && tt_same(tpl_substitute("\"open p_x",mapping),"\"open A")
+    && tt_same(tpl_substitute("\"a\\\np_x\" p_x \"b\"",mapping),"\"a\\\nA\" p_x \"b\"")
+    && tt_same(tpl_substitute("p_x",tpl_no_pairs()),"p_x")
+
+fn test_url_attributes_and_meta_refresh() -> bool
+  = tt_value_error("<object data=\"{{ value }}\"></object>","dynamic data requires one url prop")
+    && tt_value_error("<video poster=\"{{ value }}\"></video>","dynamic poster requires one url prop")
+    && tt_value_error("<svg><a xlink:href=\"javascript:alert(1)\">x</a></svg>","executable URLs are not supported")
+    && tt_value_error("<meta http-equiv=\"refresh\" content=\"0;url=javascript:alert(1)\">","executable URLs are not supported")
+    && tt_value_error("<meta http-equiv=\"refresh\" content=\"{{ value }}\">","dynamic meta refresh is unsupported")
+    && tt_same(tt_compile("@props(link:url)\n<video poster=\"{{ link }}\"></video>"),
+         "fn text_Test(p_link: WebURL) -> Arr u8 _ = concat(\"<video poster=\\\"\",html_escape(p_link.value),\"\\\"></video>\")\nfn view_Test(p_link: WebURL) -> WebHtml = web_html(text_Test(p_link))\n")
+
+fn test_executable_contexts_rejected() -> bool
+  = tt_value_error("<script>{{ value }}</script>","use external JavaScript modules, not inline scripts")
+    && tt_value_error("<style>{{ value }}</style>","interpolation inside script/style is not supported")
+    && tt_value_error("<div onclick=\"{{ value }}\">x</div>","executable HTML attributes are not supported")
+    && tt_value_error("<a href=\"{{ value }}\">x</a>","dynamic href requires one url prop")
+    && tt_value_error("<input value={{ value }}>","dynamic tag/attribute syntax is not supported")
+    && tt_value_error("<iframe srcdoc=\"{{ value }}\"></iframe>","executable HTML attributes are not supported")
+    && tt_value_error("<div style=\"{{ value }}\">x</div>","dynamic style is unsupported")
+    && tt_value_error("<!-- {{ value }} -->","dynamic tag/attribute syntax is not supported")
+    && tt_value_error("<a href=\"javascript:alert(1)\">x</a>","executable URLs are not supported")
+    && tt_value_error("<{{ value }}>x</{{ value }}>","dynamic tag/attribute syntax is not supported")
+    && tt_value_error("<input {{ value }}=\"x\">","dynamic tag/attribute syntax is not supported")
+    && tt_value_error("<div {% if value %}hidden{% endif %}>x</div>","dynamic tag/attribute syntax is not supported")
+
+fn test_html_props_rejected_in_attributes() -> bool
+  = tt_error("@props(value:html)\n<div title=\"{{ value }}\"></div>","HTML props cannot appear in attributes")
+
+fn test_component_types_and_required_arguments() -> bool
+  = let badge=tt_one("Badge","@props(label:text)\n{{ label }}") in
+    tt_same(tt_with("@props(count:int)\n{% include Badge %}",badge),"error: <template>: Badge requires props ['label']")
+    && tt_same(tt_with("@props(count:int)\n{% include Badge label=count %}",badge),"error: <template>: incompatible prop label for Badge")
+    && tt_same(tt_with("@props(count:int)\n{% include Unknown %}",badge),"error: <template>: unknown component Unknown")
+
+fn tt_all_error(borrow templates:Arr TplTemplate _) -> Arr u8 _
+  = match tpl_compile_all(templates,templates,tpl_no_pairs()) { Ok(all) => all.code, Err(e) => e }
+fn test_recursive_components_rejected() -> bool
+  = let a=tt_parse("A","@props()\n{% include B %}") in let b=tt_parse("B","@props()\n{% include A %}") in
+    tt_same(tt_all_error(push(push(tpl_no_templates(),a),b)),"Recursive template component: A -> B -> A")
+
+fn test_compile_all_code_and_expressions() -> bool
+  = let badge=tt_parse("Badge","@props(label:text, content:html)\n<b>{{ label }}</b>{{ content }}") in
+    let page=match tpl_parse("Page","@props(names:text[])\n{% for name in names %}{% component Badge label=name %}<i>{{ name }}</i>{% endcomponent %}{% endfor %}","app/page.view") {
+      Ok(template) => template, Err(e) => badge } in
+    match tpl_compile_all(push(push(tpl_no_templates(),badge),page),push(tpl_no_templates(),badge),tpl_no_pairs()) {
+      Err(e) => false,
+      Ok(all) => tt_same(all.code,
+          "fn text_Badge(p_label: Arr u8 _,p_content: WebHtml) -> Arr u8 _ = concat(\"<b>\",html_escape(p_label),\"</b>\",p_content.bytes)\nfn view_Badge(p_label: Arr u8 _,p_content: WebHtml) -> WebHtml = web_html(text_Badge(p_label,p_content))\n\nfn text_Page_loop_0(p_names: Arr Arr u8 _ _,at:i64,count:i64) -> Arr u8 _ = if count<=0 then \"\" else if count==1 then check at>=0 && at<len(p_names) in let item_name=p_names[at] in view_Badge(item_name,web_html(concat(\"<i>\",html_escape(item_name),\"</i>\"))).bytes else let half=count/2 in concat(text_Page_loop_0(p_names,at,half),text_Page_loop_0(p_names,at+half,count-half))\nfn text_Page(p_names: Arr Arr u8 _ _) -> Arr u8 _ = text_Page_loop_0(p_names,0,len(p_names))\nfn view_Page(p_names: Arr Arr u8 _ _) -> WebHtml = web_html(text_Page(p_names))\n")
+        && len(all.expressions)==2
+        && tt_same(all.expressions[0].key,"Badge") && tt_same(all.expressions[0].value,"concat(\"<b>\",html_escape(p_label),\"</b>\",p_content.bytes)")
+        && tt_same(all.expressions[1].key,"Page") && tt_same(all.expressions[1].value,"text_Page_loop_0(p_names,0,len(p_names))") }
+
+fn test_unbalanced_and_arbitrary_expressions_rejected() -> bool
+  = tt_error("@props(ok:bool)\n{{ x","arbitrary expressions are not supported: ''")
+    && tt_error("@props(ok:bool)\n{% if ok %}yes","missing endif")
+    && tt_error("@props(ok:bool)\n{% else %}","unexpected else")
+    && tt_error("@props(ok:bool)\n{{ eval(x) }}","arbitrary expressions are not supported: 'eval(x)'")
+    && tt_error("@props(ok:bool)\n{% for item in items %}","unknown prop 'items'")
+
+fn test_byte_literals_preserve_binary_unicode() -> bool
+  = tt_same(tpl_literal("\x00\xff\"\n"),"\"\\x00\\xff\\\"\\n\"") && tt_same(tpl_literal("caf\xc3\xa9"),"\"caf\\xc3\\xa9\"")
+
+; tests/test_features.py: the page views discover() parses.
+fn tt_page(borrow source:Arr u8 _) -> Arr u8 _
+  = match tpl_parse("Page_x",source,"app/page.view") {
+      Ok(template) => if len(template.props)==1 && tt_same(tpl_get(template.props,"title"),"text") then tt_code(template,tpl_no_templates(),tpl_no_pairs()) else "",
+      Err(e) => e }
+fn test_feature_page_views() -> bool
+  = tt_same(tt_page("@props(title:text)\n<h1>{{ title }}</h1>"),
+      "fn text_Page_x(p_title: Arr u8 _) -> Arr u8 _ = concat(\"<h1>\",html_escape(p_title),\"</h1>\")\nfn view_Page_x(p_title: Arr u8 _) -> WebHtml = web_html(text_Page_x(p_title))\n")
+    && tt_same(tt_page("@props(title:text)\nx"),
+      "fn text_Page_x(p_title: Arr u8 _) -> Arr u8 _ = \"x\"\nfn view_Page_x(p_title: Arr u8 _) -> WebHtml = web_html(text_Page_x(p_title))\n")
+
+fn test_repr_matches_python() -> bool
+  = tt_same(tpl_repr("it's"),"\"it's\"") && tt_same(tpl_repr("a\"b'c"),"'a\"b\\'c'")
+    && tt_same(tpl_repr("\x07\xc3\xa9\xe2\x80\xa8\xf0\x9f\x98\x80\xc2\x85\t\\"),"'\\x07\xc3\xa9\\u2028\xf0\x9f\x98\x80\\x85\\t\\\\'")
+
+fn tt_native(borrow kind:Arr u8 _, borrow types:Arr TplType _) -> Arr u8 _
+  = match tpl_native(kind,types) { Ok(native) => native, Err(e) => concat("error: ",e) }
+fn test_known_and_native_types() -> bool
+  = let person=push(tpl_no_types(),TplType { name="Person", fields=tpl_no_pairs() }) in
+    tt_same(tt_native("text[]",tpl_no_types()),"Arr Arr u8 _ _") && tt_same(tt_native("url",tpl_no_types()),"WebURL")
+    && tt_same(tt_native("Person[]",person),"Arr Person _") && tt_same(tt_native("Person",person),"Person")
+    && tt_same(tt_native("Person",tpl_no_types()),"error: Unknown template type 'Person'")
+    && tpl_known("html[]",tpl_no_types()) && !tpl_known("url[]",tpl_no_types()) && tpl_known("Person[]",person) && !tpl_known("Person[][]",person)
+
+fn test_fields_keep_order_and_reject_bad_items() -> bool
+  = let ok=match tpl_fields(" a : text , , b:int[] ,","f.view",tpl_no_types()) {
+      Ok(found) => len(found)==2 && tt_same(found[0].key,"a") && tt_same(found[0].value,"text") && tt_same(found[1].key,"b") && tt_same(found[1].value,"int[]"),
+      Err(e) => false } in
+    ok && match tpl_fields("a:text,b","f.view",tpl_no_types()) {
+      Ok(found) => false,
+      Err(e) => tt_same(e,"f.view: invalid/duplicate prop 'b'; types: text, int, bool, html, url, text[], int[], bool[], html[], and @type records") }
+
+fn tt_kind(borrow name:Arr u8 _) -> Arr u8 _
+  = let types=push(tpl_no_types(),TplType { name="Person", fields=tpl_put(tpl_no_pairs(),"name","text") }) in
+    match tpl_resolve_kind(name,tpl_put(tpl_no_pairs(),"p","Person"),types) { Some(kind) => kind, None => "None" }
+fn test_resolve_kind() -> bool
+  = tt_same(tt_kind("p.name"),"text") && tt_same(tt_kind("p"),"Person") && tt_same(tt_kind("p.age"),"None") && tt_same(tt_kind("q"),"None")
+    && tt_same(tt_kind("p.name.x"),"None")
+
+fn test_tokens_split_like_re_split() -> bool
+  = let tokens=tpl_tokens("a{{ b }}c{% d %}{{ e") in
+    len(tokens)==5 && tt_same(tokens[0],"a") && tt_same(tokens[1],"{{ b }}") && tt_same(tokens[2],"c") && tt_same(tokens[3],"{% d %}") && tt_same(tokens[4],"{{ e")
+
+; NAME.fullmatch, which build.py also applies to loader and handler names.
+fn test_name_is_an_ascii_identifier() -> bool
+  = tpl_name("load") && tpl_name("_a1") && tpl_name("Z") && !tpl_name("") && !tpl_name("1a") && !tpl_name("a-b")
+    && !tpl_name("\xc3\xa9") && !tpl_name("a\n") && !tpl_name("a b")
+
+; A later component with the same name replaces an earlier one, as in the
+; dict build.py passes.
+fn test_components_resolve_like_a_dict() -> bool
+  = let components=push(tt_one("Badge","@props(label:text)\nold"),tt_parse("Badge","@props(count:int)\nnew")) in
+    tt_same(tt_with("@props(n:int)\n{% include Badge count=n %}",components),
+      "fn text_Test(p_n: i64) -> Arr u8 _ = view_Badge(p_n).bytes\nfn view_Test(p_n: i64) -> WebHtml = web_html(text_Test(p_n))\n")

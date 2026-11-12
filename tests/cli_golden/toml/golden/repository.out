@@ -1,0 +1,491 @@
+=== examples/blog/app/about/page.toml
+{
+  "loader": "journal_about",
+  "client": true
+}
+=== examples/blog/app/journal/[slug]/page.toml
+{
+  "loader": "journal_article",
+  "mode": "ssr",
+  "client": true,
+  "paths": [
+    "/journal/a-smaller-web",
+    "/journal/slower-mornings",
+    "/journal/quiet-interfaces"
+  ]
+}
+=== examples/blog/app/page.toml
+{
+  "loader": "journal_home",
+  "mode": "ssr",
+  "client": true
+}
+=== examples/blog/web.toml
+{
+  "site": {
+    "name": "Fieldnotes",
+    "description": "Independent thoughts on design, engineering, and the everyday."
+  },
+  "server": {
+    "timing": true,
+    "before": "journal_guard"
+  }
+}
+=== examples/dashboard/app/actions/tasks/route.toml
+{
+  "handler": "dashboard_action",
+  "methods": [
+    "POST"
+  ]
+}
+=== examples/dashboard/app/api/tasks/[id]/route.toml
+{
+  "handler": "dashboard_api",
+  "methods": [
+    "PATCH",
+    "DELETE"
+  ]
+}
+=== examples/dashboard/app/api/tasks/route.toml
+{
+  "handler": "dashboard_api",
+  "methods": [
+    "POST"
+  ]
+}
+=== examples/dashboard/app/dashboard/page.toml
+{
+  "loader": "dashboard_load",
+  "export": false,
+  "client": true
+}
+=== examples/dashboard/app/login/route.toml
+{
+  "handler": "dashboard_login",
+  "methods": [
+    "GET",
+    "POST"
+  ]
+}
+=== examples/dashboard/app/logout/route.toml
+{
+  "handler": "dashboard_logout",
+  "methods": [
+    "POST"
+  ]
+}
+=== examples/dashboard/app/oauth/callback/route.toml
+{
+  "handler": "dashboard_oauth_callback"
+}
+=== examples/dashboard/app/oauth/route.toml
+{
+  "handler": "dashboard_oauth"
+}
+=== examples/dashboard/app/page.toml
+{
+  "loader": "landing_load"
+}
+=== examples/dashboard/web.toml
+{
+  "site": {
+    "name": "NeoKit Tasks"
+  },
+  "server": {
+    "before": "dashboard_before",
+    "after": "dashboard_after"
+  }
+}
+=== examples/features/app/actions/typed/route.toml
+{
+  "handler": "feature_typed",
+  "input_type": "TypedInput",
+  "methods": [
+    "POST"
+  ],
+  "csrf": false,
+  "input": {
+    "title": {
+      "type": "text",
+      "min": 1,
+      "max": 50
+    },
+    "count": {
+      "type": "int",
+      "min": 0,
+      "max": 100
+    },
+    "enabled": "bool"
+  }
+}
+=== examples/features/app/api/[id]/route.toml
+{
+  "handler": "feature_mutation",
+  "methods": [
+    "POST",
+    "PATCH",
+    "DELETE",
+    "OPTIONS"
+  ]
+}
+=== examples/features/app/async-api/route.toml
+{
+  "handler": "feature_async_api",
+  "async": true,
+  "async_timeout_ms": 2000
+}
+=== examples/features/app/async-page/page.toml
+{
+  "loader": "feature_async_page",
+  "async": true,
+  "async_timeout_ms": 2000,
+  "export": false
+}
+=== examples/features/app/async-stats/route.toml
+{
+  "handler": "feature_async_stats"
+}
+=== examples/features/app/async/route.toml
+{
+  "handler": "feature_async",
+  "stream": true,
+  "async": true,
+  "async_timeout_ms": 10000
+}
+=== examples/features/app/cached/page.toml
+{
+  "loader": "feature_cached",
+  "cache_ttl": 1,
+  "stale_ttl": 10,
+  "cache_tag": "features"
+}
+=== examples/features/app/docs/[[...slug]]/page.toml
+{
+  "loader": "feature_docs",
+  "paths": [
+    "/docs",
+    "/docs/a/b"
+  ]
+}
+=== examples/features/app/invalidate/route.toml
+{
+  "handler": "feature_invalidate",
+  "methods": [
+    "POST"
+  ]
+}
+=== examples/features/app/org/[org]/items/[id]/page.toml
+{
+  "loader": "feature_item",
+  "paths": [
+    "/org/acme/items/42"
+  ]
+}
+=== examples/features/app/page.toml
+{
+  "loader": "features_load"
+}
+=== examples/features/app/stream/route.toml
+{
+  "handler": "feature_stream",
+  "stream": true
+}
+=== examples/features/web.toml
+{
+  "site": {
+    "name": "NeoKit feature verification",
+    "url": "https://features.test",
+    "description": "Typed routes & native pages"
+  }
+}
+=== examples/saas/app/activity/page.toml
+{
+  "loader": "saas_activity",
+  "mode": "ssr",
+  "client": true
+}
+=== examples/saas/app/api/events/route.toml
+{
+  "handler": "saas_subscribe",
+  "methods": [
+    "GET"
+  ],
+  "realtime": true
+}
+=== examples/saas/app/api/export-customers/route.toml
+{
+  "handler": "saas_csv",
+  "methods": [
+    "GET"
+  ]
+}
+=== examples/saas/app/api/metrics/route.toml
+{
+  "handler": "saas_metrics",
+  "methods": [
+    "GET"
+  ]
+}
+=== examples/saas/app/customers/page.toml
+{
+  "loader": "saas_customers",
+  "mode": "ssr",
+  "client": true
+}
+=== examples/saas/app/page.toml
+{
+  "loader": "saas_overview",
+  "mode": "ssr",
+  "client": true
+}
+=== examples/saas/web.toml
+{
+  "site": {
+    "name": "Meridian Analytics",
+    "description": "A native NeoKit SaaS dashboard with server-rendered charts and a searchable customer dataset."
+  },
+  "server": {
+    "timing": true,
+    "startup": "saas_start"
+  }
+}
+=== examples/ssr-site/app/page.toml
+{
+  "loader": "forma_home",
+  "mode": "ssr",
+  "client": true
+}
+=== examples/ssr-site/app/studio/page.toml
+{
+  "loader": "forma_studio",
+  "mode": "ssr",
+  "client": true
+}
+=== examples/ssr-site/web.toml
+{
+  "site": {
+    "name": "Forma Studio",
+    "description": "Spaces for a slower, better everyday. A native NeoKit SSR example."
+  },
+  "server": {
+    "timing": true
+  }
+}
+=== examples/studio/app/about/page.toml
+{
+  "loader": "about_load",
+  "mode": "static",
+  "client": false,
+  "export": true
+}
+=== examples/studio/app/api/status/route.toml
+{
+  "handler": "status_route"
+}
+=== examples/studio/app/greet/page.toml
+{
+  "loader": "greet_load",
+  "mode": "ssr",
+  "client": false,
+  "export": false
+}
+=== examples/studio/app/notes/[slug]/page.toml
+{
+  "loader": "note_load",
+  "mode": "ssr",
+  "client": true,
+  "export": true,
+  "paths": [
+    "/notes/native",
+    "/notes/static",
+    "/notes/islands"
+  ]
+}
+=== examples/studio/app/page.toml
+{
+  "loader": "home_load",
+  "mode": "ssr",
+  "client": true,
+  "export": true
+}
+=== examples/studio/app/stress/page.toml
+{
+  "loader": "stress_load",
+  "mode": "ssr",
+  "client": true,
+  "export": true
+}
+=== examples/studio/web.toml
+{
+  "site": {
+    "name": "NeoKit starter"
+  },
+  "css": {
+    "tailwind": [
+      "site.css"
+    ]
+  }
+}
+=== neo.toml
+{
+  "package": {
+    "name": "neokit",
+    "version": "0.1.0-alpha.1",
+    "entry": "src/lib.neo"
+  },
+  "dependencies": {
+    "http-server": {
+      "path": "../neo-libs/http-server",
+      "version": "0.1.0"
+    },
+    "web-security": {
+      "path": "../neo-libs/web-security",
+      "version": "0.1.0"
+    },
+    "web-cache": {
+      "path": "../neo-libs/web-cache",
+      "version": "0.1.0"
+    },
+    "document-store": {
+      "path": "../neo-libs/document-store",
+      "version": "0.1.0"
+    },
+    "postgres": {
+      "path": "../neo-libs/postgres",
+      "version": "0.1.0"
+    },
+    "oauth2": {
+      "path": "../neo-libs/oauth2",
+      "version": "0.1.0"
+    }
+  }
+}
+=== tests/catalog_fixture/app/interactive/page.toml
+{
+  "loader": "load_interactive",
+  "mode": "ssr",
+  "client": true,
+  "export": true
+}
+=== tests/catalog_fixture/app/large/page.toml
+{
+  "loader": "load_large",
+  "mode": "ssr",
+  "client": false,
+  "export": true
+}
+=== tests/catalog_fixture/app/page.toml
+{
+  "loader": "load_home",
+  "mode": "ssr",
+  "client": false,
+  "export": true
+}
+=== tests/catalog_fixture/web.toml
+{
+  "site": {
+    "name": "Catalog fixture"
+  }
+}
+=== tests/realtime_fixture/app/feed/[slug]/route.toml
+{
+  "handler": "fixture_child_feed",
+  "methods": [
+    "GET"
+  ],
+  "realtime": true
+}
+=== tests/realtime_fixture/app/feed/route.toml
+{
+  "handler": "fixture_feed",
+  "realtime": true,
+  "methods": [
+    "GET"
+  ]
+}
+=== tests/realtime_fixture/app/feed/snapshot/route.toml
+{
+  "handler": "fixture_snapshot",
+  "methods": [
+    "GET"
+  ]
+}
+=== tests/realtime_fixture/app/page.toml
+{
+  "loader": "fixture_page"
+}
+=== tests/realtime_fixture/app/publish-other/route.toml
+{
+  "handler": "publish_other",
+  "methods": [
+    "POST"
+  ]
+}
+=== tests/realtime_fixture/app/publish/route.toml
+{
+  "handler": "fixture_publish",
+  "methods": [
+    "POST"
+  ]
+}
+=== tests/realtime_fixture/app/stats/route.toml
+{
+  "handler": "fixture_stats",
+  "methods": [
+    "GET"
+  ]
+}
+=== tests/realtime_fixture/app/wait/route.toml
+{
+  "handler": "fixture_wait",
+  "methods": [
+    "GET"
+  ],
+  "async": true,
+  "async_timeout_ms": 2000
+}
+=== tests/realtime_fixture/web.toml
+{
+  "server": {
+    "before": "fixture_guard",
+    "shutdown_grace_ms": 250
+  }
+}
+=== tests/realtime_limits_fixture/app/feed/route.toml
+{
+  "handler": "fixture_feed",
+  "realtime": true,
+  "methods": [
+    "GET"
+  ]
+}
+=== tests/realtime_limits_fixture/app/page.toml
+{
+  "loader": "fixture_page",
+  "client": false,
+  "export": false
+}
+=== tests/realtime_limits_fixture/app/publish/route.toml
+{
+  "handler": "fixture_publish",
+  "methods": [
+    "POST"
+  ]
+}
+=== tests/realtime_limits_fixture/app/stats/route.toml
+{
+  "handler": "fixture_stats",
+  "methods": [
+    "GET"
+  ]
+}
+=== tests/realtime_limits_fixture/web.toml
+{
+  "server": {
+    "before": "fixture_guard",
+    "shutdown_grace_ms": 250
+  },
+  "realtime": {
+    "max_event_bytes": 8192
+  }
+}
