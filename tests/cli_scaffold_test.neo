@@ -1,0 +1,29 @@
+; Unit tests for cli/scaffold.neo's file texts. The expected text is what
+; compiler/scaffold.py writes (json.dumps quoting: ASCII with \u escapes).
+; init itself, against Python on a fixture SDK, is in
+; tests/cli_golden/scaffold/.
+import "std:option"
+import "std:result"
+import "../cli/scaffold.neo"
+
+fn same(actual:Arr u8 _, expected:Arr u8 _) -> bool = text_equal(actual,expected)
+
+fn test_neo_toml_quotes_like_json_dumps() -> bool
+  = same(scf_neo_toml("plain","../neokit","0.1.0-alpha.1"),
+      "[package]\nname=\"plain\"\nversion=\"0.1.0\"\nentry=\"app/page.neo\"\n\n[dependencies]\nneokit={path=\"../neokit\",version=\"0.1.0-alpha.1\"}\n")
+    && same(scf_neo_toml("my \"app\" \xc3\xa9","a\\b","1"),
+      "[package]\nname=\"my \\\"app\\\" \\u00e9\"\nversion=\"0.1.0\"\nentry=\"app/page.neo\"\n\n[dependencies]\nneokit={path=\"a\\\\b\",version=\"1\"}\n")
+
+fn test_web_toml_and_index() -> bool
+  = same(scf_web_toml("x\ty"),"[site]\nname=\"x\\ty\"\n")
+    && same(scf_index_js("../../neokit/client/runtime.js"),"import { start } from \"../../neokit/client/runtime.js\";\nstart();\n")
+
+fn test_fixed_files() -> bool
+  = same(scf_page_toml(),"loader=\"load\"\nclient=true\n")
+    && same(scf_gitignore(),".neokit/\n.neo-build/\nnode_modules/\n.env\n")
+    && text_starts(scf_launcher(),"#!/bin/sh\nset -eu\n") && text_ends(scf_launcher(),"exec \"$project/vendor/neokit-sdk/framework/neokit\" \"$@\"\n")
+    && text_ends(scf_layout_view(),"</body></html>\n") && text_starts(scf_page_neo(),"import \"pkg:neokit\"\n")
+
+fn test_created_line() -> bool
+  = same(scf_created("/srv/app",false),"Created /srv/app. Run ./neokit dev --app /srv/app")
+    && same(scf_created("/srv/app",true),"Created /srv/app. Run ./neokit dev from the project directory.")

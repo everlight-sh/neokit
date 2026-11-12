@@ -1,0 +1,249 @@
+-	root
+-	root	-h
+-	root	--help
+-	root	--he
+-	root	-h	build
+-	root	-hx
+-	root	-h=1
+-	root	--help=1
+-	root	--help=
+-	root	prepare	-h
+-	root	build	-h
+-	root	serve	-h
+-	root	dev	-h
+-	root	export	-h
+-	root	test	-h
+-	root	init	-h
+-	root	release	-h
+-	root	doctor	-h
+-	root	revalidate	-h
+-	root	password	-h
+-	root	migrate	-h
+-	root	preview	-h
+1	root	-h
+1	root	serve	-h
+1	root	release	-h
+1	root	init	-h
+1	root	test	-h
+1	root	export	-h
+1	root	prepare	-h
+1	root	release
+1	root	nope
+20	root	-h
+20	root	serve	-h
+20	root	release	-h
+20	root	init	-h
+20	root	test	-h
+20	root	export	-h
+20	root	prepare	-h
+20	root	release
+20	root	nope
+30	root	-h
+30	root	serve	-h
+30	root	release	-h
+30	root	init	-h
+30	root	test	-h
+30	root	export	-h
+30	root	prepare	-h
+30	root	release
+30	root	nope
+40	root	-h
+40	root	serve	-h
+40	root	release	-h
+40	root	init	-h
+40	root	test	-h
+40	root	export	-h
+40	root	prepare	-h
+40	root	release
+40	root	nope
+52	root	-h
+52	root	serve	-h
+52	root	release	-h
+52	root	init	-h
+52	root	test	-h
+52	root	export	-h
+52	root	prepare	-h
+52	root	release
+52	root	nope
+60	root	-h
+60	root	serve	-h
+60	root	release	-h
+60	root	init	-h
+60	root	test	-h
+60	root	export	-h
+60	root	prepare	-h
+60	root	release
+60	root	nope
+100	root	-h
+100	root	serve	-h
+100	root	release	-h
+100	root	init	-h
+100	root	test	-h
+100	root	export	-h
+100	root	prepare	-h
+100	root	release
+100	root	nope
+200	root	-h
+200	root	serve	-h
+200	root	release	-h
+200	root	init	-h
+200	root	test	-h
+200	root	export	-h
+200	root	prepare	-h
+200	root	release
+200	root	nope
+abc	root	-h
+abc	root	serve	-h
+abc	root	release	-h
+abc	root	init	-h
+abc	root	test	-h
+abc	root	export	-h
+abc	root	prepare	-h
+abc	root	release
+abc	root	nope
+0	root	-h
+0	root	serve	-h
+0	root	release	-h
+0	root	init	-h
+0	root	test	-h
+0	root	export	-h
+0	root	prepare	-h
+0	root	release
+0	root	nope
+ 50 	root	-h
+ 50 	root	serve	-h
+ 50 	root	release	-h
+ 50 	root	init	-h
+ 50 	root	test	-h
+ 50 	root	export	-h
+ 50 	root	prepare	-h
+ 50 	root	release
+ 50 	root	nope
+-5	root	-h
+-5	root	serve	-h
+-5	root	release	-h
+-5	root	init	-h
+-5	root	test	-h
+-5	root	export	-h
+-5	root	prepare	-h
+-5	root	release
+-5	root	nope
+-	root	prepare
+-	root	build
+-	root	serve
+-	root	dev
+-	root	export
+-	root	test
+-	root	init	x
+-	root	release	--out	o
+-	root	doctor
+-	root	revalidate
+-	root	password
+-	root	migrate
+-	root	preview
+-	app	prepare
+-	app	build
+-	app	serve
+-	app	dev
+-	app	export
+-	app	test
+-	app	init	x
+-	app	release	--out	o
+-	app	doctor
+-	app	revalidate
+-	app	password
+-	app	migrate
+-	app	preview
+-	studio	prepare
+-	studio	build
+-	studio	serve
+-	studio	dev
+-	studio	export
+-	studio	test
+-	studio	init	x
+-	studio	release	--out	o
+-	studio	doctor
+-	studio	revalidate
+-	studio	password
+-	studio	migrate
+-	studio	preview
+-	root	nope
+-	root	help
+-	root	--	build
+-	root	--	--
+-	root	nope-é
+-	root	-x
+-	root	-x	build
+-	root	--x	build	--y
+-	root	build	--port	1
+-	root	build	--strict
+-	root	build	-h-x
+-	root	build	-hx
+-	root	build	--a
+-	root	build	--app
+-	root	build	--app	--	x
+-	root	build	--app=	x
+-	root	build	--app	a b
+-	root	build	--app	-x y
+-	root	build	--app	a//b/./c/	--out	//o	--profile	dev
+-	root	build	--out	é	--app	~/x
+-	root	build	--	--app	x
+-	root	build	--app	a	--app	b
+-	root	build	--profile	x
+-	root	build	--profile
+-	root	build	--profile	--app	x
+-	root	build	--pro=dev
+-	root	build	--profile=	x
+-	root	build	-	x
+-	root	serve	--port	abc
+-	root	serve	--port=
+-	root	serve	--port	-5
+-	root	serve	--port	1_000
+-	root	serve	--port	 7 
+-	root	serve	--port	-1.5
+-	root	serve	--port	+3
+-	root	serve	--port	1__0
+-	root	serve	--p	1
+-	root	serve	--po	1
+-	root	serve	--no
+-	root	serve	--no-build=x
+-	root	serve	--no-build	--port	9	--app	x
+-	root	serve	--p=1
+-	root	serve	--=x
+-	root	dev	--port	70000
+-	root	dev	--profile	release
+-	root	export	--strict	--dest	d
+-	root	export	--d	x
+-	root	export	--s
+-	root	test	--extended	--postgres
+-	root	test	--e	--p
+-	root	test	x
+-	root	init
+-	root	init	a	b
+-	root	init	--	-x
+-	root	init	-x
+-	root	init	--standalone=1
+-	root	init	--standalone	p/q/
+-	root	init	x	--
+-	root	init	--	--	x
+-	root	init	
+-	root	release
+-	root	release	--out	o	--neo	x
+-	root	release	--out	o	--neo-s	abc
+-	root	release	--out=o	--neo-archive	a//b/
+-	root	release	--out	o	--neo-sha256	
+-	root	release	--neo-archive	a
+-	root	doctor	extra
+-	root	password	--x
+-	root	prepare	-h	--bad
+-	root	prepare	--bad	-h
+-	root	revalidate	--out	r
+-	root	migrate	--build-only	--app	m
+-	root	migrate	--b
+-	root	preview	--dir	x	--port	9
+-	root	preview	--port	x
+-	root	preview	--d=y
+-	app	preview
+-	app	revalidate
+-	studio	migrate
+-	app	export	--app	elsewhere

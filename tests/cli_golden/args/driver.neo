@@ -1,0 +1,53 @@
+; Driver for cli/args.neo, as args.neo.toml runs it: parses each case of
+; CASES (generate.py's cases.tsv: COLUMNS or "-", the working directory
+; "root", "app" or "studio", then the arguments, separated by tabs) and
+; prints the exit status, stdout and stderr argparse would give, with a
+; successful parse shown as generate.py's harness prints the namespace.
+; The checkout (the working directory) is ROOT.
+import "std:io"
+import "std:process"
+import "../../../cli/args.neo"
+
+effect fn arg(i:i64) -> Arr u8 _ = let value=cli_arg(i) in if value.present then value.value else text_empty()
+
+fn path_text(borrow value:Arr u8 _) -> Arr u8 _ = concat("Path(",value,")")
+fn flag_text(value:bool) -> Arr u8 _ = if value then "True" else "False"
+fn field(borrow name:Arr u8 _, borrow value:Arr u8 _) -> Arr u8 _ = concat(name,"=",value,"\n")
+; The namespace of the command, in sorted order.
+fn dump(borrow a:CmdArgs) -> Arr u8 _
+  = let c=a.command in
+    let command=field("command",text_repr(c)) in
+    let app=field("app",path_text(a.app)) in
+    let out=field("out",path_text(a.out)) in
+    let profile=field("profile",text_repr(a.profile)) in
+    let port=field("port",text_int(a.port)) in
+    if text_equal(c,"build") then concat(app,command,out,profile)
+    else if text_equal(c,"serve") then concat(app,command,field("no_build",flag_text(a.no_build)),out,port,profile)
+    else if text_equal(c,"dev") then concat(app,command,out,port,profile)
+    else if text_equal(c,"export") then concat(app,command,field("dest",path_text(a.dest)),out,profile,field("strict",flag_text(a.strict)))
+    else if text_equal(c,"test") then concat(command,field("extended",flag_text(a.extended)),field("postgres",flag_text(a.postgres)))
+    else if text_equal(c,"init") then concat(command,field("path",path_text(a.path)),field("standalone",flag_text(a.standalone)))
+    else if text_equal(c,"release") then
+      concat(command,field("neo_archive",if a.has_neo_archive then path_text(a.neo_archive) else "None"),
+        field("neo_sha256",if a.has_neo_sha256 then text_repr(a.neo_sha256) else "None"),out)
+    else if text_equal(c,"revalidate") then concat(app,command,out)
+    else if text_equal(c,"migrate") then concat(app,field("build_only",flag_text(a.build_only)),command,out)
+    else if text_equal(c,"preview") then concat(command,field("dir",path_text(a.dir)),port)
+    else command
+
+effect fn run_case(borrow line:Arr u8 _, borrow root:Arr u8 _) -> Arr u8 _
+  = let fields=text_split(line,"\t") in
+    let columns=text_word(fields,0) in let where=text_word(fields,1) in
+    let args=loop (out=text_words(), i=2) while i<len(fields) next (push(out,text_word(fields,i)), i+1) yield out in
+    let cwd=if text_equal(where,"app") then host_join(root,"examples/blog") else if text_equal(where,"studio") then host_join(root,"examples/studio") else root in
+    let parsed=cmd_parse_with(args,root,cwd,host_is_file(host_join(cwd,"web.toml")),if text_equal(columns,"-") then text_empty() else columns) in
+    let stdout=if parsed.ok then dump(parsed.args) else parsed.stdout in
+    concat("=== ",text_repr_list(args)," COLUMNS=",columns," cwd=",where,"\n","exit ",text_int(parsed.exit),"\n",
+      "--- stdout\n",text_replace(stdout,root,"ROOT"),"--- stderr\n",text_replace(parsed.stderr,root,"ROOT"))
+
+effect fn main() -> unit
+  = let root=match host_cwd() { Ok(path) => path, Err(message) => "." } in
+    let text=match host_read_text(arg(1)) { Ok(data) => data, Err(message) => text_empty() } in
+    let lines=text_split(text_rstrip_chars(text,"\n"),"\n") in
+    let output=loop (out=text_empty(), i=0) while i<len(lines) next (concat(out,run_case(text_word(lines,i),root)), i+1) yield out in
+    let printed=print_out(output) in noop()

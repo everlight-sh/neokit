@@ -1,0 +1,523 @@
+; NeoKit's relocatable source SDK: compiler/release.py's assemble and
+; bundle, natively.
+;
+; rel_assemble copies the verified framework, its exact neo-libs graph and a
+; multi-platform Neo toolchain into a new directory:
+;
+;   framework/      the checkout's sources (rel_source_dirs, filtered)
+;   neo/            Neo rel_neo_version(), with every rel_neo_binaries() compiler
+;   neo-libs/       the locked dependencies of neo.lock, with their licenses
+;   install.sh      deploy/install.sh (plain sh, no NeoKit code)
+;   README.md       docs/alpha-release.md
+;   VERSION         the NeoKit version and a newline, for install.sh
+;   MANIFEST.json   {"format", "version", "neo_version", "files"}: the SHA-256
+;                   of every other file, as release.py writes it
+;   SHA256SUMS      `sha256sum -c` lines for every file but itself
+;
+; rel_bundle archives that tree as release.py does: a USTAR tar that is byte
+; for byte what Python's tarfile writes (entries in sorted path order, named
+; neokit-VERSION/PATH, mode 0755 or 0644 from the owner's execute bit,
+; mtime SOURCE_DATE_EPOCH, uid/gid 0, empty uname/gname, zero blocks and
+; record padding), compressed with std:deflate's gzip_encode. The gzip header
+; carries the same MTIME and XFL bytes as Python's GzipFile; the deflate
+; stream itself differs from zlib's, so archives compare after decompression.
+;
+; Differences from release.py:
+; - The framework copy takes cli/ (the native CLI) where release.py takes
+;   compiler/, and tests/ includes Bun's .ts files. VERSION and SHA256SUMS
+;   are new. Everything else, including MANIFEST.json's form, is the same.
+; - The Neo archive may be a gzip-compressed or a plain tar (tarfile.open
+;   also tries bzip2 and xz). Its entries pass release.py's checks; regular
+;   files and directories are extracted, and every other type is refused as
+;   there. GNU long names and pax "path"/"size" records are read; a header
+;   with a bad checksum is an error anywhere (tarfile only refuses one at
+;   the start and silently stops at a later one).
+; - Directory modes come from host_mkdir (see cli/host.neo).
+; - Python lets ValueError and KeyError escape as tracebacks (a malformed
+;   neo.lock, an invalid SOURCE_DATE_EPOCH, a name longer than USTAR holds);
+;   here they are Err with Python's message text.
+import "std:option"
+import "std:result"
+import "std:json"
+import "std:io"
+import "std:fs"
+import "std:deflate"
+import "host.neo"
+import "toml.neo"
+import "pyjson.neo"
+
+; ---------------------------------------------------------------- constants
+
+; The Neo release the SDK bundles, its compilers and the archive help text.
+; This is the only place NeoKit names the Neo version it ships with.
+fn rel_neo_version() -> Arr u8 _ = "0.2.6"
+fn rel_neo_binaries() -> Arr Arr u8 _ _ = push(push(push(text_words(),"darwin-arm64"),"linux-arm64"),"linux-x86_64")
+
+; release.py's FRAMEWORK_FILES: copied as they are.
+fn rel_framework_files() -> Arr Arr u8 _ _
+  = text_split("neokit web neo.toml neo.lock package.json bun.lock Dockerfile .dockerignore README.md AGENTS.md LICENSE SECURITY.md CHANGELOG.md"," ")
+; The directories copied through rel_copy_sources. release.py copies
+; compiler/; the SDK now carries the native CLI's sources instead.
+fn rel_source_dirs() -> Arr Arr u8 _ _ = text_split("cli client src examples docs deploy tools tests"," ")
+; release.py's SOURCE_SUFFIXES plus .ts (tests/ is Bun TypeScript). .py
+; stays while compiler/ exists, so tests/*.py and the golden generators are
+; copied as release.py copies them; drop it when the Python is deleted.
+fn rel_source_suffixes() -> Arr Arr u8 _ _
+  = text_split(".ax .neo .py .ts .js .view .toml .css .svg .json .lock .md .sh .yaml .png .jpg .webp"," ")
+; Directory names never descended into (besides hidden ones).
+fn rel_ignored() -> Arr Arr u8 _ _ = text_split("build data node_modules vendor __pycache__ out"," ")
+
+private fn rel_ok(borrow value:Arr u8 _) -> Result<Arr u8 _,Arr u8 _> = Ok::<Arr u8 _,Arr u8 _>(value)
+private fn rel_err(borrow message:Arr u8 _) -> Result<Arr u8 _,Arr u8 _> = Err::<Arr u8 _,Arr u8 _>(message)
+private fn rel_done(value:i64) -> Result<i64,Arr u8 _> = Ok::<i64,Arr u8 _>(value)
+private fn rel_fail(borrow message:Arr u8 _) -> Result<i64,Arr u8 _> = Err::<i64,Arr u8 _>(message)
+private fn rel_zeros(count:i64) -> Arr u8 _ = arr(i in 0..(if count<0 then 0 else count)) u8(0)
+
+; ---------------------------------------------------------------- Python int()
+
+; int(text) for base 10: surrounding whitespace, a sign, ASCII digits with
+; single underscores between them. A value beyond i64 saturates (Python
+; has big integers; NeoKit only range-checks such values). ok is false for
+; Python's ValueError, whose text is rel_int_error(text).
+type RelInt = { ok:bool, value:i64 }
+private fn rel_int_digits(borrow body:Arr u8 _, negative:bool) -> RelInt
+  = let scan=loop (i=0, value=0, ok=len(body)>0, big=false) while ok && i<len(body)
+      next (i+1,
+            let b=text_byte(body,i) in
+            if b>=48 && b<=57 then (if big || value>(9223372036854775807-(b-48))/10 then value else value*10+(b-48)) else value,
+            let b=text_byte(body,i) in
+            (b>=48 && b<=57) || (b==95 && i>0 && i<len(body)-1 && text_byte(body,i-1)!=95 && text_byte(body,i+1)>=48 && text_byte(body,i+1)<=57),
+            let b=text_byte(body,i) in big || (b>=48 && b<=57 && value>(9223372036854775807-(b-48))/10)) yield RelInt { ok=ok && text_byte(body,0)!=95, value=if big then (if negative then -9223372036854775807 else 9223372036854775807) else if negative then 0-value else value } in
+    scan
+fn rel_int(borrow text:Arr u8 _) -> RelInt
+  = let body=text_strip(text) in let sign=text_byte(body,0) in
+    if sign==43 || sign==45 then rel_int_digits(text_from(body,1),sign==45) else rel_int_digits(body,false)
+; str(ValueError) for int(text).
+fn rel_int_error(borrow text:Arr u8 _) -> Arr u8 _ = concat("invalid literal for int() with base 10: ",text_repr(text))
+
+; ---------------------------------------------------------------- USTAR writing
+
+private fn rel_octal(value:i64, digits:i64) -> Arr u8 _
+  = loop (out=text_empty(), k=digits-1) while k>=0 next (push(out,u8(48+bit_and(shift_right(value,k*3),7))), k-1) yield out
+; tarfile's itn(n, digits): digits-1 octal digits and a NUL.
+private fn rel_number(value:i64, digits:i64) -> Arr u8 _ = push(rel_octal(value,digits-1),u8(0))
+; tarfile's stn(s, length): truncated or NUL-padded.
+private fn rel_field(borrow text:Arr u8 _, length:i64) -> Arr u8 _
+  = if len(text)>=length then text_slice(text,0,length) else concat(text,rel_zeros(length-len(text)))
+type RelName = { prefix:Arr u8 _, name:Arr u8 _ }
+; TarInfo._posix_split_name: the first split whose prefix fits 155 bytes and
+; name 100, for names longer than 100 bytes.
+fn rel_tar_split(borrow name:Arr u8 _) -> Result<RelName,Arr u8 _>
+  = if len(name)<=100 then Ok::<RelName,Arr u8 _>(RelName { prefix=text_empty(), name=name }) else
+    let parts=text_split(name,"/") in
+    let at=loop (i=1, found= -1) while found<0 && i<len(parts)
+      next (i+1, let prefix=text_join(rel_words_split(parts,i,true),"/") in let rest=text_join(rel_words_split(parts,i,false),"/") in
+            if len(prefix)<=155 && len(rest)<=100 then i else -1) yield found in
+    if at<0 then Err::<RelName,Arr u8 _>("name is too long")
+    else Ok::<RelName,Arr u8 _>(RelName { prefix=text_join(rel_words_split(parts,at,true),"/"), name=text_join(rel_words_split(parts,at,false),"/") })
+; The first count words (keep) or the words after them.
+private fn rel_words_split(borrow words:Arr Arr u8 _ _, count:i64, keep:bool) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=0) while i<len(words) next (if (i<count)==keep then push(out,text_word(words,i)) else out, i+1) yield out
+private fn rel_sum(borrow block:Arr u8 _, start:i64, end:i64) -> i64
+  = loop (i=start, total=0) while i<end next (i+1, total+text_byte(block,i)) yield total
+; The header block tarfile writes for a regular file in USTAR_FORMAT
+; (TarInfo.tobuf): name (split into prefix and name past 100 bytes), mode,
+; uid 0, gid 0, size, mtime, type "0", magic "ustar\0" "00", empty
+; uname/gname, empty device numbers, and the unsigned checksum.
+fn rel_tar_header(borrow name:Arr u8 _, size:i64, mode:i64, mtime:i64) -> Result<Arr u8 _,Arr u8 _>
+  = let split=rel_tar_split(name)? in
+    if size<0 || size>=8589934592 || mtime<0 || mtime>=8589934592 then rel_err("overflow in number field") else
+    let raw=concat(rel_field(split.name,100),rel_number(bit_and(mode,4095),8),rel_number(0,8),rel_number(0,8),
+      rel_number(size,12),rel_number(mtime,12),"        0",rel_zeros(100),
+      concat("ustar",rel_zeros(1),"00"),rel_zeros(32),rel_zeros(32),rel_zeros(16),rel_field(split.prefix,155),rel_zeros(12)) in
+    let checksum=rel_sum(raw,0,512) in
+    rel_ok(concat(text_slice(raw,0,148),rel_number(checksum,7),text_from(raw,155)))
+; One member: its header, its data and NUL padding to the next block.
+fn rel_tar_append(move out:Arr u8 _, borrow name:Arr u8 _, borrow data:Arr u8 _, mode:i64, mtime:i64) -> Result<Arr u8 _,Arr u8 _>
+  = let header=rel_tar_header(name,len(data),mode,mtime)? in
+    let remainder=len(data)%512 in
+    rel_ok(concat(out,header,data,rel_zeros(if remainder==0 then 0 else 512-remainder)))
+; TarFile.close(): two zero blocks, then zeros up to a multiple of the
+; 20-block record size.
+fn rel_tar_finish(move out:Arr u8 _) -> Arr u8 _
+  = let size=len(out)+1024 in let remainder=size%10240 in
+    concat(out,rel_zeros(1024),rel_zeros(if remainder==0 then 0 else 10240-remainder))
+; gzip_encode at level 9 with the header GzipFile(filename='', mtime=epoch,
+; compresslevel 9) writes: MTIME epoch (little endian) and XFL 2.
+fn rel_gzip(borrow data:Arr u8 _, epoch:i64) -> Result<Arr u8 _,Arr u8 _>
+  = let encoded=gzip_encode(data,9) in
+    if !encoded.ok then rel_err(host_errno_text(encoded.error.code)) else
+    if len(encoded.value)<10 then rel_err("gzip_encode returned no header") else
+    rel_ok(set(byte_write_le(encoded.value,4,epoch,4),8,u8(2)))
+
+; ---------------------------------------------------------------- USTAR reading
+
+; One member of a tar archive: its name as tarfile reports it, its type
+; byte, mode, size and the offset of its data.
+type RelTarEntry = { name:Arr u8 _, kind:i64, mode:i64, size:i64, offset:i64 }
+private fn rel_no_entries() -> Arr RelTarEntry _ = arr(i in 0..0) RelTarEntry { name=text_empty(), kind=0, mode=0, size=0, offset=0 }
+; tarfile's nts(): the text before the first NUL.
+private fn rel_nts(borrow block:Arr u8 _, start:i64, end:i64) -> Arr u8 _
+  = let field=text_slice(block,start,end) in let at=text_find(field,rel_zeros(1),0) in if at<0 then field else text_slice(field,0,at)
+type RelNumber = { ok:bool, value:i64 }
+; tarfile's nti(): octal text (spaces and NULs trimmed, empty is 0) or a
+; base-256 field marked by 0x80.
+private fn rel_nti(borrow block:Arr u8 _, start:i64, end:i64) -> RelNumber
+  = if text_byte(block,start)==128 then
+      RelNumber { ok=true, value=loop (i=start+1, n=0) while i<end next (i+1, if n>=36028797018963968 then n else n*256+text_byte(block,i)) yield n }
+    else let text=text_strip(rel_nts(block,start,end)) in
+      loop (i=0, n=0, ok=true) while ok && i<len(text)
+        next (i+1, let d=text_byte(text,i)-48 in if n>=1152921504606846976 then n else n*8+d, let d=text_byte(text,i)-48 in d>=0 && d<8)
+        yield RelNumber { ok=ok, value=n }
+private fn rel_all_zero(borrow block:Arr u8 _) -> bool = loop (i=0, zero=true) while zero && i<len(block) next (i+1, text_byte(block,i)==0) yield zero
+; The value of key in a pax extended header ("" when absent).
+type RelPax = { at:i64, found:Arr u8 _ }
+; One "LENGTH key=value\n" record; at past the data ends the scan.
+private fn rel_pax_step(borrow data:Arr u8 _, borrow key:Arr u8 _, move s:RelPax) -> RelPax
+  = let gap=text_find(data," ",s.at) in
+    let length=rel_int(text_slice(data,s.at,if gap<0 then s.at else gap)) in
+    if gap<0 || !length.ok || length.value<=gap-s.at then s with { at=len(data) } else
+    let pair=text_partition(text_slice(data,gap+1,s.at+length.value-1),"=") in
+    RelPax { at=s.at+length.value, found=if pair.found && text_equal(pair.before,key) then pair.after else s.found }
+private fn rel_pax_value(borrow data:Arr u8 _, borrow key:Arr u8 _) -> Arr u8 _
+  = let scan=loop (s=RelPax { at=0, found=text_empty() }) while s.at<len(data) next (rel_pax_step(data,key,s)) yield s in scan.found
+type RelTarScan = { at:i64, entries:Arr RelTarEntry _, error:Arr u8 _, done:bool, long_name:Arr u8 _, pax_path:Arr u8 _, pax_size:i64 }
+private fn rel_tar_scan(borrow tar:Arr u8 _, move s:RelTarScan) -> RelTarScan
+  = if s.at+512>len(tar) then
+      (if len(tar)==0 then s with { error="empty file", done=true } else if s.at<len(tar) then s with { error="truncated header", done=true } else s with { done=true }) else
+    let block=text_slice(tar,s.at,s.at+512) in
+    if rel_all_zero(block) then (if s.at==0 then s with { error="empty file", done=true } else s with { done=true }) else
+    let stored=rel_nti(block,148,156) in
+    let unsigned=256+rel_sum(block,0,148)+rel_sum(block,156,512) in
+    let signed=loop (i=0, total=256) while i<512 next (i+1, if i>=148 && i<156 then total else let b=text_byte(block,i) in total+(if b>=128 then b-256 else b)) yield total in
+    if !stored.ok || (stored.value!=unsigned && stored.value!=signed) then s with { error="bad checksum", done=true } else
+    let kind0=text_byte(block,156) in
+    let raw_name=rel_nts(block,0,100) in
+    let kind=if kind0==0 && text_ends(raw_name,"/") then 53 else kind0 in
+    let size=rel_nti(block,124,136) in let mode=rel_nti(block,100,108) in
+    if !size.ok || !mode.ok then s with { error="invalid header", done=true } else
+    let prefix=rel_nts(block,345,500) in
+    let dir_name=if kind==53 then text_rstrip_chars(raw_name,"/") else raw_name in
+    let gnu=kind==76 || kind==75 || kind==83 in
+    let built=if len(prefix)>0 && !gnu then concat(prefix,"/",dir_name) else dir_name in
+    let name=if len(s.pax_path)>0 then s.pax_path else if len(s.long_name)>0 then s.long_name else built in
+    let length=if s.pax_size>=0 then s.pax_size else size.value in
+    let regular=kind==48 || kind==0 || kind==55 || kind==83 in
+    let supported=regular || kind==49 || kind==50 || kind==51 || kind==52 || kind==53 || kind==54 || kind==76 || kind==75 in
+    let data=s.at+512 in
+    let blocks=(length+511)/512*512 in
+    let following=if regular || !supported || kind==76 || kind==75 || kind==120 || kind==103 then data+blocks else data in
+    if (regular || kind==76 || kind==120) && data+length>len(tar) then s with { error="unexpected end of data", done=true }
+    else if kind==76 then s with { at=following, long_name=rel_nts(tar,data,data+length) }
+    else if kind==120 then
+      (let pax=text_slice(tar,data,data+length) in let path=rel_pax_value(pax,"path") in let sized=rel_int(rel_pax_value(pax,"size")) in
+       s with { at=following, pax_path=path, pax_size=if sized.ok then sized.value else -1 })
+    else if kind==103 || kind==75 then s with { at=following }
+    else s with { at=following, entries=push(s.entries,RelTarEntry { name=name, kind=kind, mode=mode.value, size=length, offset=data }),
+                  long_name=text_empty(), pax_path=text_empty(), pax_size= -1 }
+; The members of an uncompressed tar archive, in order, or tarfile's
+; ReadError text.
+fn rel_tar_entries(borrow tar:Arr u8 _) -> Result<Arr RelTarEntry _,Arr u8 _>
+  = let scan=loop (s=RelTarScan { at=0, entries=rel_no_entries(), error=text_empty(), done=false, long_name=text_empty(), pax_path=text_empty(), pax_size= -1 })
+      while !s.done next (rel_tar_scan(tar,s)) yield s in
+    if len(scan.error)>0 then Err::<Arr RelTarEntry _,Arr u8 _>(scan.error) else Ok::<Arr RelTarEntry _,Arr u8 _>(scan.entries)
+; TarInfo.isfile() and isdir().
+fn rel_tar_is_file(borrow entry:RelTarEntry) -> bool = entry.kind==48 || entry.kind==0 || entry.kind==55
+fn rel_tar_is_dir(borrow entry:RelTarEntry) -> bool = entry.kind==53
+; The tar inside a Neo archive: gzip_decode for gzip data (up to 1 GiB),
+; the bytes themselves otherwise.
+fn rel_tar_payload(borrow archive:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = if text_byte(archive,0)==31 && text_byte(archive,1)==139 then
+      (let decoded=gzip_decode(archive,1073741824) in
+       if decoded.ok then rel_ok(decoded.value) else rel_err(concat("Neo archive is not a valid gzip file: ",decoded.error.message)))
+    else rel_ok(archive)
+; release.py's check on one member name: relative, without "..", inside
+; neo-VERSION/. Returns the path below neo-VERSION ("" for the top), or ok
+; false.
+type RelMember = { ok:bool, below:Arr u8 _ }
+fn rel_member(borrow name:Arr u8 _) -> RelMember
+  = let parts=host_parts(name) in
+    if host_is_absolute(name) || text_member(parts,"..") || len(parts)==0 || !text_equal(text_word(parts,0),concat("neo-",rel_neo_version()))
+    then RelMember { ok=false, below=text_empty() }
+    else RelMember { ok=true, below=text_join(rel_words_split(parts,1,false),"/") }
+
+; ---------------------------------------------------------------- effects
+
+private effect(fs,process) fn rel_extract(borrow tar:Arr u8 _, borrow entry:RelTarEntry, borrow destination:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let member=rel_member(entry.name) in
+    if !member.ok then rel_fail(concat("Unexpected compiler archive entry: ",entry.name)) else
+    let target=if len(member.below)==0 then destination else host_join(destination,member.below) in
+    if rel_tar_is_dir(entry) then host_mkdir(target,true,true)
+    else if rel_tar_is_file(entry) then
+      (let made=host_mkdir(host_parent(target),true,true)? in
+       let written=host_write_mode(target,text_slice(tar,entry.offset,entry.offset+entry.size),bit_and(entry.mode,493))? in rel_done(0))
+    else rel_fail(concat("Unexpected compiler archive entry type: ",entry.name))
+; release.py's unpack_neo: checks the archive's SHA-256 against checksum
+; ("" for None), then extracts every member below neo-VERSION/ into
+; destination.
+effect(fs,process) fn rel_unpack_neo(borrow archive:Arr u8 _, borrow checksum:Arr u8 _, borrow destination:Arr u8 _) -> Result<i64,Arr u8 _>
+  = if len(checksum)==0 then rel_fail("Neo archive SHA-256 does not match --neo-sha256") else
+    let data=host_read_bytes(archive)? in
+    if !text_equal(host_sha256_hex(data),text_lower(checksum)) then rel_fail("Neo archive SHA-256 does not match --neo-sha256") else
+    let tar=rel_tar_payload(data)? in
+    match rel_tar_entries(tar) {
+      Err(message) => rel_fail(concat("Neo archive is not a valid tar archive: ",message)),
+      Ok(entries) =>
+        let failed=loop (err=text_empty(), i:i64{i>=0}=0) while len(err)==0 && i<len(entries)
+          next (match rel_extract(tar,entries[i],destination) { Ok(done) => text_empty(), Err(message) => message }, i+1) yield err in
+        if len(failed)>0 then rel_fail(failed) else rel_done(len(entries))
+    }
+
+; Whether release.py's copy_sources copies a file of this name.
+fn rel_source_wanted(borrow name:Arr u8 _) -> bool
+  = text_equal(name,".env.example")
+    || !(text_starts(name,".") || (!text_member(rel_source_suffixes(),host_suffix(name)) && !text_equal(name,"LICENSE") && !text_starts(name,"Caddyfile")))
+private effect(fs,process) fn rel_copy_file(borrow source:Arr u8 _, borrow destination:Arr u8 _, borrow path:Arr u8 _) -> Arr u8 _
+  = if host_is_symlink(path) then concat("Release source must be a regular file: ",path) else
+    match host_relative_to(path,source) {
+      Err(message) => message,
+      Ok(relative) =>
+        let target=host_join(destination,relative) in
+        match host_mkdir(host_parent(target),true,true) {
+          Err(message) => message,
+          Ok(made) => match host_copy_file(path,target) { Ok(copied) => text_empty(), Err(message) => message }
+        }
+    }
+private effect(fs,process) fn rel_copy_walked(borrow source:Arr u8 _, borrow destination:Arr u8 _, borrow walked:HostWalk) -> Arr u8 _
+  = loop (err=text_empty(), i:i64{i>=0}=0) while len(err)==0 && i<len(walked.names)
+      next (if rel_source_wanted(walked.names[i]) then rel_copy_file(source,destination,host_join(walked.path,walked.names[i])) else err, i+1) yield err
+; release.py's copy_sources(source, destination): every wanted file below
+; source (hidden and rel_ignored() directories skipped), in os.walk order.
+effect(fs,process) fn rel_copy_sources(borrow source:Arr u8 _, borrow destination:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let walked=host_walk(source,rel_ignored(),true) in
+    let failed=loop (err=text_empty(), i:i64{i>=0}=0) while len(err)==0 && i<len(walked)
+      next (rel_copy_walked(source,destination,walked[i]), i+1) yield err in
+    if len(failed)>0 then rel_fail(failed) else rel_done(0)
+
+; subprocess.run([neo, 'pkg', 'verify', path], env=environment, check=True,
+; stdout=DEVNULL): the child's stderr is passed on.
+private effect(fs,env,process,time) fn rel_verify(borrow neo:Arr u8 _, borrow path:Arr u8 _, borrow environment:Arr Arr u8 _ _) -> Result<i64,Arr u8 _>
+  = let argv=push(push(push(push(text_words(),neo),"pkg"),"verify"),path) in
+    let run=host_run_with(argv,environment,text_empty(),text_empty()) in
+    let shown=if len(run.errors)>0 then print_error(run.errors) else int_ok(0) in
+    if !run.ok then rel_fail(run.error) else if run.code!=0 then rel_fail(host_process_error(argv,run)) else rel_done(0)
+
+private fn rel_key_error(borrow key:Arr u8 _) -> Arr u8 _ = text_repr(key)
+private fn rel_member_of(borrow table:Json, borrow key:Arr u8 _) -> Result<Json,Arr u8 _>
+  = let found=if table.kind==6 then json_get(table,key) else json_none() in
+    if found.present then Ok::<Json,Arr u8 _>(found.value) else Err::<Json,Arr u8 _>(rel_key_error(key))
+private fn rel_text_of(borrow table:Json, borrow key:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = let value=rel_member_of(table,key)? in
+    if value.kind==4 then rel_ok(json_text(value).value) else rel_err(concat("expected str for ",text_repr(key)))
+
+; One locked dependency: copy_sources of its sources, its LICENSE* files,
+; and the license check.
+private effect(fs,process) fn rel_copy_package(borrow root:Arr u8 _, borrow framework:Arr u8 _, borrow stage:Arr u8 _,
+    borrow identity:Arr u8 _, borrow package:Json) -> Result<i64,Arr u8 _>
+  = let path=rel_text_of(package,"path")? in
+    let source=host_resolve(host_join(root,path))? in
+    let target=host_resolve(host_join(framework,path))? in
+    if !host_is_relative_to(target,host_join(stage,"neo-libs")) then rel_fail(concat("Unsupported release dependency location: ",host_normalize(path))) else
+    let copied=rel_copy_sources(source,target)? in
+    let notices=host_glob(source,"LICENSE*") in
+    let failed=loop (err=text_empty(), i=0) while len(err)==0 && i<len(notices)
+      next (let notice=text_word(notices,i) in
+            if host_is_file(notice) && !host_is_symlink(notice)
+            then (match host_copy_file(notice,host_join(target,host_name(notice))) { Ok(done) => text_empty(), Err(message) => message })
+            else text_empty(), i+1) yield err in
+    if len(failed)>0 then rel_fail(failed)
+    else if !host_is_file(host_join(target,"LICENSE")) then rel_fail(concat("Missing release license for ",identity))
+    else rel_done(0)
+private effect(fs,process) fn rel_copy_packages(borrow root:Arr u8 _, borrow framework:Arr u8 _, borrow stage:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let text=host_read_text(host_join(root,"neo.lock"))? in
+    let parsed=json_parse(text) in
+    if !parsed.ok then rel_fail(concat("Invalid neo.lock: ",parsed.error.message)) else
+    let packages=rel_member_of(parsed.value,"packages")? in
+    let own=rel_text_of(parsed.value,"root")? in
+    if packages.kind!=6 then rel_fail("'packages' must be an object") else
+    let failed=loop (err=text_empty(), i=0) while len(err)==0 && i<packages.count
+      next (let identity=json_object_key_at(packages,i).value in
+            if text_equal(identity,own) then err else
+            match rel_copy_package(root,framework,stage,identity,json_object_value_at(packages,i).value) { Ok(done) => text_empty(), Err(message) => message }, i+1) yield err in
+    if len(failed)>0 then rel_fail(failed) else rel_done(0)
+
+; The relative paths and SHA-256 digests of every file below stage, in
+; sorted(Path) order.
+type RelFile = { path:Arr u8 _, digest:Arr u8 _ }
+private fn rel_no_files() -> Arr RelFile _ = arr(i in 0..0) RelFile { path=text_empty(), digest=text_empty() }
+type RelFiles = { files:Arr RelFile _, err:Arr u8 _ }
+private fn rel_relative(borrow path:Arr u8 _, borrow stage:Arr u8 _) -> Arr u8 _
+  = match host_relative_to(path,stage) { Ok(relative) => relative, Err(message) => path }
+private effect(fs) fn rel_hash_step(move s:RelFiles, borrow stage:Arr u8 _, borrow path:Arr u8 _) -> RelFiles
+  = if !host_is_file(path) then s else
+    match host_read_bytes(path) {
+      Err(message) => s with { err=message },
+      Ok(data) => s with { files=push(s.files,RelFile { path=rel_relative(path,stage), digest=host_sha256_hex(data) }) }
+    }
+private effect(fs) fn rel_tree_files(borrow stage:Arr u8 _) -> Result<Arr RelFile _,Arr u8 _>
+  = let paths=host_rglob(stage,"*") in
+    let scan=loop (s=RelFiles { files=rel_no_files(), err=text_empty() }, i=0) while len(s.err)==0 && i<len(paths)
+      next (rel_hash_step(s,stage,text_word(paths,i)), i+1) yield s in
+    if len(scan.err)>0 then Err::<Arr RelFile _,Arr u8 _>(scan.err) else Ok::<Arr RelFile _,Arr u8 _>(scan.files)
+
+; The MANIFEST.json release.py writes: json.dumps(manifest, indent=2)+'\n'.
+fn rel_manifest_text(borrow version:Arr u8 _, borrow neo_version:Arr u8 _, borrow files:Arr RelFile _) -> Arr u8 _
+  = let keys=loop (out=text_words(), i:i64{i>=0}=0) while i<len(files) next (push(out,files[i].path), i+1) yield out in
+    let values=arr(i in 0..len(files)) check i>=0 && i<len(files) in json_value_string(files[i].digest).value in
+    let listed=json_value_object(keys,values).value in
+    let top=json_value_object(push(push(push(push(text_words(),"format"),"version"),"neo_version"),"files"),
+      push(push(push(push(arr(i in 0..0) json_value_null(),json_value_int(1)),json_value_string(version).value),json_value_string(neo_version).value),listed)).value in
+    concat(pj_dumps_indent2(top),"\n")
+; SHA256SUMS: "DIGEST  PATH" lines in sorted(Path) order, the format
+; `sha256sum -c` and `shasum -a 256 -c` read. A name holding a newline or a
+; backslash would need sha256sum's escaping, so it is refused.
+fn rel_sums_text(borrow files:Arr RelFile _) -> Result<Arr u8 _,Arr u8 _>
+  = let keys=loop (out=text_words(), i:i64{i>=0}=0) while i<len(files) next (push(out,files[i].path), i+1) yield out in
+    let order=host_path_order(keys) in
+    let bad=loop (found=text_empty(), i:i64{i>=0}=0) while len(found)==0 && i<len(files)
+      next (if text_contains(files[i].path,"\n") || text_contains(files[i].path,"\\") then files[i].path else found, i+1) yield found in
+    if len(bad)>0 then rel_err(concat("Release file names must not contain a newline or backslash: ",text_repr(bad))) else
+    rel_ok(loop (out=text_empty(), i:i64{i>=0}=0) while i<len(order)
+      next (let at=order[i] in if at>=0 && at<len(files) then concat(out,files[at].digest,"  ",files[at].path,"\n") else out, i+1) yield out)
+
+; ---------------------------------------------------------------- assemble
+
+; An assembled SDK: where it is and what its manifest says.
+type RelSdk = { path:Arr u8 _, version:Arr u8 _, neo_version:Arr u8 _, manifest:Arr u8 _ }
+
+private effect(fs,process) fn rel_install_neo(borrow root:Arr u8 _, borrow neo:Arr u8 _, borrow archive:Arr u8 _, borrow checksum:Arr u8 _) -> Result<i64,Arr u8 _>
+  = if len(archive)>0 then rel_unpack_neo(archive,checksum,neo) else
+    let installed=host_join(host_parent(root),"neo") in
+    if !host_is_file(host_join(installed,"bin/neoc-linux-arm64"))
+    then rel_fail("Use a released SDK for standalone scaffolding, or build a release with --neo-archive and --neo-sha256")
+    else host_copy_tree(installed,neo,push(push(text_words(),".neo-build"),"__pycache__"),false)
+private effect(fs) fn rel_neo_complete(borrow neo:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = let raw=host_read_text(host_join(neo,"VERSION"))? in let version=text_strip(raw) in
+    let binaries=rel_neo_binaries() in
+    let all=loop (i=0, ok=true) while ok && i<len(binaries) next (i+1, host_is_file(host_join(neo,concat("bin/neoc-",text_word(binaries,i))))) yield ok in
+    if !text_equal(version,rel_neo_version()) || !all then rel_err(concat("Expected a multi-platform native Neo ",rel_neo_version()," bundle")) else rel_ok(version)
+private effect(fs,process) fn rel_copy_framework(borrow root:Arr u8 _, borrow framework:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let names=rel_framework_files() in
+    let failed=loop (err=text_empty(), i=0) while len(err)==0 && i<len(names)
+      next (let name=text_word(names,i) in match host_copy_file(host_join(root,name),host_join(framework,name)) { Ok(done) => text_empty(), Err(message) => message }, i+1) yield err in
+    if len(failed)>0 then rel_fail(failed) else
+    let dirs=rel_source_dirs() in
+    let copied=loop (err=text_empty(), i=0) while len(err)==0 && i<len(dirs)
+      next (let name=text_word(dirs,i) in match rel_copy_sources(host_join(root,name),host_join(framework,name)) { Ok(done) => text_empty(), Err(message) => message }, i+1) yield err in
+    if len(copied)>0 then rel_fail(copied) else rel_done(0)
+
+private effect(fs,env,process,time) fn rel_assemble_in(borrow temporary:Arr u8 _, borrow destination:Arr u8 _, borrow root:Arr u8 _,
+    borrow environment:Arr Arr u8 _ _, borrow archive:Arr u8 _, borrow checksum:Arr u8 _) -> Result<RelSdk,Arr u8 _>
+  = let resolved=host_resolve(temporary)? in let stage=host_join(resolved,"sdk") in
+    let framework=host_join(stage,"framework") in
+    let made=host_mkdir(framework,true,false)? in
+    let neo=host_join(stage,"neo") in
+    let installed=rel_install_neo(root,neo,archive,checksum)? in
+    let complete=rel_neo_complete(neo)? in
+    let bundled=host_env_remove(host_env_set(host_env_set(environment,"NEO_HOME",neo),"NEO_ROOT",neo),"NEOC") in
+    let command=host_join(neo,"neo") in
+    let checked=rel_verify(command,root,bundled)? in
+    let copied=rel_copy_framework(root,framework)? in
+    let libraries=rel_copy_packages(root,framework,stage)? in
+    let verified=rel_verify(command,framework,bundled)? in
+    let installer=host_copy_file(host_join(framework,"deploy/install.sh"),host_join(stage,"install.sh"))? in
+    let guide=host_read_text(host_join(framework,"docs/alpha-release.md"))? in
+    let readme=host_write_text(host_join(stage,"README.md"),text_replace(guide,"../SECURITY.md","framework/SECURITY.md"))? in
+    let config_bytes=host_read_bytes(host_join(framework,"neo.toml"))? in let config=toml_load(host_join(framework,"neo.toml"),config_bytes)? in
+    let package=rel_member_of(config,"package")? in
+    let version=rel_text_of(package,"version")? in
+    let plain=host_write_text(host_join(stage,"VERSION"),concat(version,"\n"))? in
+    let neo_raw=host_read_text(host_join(stage,"neo/VERSION"))? in let neo_version=text_strip(neo_raw) in
+    let files=rel_tree_files(stage)? in
+    let manifest=rel_manifest_text(version,neo_version,files) in
+    let written=host_write_text(host_join(stage,"MANIFEST.json"),manifest)? in
+    let sums=rel_sums_text(push(files,RelFile { path="MANIFEST.json", digest=host_sha256_hex(manifest) }))? in
+    let summed=host_write_text(host_join(stage,"SHA256SUMS"),sums)? in
+    let parent=host_mkdir(host_parent(destination),true,true)? in
+    ; The stage is renamed into place when it can be; otherwise copied, as
+    ; release.py always does.
+    let placed=match host_rename(stage,destination) { Ok(moved) => rel_done(0), Err(message) => host_copy_tree(stage,destination,text_words(),false) } in
+    match placed {
+      Err(message) => Err::<RelSdk,Arr u8 _>(message),
+      Ok(done) => Ok::<RelSdk,Arr u8 _>(RelSdk { path=destination, version=version, neo_version=neo_version, manifest=manifest })
+    }
+
+; release.py's assemble(destination, root, environment, neo_archive,
+; neo_sha256): the SDK at destination (which must not exist), built in a
+; temporary directory that is removed afterwards. root is the framework
+; checkout; environment the variables `neo pkg verify` runs with (NEO_HOME
+; and NEO_ROOT point at the bundled Neo, NEOC is dropped). neo_archive ""
+; (None) copies the multi-platform Neo installed beside root (root/../neo)
+; instead of unpacking an archive, as standalone scaffolding from an
+; installed SDK does; neo_sha256 "" is None.
+effect(fs,env,process,time) fn rel_assemble(borrow destination:Arr u8 _, borrow root:Arr u8 _, borrow environment:Arr Arr u8 _ _,
+    borrow neo_archive:Arr u8 _, borrow neo_sha256:Arr u8 _) -> Result<RelSdk,Arr u8 _>
+  = let source=host_resolve(root)? in
+    let target=host_resolve(destination)? in
+    if host_exists(target) then Err::<RelSdk,Arr u8 _>(concat("SDK destination already exists: ",target)) else
+    let temporary=host_mkdtemp("neokit-sdk-",text_empty())? in
+    let result=rel_assemble_in(temporary,target,source,environment,neo_archive,neo_sha256) in
+    let removed=host_remove_tree(temporary) in
+    result
+
+; ---------------------------------------------------------------- bundle
+
+; SOURCE_DATE_EPOCH as bundle() reads it: int(os.environ.get(..., '0')),
+; 0 through 4294967295.
+fn rel_source_date_epoch(borrow environment:Arr Arr u8 _ _) -> Result<i64,Arr u8 _>
+  = let configured=host_env_get(environment,"SOURCE_DATE_EPOCH") in
+    let text=if configured.present then configured.value else "0" in
+    let parsed=rel_int(text) in
+    if !parsed.ok then rel_fail(rel_int_error(text))
+    else if parsed.value<0 || parsed.value>4294967295 then rel_fail("SOURCE_DATE_EPOCH must be between 0 and 4294967295")
+    else rel_done(parsed.value)
+
+; The uncompressed archive of an assembled SDK at stage: every file below
+; it in sorted(Path) order as neokit-VERSION/PATH.
+type RelTar = { out:Arr u8 _, err:Arr u8 _ }
+private effect(fs) fn rel_tar_step(move s:RelTar, borrow stage:Arr u8 _, borrow path:Arr u8 _, borrow version:Arr u8 _, epoch:i64) -> RelTar
+  = if !host_is_file(path) then s else
+    match host_read_bytes(path) {
+      Err(message) => s with { err=message },
+      Ok(data) =>
+        let name=concat("neokit-",version,"/",rel_relative(path,stage)) in
+        let mode=if host_is_executable(path) then 493 else 420 in
+        let failed=match rel_tar_split(name) { Ok(split) => text_empty(), Err(message) => message } in
+        if len(failed)>0 then s with { err=failed } else
+        match rel_tar_append(s.out,name,data,mode,epoch) { Ok(appended) => RelTar { out=appended, err=text_empty() }, Err(message) => RelTar { out=text_empty(), err=message } }
+    }
+effect(fs) fn rel_tar_tree(borrow stage:Arr u8 _, borrow version:Arr u8 _, epoch:i64) -> Result<Arr u8 _,Arr u8 _>
+  = let paths=host_rglob(stage,"*") in
+    let built=loop (s=RelTar { out=text_empty(), err=text_empty() }, i=0) while len(s.err)==0 && i<len(paths)
+      next (rel_tar_step(s,stage,text_word(paths,i),version,epoch), i+1) yield s in
+    if len(built.err)>0 then rel_err(built.err) else rel_ok(rel_tar_finish(built.out))
+
+; bundle()'s result, which `neokit release` prints with json.dumps(indent=2).
+type RelBundle = { archive:Arr u8 _, version:Arr u8 _, sha256:Arr u8 _ }
+fn rel_bundle_json(borrow bundle:RelBundle) -> Arr u8 _
+  = pj_dumps_indent2(json_value_object(push(push(push(text_words(),"archive"),"version"),"sha256"),
+      push(push(push(arr(i in 0..0) json_value_null(),json_value_string(bundle.archive).value),json_value_string(bundle.version).value),json_value_string(bundle.sha256).value)).value)
+
+private effect(fs,env,process,time) fn rel_bundle_in(borrow temporary:Arr u8 _, borrow output:Arr u8 _, borrow root:Arr u8 _,
+    borrow environment:Arr Arr u8 _ _, borrow archive:Arr u8 _, borrow checksum:Arr u8 _, epoch:i64) -> Result<RelBundle,Arr u8 _>
+  = let stage=host_join(temporary,"sdk") in
+    let sdk=rel_assemble(stage,root,environment,archive,checksum)? in
+    let tar=rel_tar_tree(stage,sdk.version,epoch)? in
+    let packed=rel_gzip(tar,epoch)? in
+    let staged=host_join(temporary,"release.tar.gz") in
+    let written=host_write_bytes(staged,packed)? in
+    let moved=host_rename(staged,output)? in
+    Ok::<RelBundle,Arr u8 _>(RelBundle { archive=output, version=sdk.version, sha256=host_sha256_hex(packed) })
+
+; release.py's bundle(output, root, neo_archive, neo_sha256), reading
+; SOURCE_DATE_EPOCH from environment: assembles the SDK and writes
+; output (a .tar.gz) through a temporary directory beside it.
+effect(fs,env,process,time) fn rel_bundle(borrow output:Arr u8 _, borrow root:Arr u8 _, borrow environment:Arr Arr u8 _ _,
+    borrow neo_archive:Arr u8 _, borrow neo_sha256:Arr u8 _) -> Result<RelBundle,Arr u8 _>
+  = let out=host_resolve(output)? in
+    let epoch=rel_source_date_epoch(environment)? in
+    let made=host_mkdir(host_parent(out),true,true)? in
+    let temporary=host_mkdtemp(".neokit-release-",host_parent(out))? in
+    let result=rel_bundle_in(temporary,out,root,environment,neo_archive,neo_sha256,epoch) in
+    let removed=host_remove_tree(temporary) in
+    result

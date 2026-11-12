@@ -1,0 +1,60 @@
+; Unit tests for cli/preview.neo's request handling; the expected values
+; are Python 3.12's (SimpleHTTPRequestHandler.translate_path, urlsplit,
+; parse_request, email.utils.parsedate_to_datetime). The server itself,
+; against compiler/cli.py's preview, is tests/cli_golden/preview/.
+import "std:option"
+import "std:result"
+import "../cli/preview.neo"
+
+fn same(actual:Arr u8 _, expected:Arr u8 _) -> bool = text_equal(actual,expected)
+fn file(borrow target:Arr u8 _) -> Arr u8 _ = cmd_preview_file("/srv/site",target)
+fn request(borrow input:Arr u8 _) -> CmdPreviewRequest = cmd_preview_request(input,false)
+fn since(borrow value:Arr u8 _) -> i64 = let s=cmd_preview_since(value) in if s.ok then s.seconds else -1
+
+fn test_paths_stay_below_the_directory() -> bool
+  = same(file("/"),"/srv/site/") && same(file("/a/./b/../c"),"/srv/site/a/c") && same(file("/../../etc/passwd"),"/srv/site/etc/passwd")
+    && same(file("/%2e%2e/%2E%2E/x"),"/srv/site/x") && same(file("/a/..%2f..%2fb"),"/srv/site/b") && same(file("/a%2fb"),"/srv/site/a/b")
+    && same(file("a/b"),"/srv/site/a/b") && same(file("?q"),"/srv/site")
+
+fn test_paths_drop_the_query_and_unquote() -> bool
+  = same(file("/dir/?q=/x/"),"/srv/site/dir/") && same(file("/x#frag/"),"/srv/site/x") && same(file("/%C3%A9"),"/srv/site/\xc3\xa9")
+    && same(file("/\xc3\xa9"),"/srv/site/\xc3\x83\xc2\xa9") && same(file("/%ff"),"/srv/site/\xef\xbf\xbd")
+    && same(file("/%zz%4"),"/srv/site/%zz%4") && same(file("/%%41"),"/srv/site/%A")
+    && cmd_preview_path("/a/").slash && !cmd_preview_path("/a%2F").slash && len(cmd_preview_path("/a/../..").words)==0
+
+fn test_redirect_location_like_urlunsplit() -> bool
+  = same(cmd_preview_location("/about"),"/about/") && same(cmd_preview_location("/about?x=1#f"),"/about/?x=1#f")
+    && same(cmd_preview_location("/about?"),"/about/") && same(cmd_preview_location("/about#"),"/about/")
+    && same(cmd_preview_location("/about?#f"),"/about/#f") && same(cmd_preview_location("/a#b?c"),"/a/#b?c")
+
+fn test_request_framing() -> bool
+  = !request("GET / HT").ready && !request("GET / HTTP/1.0\r\nHost: x\r\n").ready && !request("").ready
+    && cmd_preview_request("",true).none && request("\r\n").none && request(" \t\r\n").none
+    && (let r=cmd_preview_request("GET /abo",true) in r.ready && r.simple && r.status==0 && same(r.path,"/abo"))
+    && (let r=request("GET //a//b HTTP/1.0\r\nA: b\r\n\r\nbody") in r.status==0 && !r.simple && same(r.path,"/a//b") && same(r.headers,"A: b\r\n\r\n"))
+    && (let r=request("HEAD / HTTP/1.1\nHost: x\n\n") in r.status==0 && same(r.command,"HEAD") && same(r.line,"HEAD / HTTP/1.1"))
+    && !request(text_repeat("a",65536)).ready && request(text_repeat("a",65537)).status==414 && !request(text_repeat("a",65537)).simple
+    && request(concat("GET / HTTP/1.0\r\n",text_repeat("X: y\r\n",99),"\r\n")).status==0
+    && same(request(concat("GET / HTTP/1.0\r\n",text_repeat("X: y\r\n",100),"\r\n")).message,"Too many headers")
+    && same(request(concat("GET / HTTP/1.0\r\nX: ",text_repeat("a",65535),"\r\n\r\n")).message,"Line too long")
+
+fn test_request_errors() -> bool
+  = (let r=request("GET / HTTP/1.x\r\n") in r.status==400 && r.simple && same(r.message,"Bad request version ('HTTP/1.x')"))
+    && (let r=request("GET / HTTP/2.0\r\n") in r.status==505 && r.simple && same(r.message,"Invalid HTTP version (2.0)"))
+    && same(request("GET / HTTP/'1\"\r\n").message,"Bad request version ('HTTP/\\'1\"')")
+    && same(request("GET / HTTP/1.12345678901\r\n").message,"Bad request version ('HTTP/1.12345678901')")
+    && (let r=request("GET / x HTTP/1.0\r\n") in r.status==400 && !r.simple && same(r.message,"Bad request syntax ('GET / x HTTP/1.0')"))
+    && (let r=request("GET\r\n") in r.status==400 && r.simple && same(r.message,"Bad request syntax ('GET')"))
+    && same(request("POST /\r\n").message,"Bad HTTP/0.9 request type ('POST')")
+    && (let r=request("POST / HTTP/1.0\r\n\r\n") in r.status==501 && same(r.message,"Unsupported method ('POST')"))
+    && same(request("GET /\x01\xe9 x HTTP/1.0\r\n").message,"Bad request syntax ('GET /\\x01\xe9 x HTTP/1.0')")
+
+fn test_if_modified_since_like_parsedate_to_datetime() -> bool
+  = since("Fri, 01 Jan 2100 00:00:00 GMT")==4102444800 && since("Thu, 01 Jan 1970 00:00:00 GMT")==0
+    && since("Friday, 01-Jan-37 00:00:00 GMT")==2114380800 && since("Fri Jan  1 00:00:00 2100")==4102444800
+    && since("Fri, 01 Jan 2100 00:00:00 +0100")== -1 && since("Fri, 01 Jan 2100 00:00:00 -0000")==4102444800
+    && since("Fri, 01 Jan 2100 00:00:00 EST")== -1 && since("Sat, 31 Feb 2100 00:00:00 GMT")== -1 && since("yesterday")== -1
+    && since("01 Jan 2100 00:00")==4102444800 && since("01 Jan 99 12:30:15 GMT")==915193815
+    && since("Jan 01 2100 00:00:00 GMT")==4102444800 && since("Fri, 01 Jan 2100 00.00.00 GMT")==4102444800
+    && since("Fri, 01 Jan 2100 00:00:00 XYZ")==4102444800 && since("Fri, 01 Jan 2100 25:00:00 GMT")== -1
+    && since("Fri, 01 Jan -5 00:00:00 GMT")== -1 && since("x,01 Jan 2100 00:00:00 UT")==4102444800 && since("")== -1

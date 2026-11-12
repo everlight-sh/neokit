@@ -1,0 +1,166 @@
+; Driver for cli/preview.neo, as preview.neo.toml runs it.
+;
+;   driver.neo serve DIR PORT   cmd_preview, as `neokit preview` runs it (an
+;                               error is "neokit: MESSAGE" on stderr and
+;                               exit status 1)
+;   driver.neo fixture          the golden cases (see generate.py): builds
+;                               setup.tsv in build/cli-golden-preview,
+;                               serves its site/ from a child `serve`
+;                               process on a free port, sends each request
+;                               of cases.tsv on a connection of its own and
+;                               prints the response and the child's log
+;                               lines, then two connections at once, the
+;                               stop (SIGTERM) and `neokit preview` errors.
+import "std:io"
+import "std:fs"
+import "std:time"
+import "std:process"
+import "std:socket"
+import "../../../cli/preview.neo"
+
+effect fn arg(i:i64) -> Arr u8 _ = let value=cli_arg(i) in if value.present then value.value else text_empty()
+
+effect fn run_serve() -> unit
+  = let port=rel_int(arg(3)) in
+    match cmd_preview(arg(2),if port.ok then port.value else -1) {
+      Ok(code) => noop(),
+      Err(message) => let printed=print_error(concat("neokit: ",message,"\n")) in process_exit(1)
+    }
+
+; ---- the setup ----
+
+fn here() -> Arr u8 _ = "tests/cli_golden/preview"
+fn unhex(borrow text:Arr u8 _) -> Arr u8 _
+  = loop (out=text_empty(), i=0) while i+1<len(text)
+      next (push(out,u8(text_hex_value(text_byte(text,i))*16+text_hex_value(text_byte(text,i+1)))), i+2) yield out
+effect fn lines_of(borrow path:Arr u8 _) -> Arr Arr u8 _ _
+  = match host_read_bytes(path) { Ok(data) => text_split(text_rstrip_chars(data,"\n"),"\n"), Err(message) => text_words() }
+effect fn scratch() -> Arr u8 _
+  = let cwd=host_cwd() in let base=match cwd { Ok(path) => host_join(path,"build/cli-golden-preview"), Err(message) => "build/cli-golden-preview" } in
+    let removed=if host_exists(base) then host_remove_tree(base) else Ok::<i64,Arr u8 _>(0) in
+    let made=host_mkdirs(base) in base
+effect fn setup_row(borrow base:Arr u8 _, borrow f:Arr Arr u8 _ _) -> Arr u8 _
+  = let kind=text_word(f,0) in let path=host_join(base,text_word(f,1)) in
+    let parent=host_mkdirs(host_parent(path)) in
+    let done=if text_equal(kind,"file") then host_write_bytes(path,unhex(text_word(f,2)))
+      else if text_equal(kind,"dir") then host_mkdir(path,false,false)
+      else if text_equal(kind,"link") then host_symlink(text_word(f,2),path)
+      else host_symlink(host_join(base,text_word(f,2)),path) in
+    match done { Ok(n) => text_empty(), Err(message) => concat("setup: ",message,"\n") }
+effect fn setup(borrow base:Arr u8 _) -> Arr u8 _
+  = let rows=lines_of(host_join(here(),"setup.tsv")) in
+    loop (err=text_empty(), i=0) while i<len(rows) next (concat(err,setup_row(base,text_split(text_word(rows,i),"\t"))), i+1) yield err
+
+; ---- a client ----
+
+type Reading = { out:Arr u8 _, more:bool }
+effect fn soon(ms:i64) -> i64 = let d=deadline_after(ms) in if d.ok then d.value else 0
+effect fn port_free(p:i64) -> bool = using held=tcp_listen_ipv4("127.0.0.1",p,1) in listener_status(held).ok
+effect fn free_port(from:i64) -> i64
+  = loop (p=from, found= -1) while found<0 && p<from+500 next (p+1, if port_free(p) then p else -1) yield found
+effect fn reachable(port:i64) -> bool = using probe=tcp_connect_ipv4("127.0.0.1",port,soon(1000)) in socket_status(probe).ok
+effect fn wait_up(port:i64) -> bool
+  = loop (up=false, i=0) while !up && i<500 next (if reachable(port) then true else (let slept=sleep_ms(10) in false), i+1) yield up
+effect fn read_step(socket:Socket, borrow r:Reading) -> Reading
+  = let got=socket_read(socket,soon(10000)) in
+    if got.ok && len(got.value)>0 then Reading { out=concat(r.out,got.value), more=true } else r with { more=false }
+effect fn read_all(socket:Socket) -> Arr u8 _
+  = let r=loop (r=Reading { out=text_empty(), more=true }) while r.more next (read_step(socket,r)) yield r in r.out
+effect fn send_pieces(socket:Socket, borrow request:Arr u8 _) -> bool
+  = loop (i=0, ok=true) while ok && i<len(request)
+      next (i+3, let sent=socket_write(socket,text_slice(request,i,i+3),soon(10000)) in let slept=sleep_ms(5) in sent.ok) yield ok
+; One request on its own connection: mode "split" sends it 3 bytes at a
+; time, "eof" shuts down the sending side after it.
+effect fn exchange(port:i64, borrow request:Arr u8 _, borrow mode:Arr u8 _) -> Arr u8 _
+  = using socket=tcp_connect_ipv4("127.0.0.1",port,soon(5000)) in
+    if !socket_status(socket).ok then "(no connection)" else
+    let sent=if text_equal(mode,"split") then send_pieces(socket,request) else socket_write(socket,request,soon(10000)).ok in
+    let shut=if text_equal(mode,"eof") then socket_close_write(socket).ok else true in
+    read_all(socket)
+
+; ---- output, as generate.py normalizes it ----
+
+fn normalized_line(borrow line:Arr u8 _) -> Arr u8 _
+  = if text_starts(line,"Date: ") then "Date: DATE" else if text_starts(line,"Server: ") then "Server: SERVER"
+    else if text_starts(line,"Last-Modified: ") then "Last-Modified: LAST-MODIFIED" else line
+fn normalized(borrow response:Arr u8 _) -> Arr u8 _
+  = if len(response)==0 then "(no response)\n" else
+    let stop=text_find(response,"\r\n\r\n",0) in
+    let fixed=if text_starts(response,"HTTP/") && stop>=0 then
+        (let lines=text_split(text_slice(response,0,stop),"\r\n") in
+         concat(text_join(arr(i in 0..len(lines)) normalized_line(text_word(lines,i)),"\r\n"),text_from(response,stop)))
+      else response in
+    concat(text_replace(fixed,"\r","\\r"),"\n")
+fn log_lines(borrow text:Arr u8 _) -> Arr u8 _
+  = let parts=text_split(text,"\n") in
+    loop (out=text_empty(), i=0) while i<len(parts)
+      next (let line=text_word(parts,i) in let start=text_find(line,"[",0) in let stop=text_find(line,"]",0) in
+            concat(out,if start>=0 && stop>start then concat(text_slice(line,0,start),"[TIME]",text_from(line,stop+1)) else line,
+              if i+1<len(parts) then "\n" else ""), i+1) yield out
+
+; ---- the server child ----
+
+effect fn drain_step(child:Process, stream:i64, borrow r:Reading) -> Reading
+  = let got=process_try_read(child,stream,65536) in
+    if got.ok && len(got.value)>0 then Reading { out=concat(r.out,got.value), more=true } else r with { more=false }
+; What the child has written on stream (1 stdout, 2 stderr) so far.
+effect fn drain(child:Process, stream:i64) -> Arr u8 _
+  = let r=loop (r=Reading { out=text_empty(), more=true }) while r.more next (drain_step(child,stream,r)) yield r in r.out
+effect fn wait_exit(child:Process) -> ProcessStatus
+  = loop (st=process_status(child), i=0) while st.ok && st.running && i<1000
+      next (let slept=sleep_ms(10) in process_status(child), i+1) yield st
+fn serve_args(borrow dir:Arr u8 _, borrow port:Arr u8 _) -> Arr Arr u8 _ _ = push(push(push(text_words(),"serve"),dir),port)
+
+effect fn run_case(child:Process, port:i64, borrow row:Arr u8 _) -> Arr u8 _
+  = let f=text_split(row,"\t") in
+    let count=rel_int(text_word(f,4)) in
+    let request=concat(unhex(text_word(f,3)),text_repeat(unhex(text_word(f,5)),if count.ok then count.value else 0),unhex(text_word(f,6))) in
+    let response=exchange(port,request,text_word(f,1)) in
+    concat("=== ",text_word(f,0),"\n",normalized(response),"--- log\n",log_lines(drain(child,2)))
+; A connection idle halfway through its request while another is served.
+effect fn concurrent(child:Process, port:i64) -> Arr u8 _
+  = using first=tcp_connect_ipv4("127.0.0.1",port,soon(5000)) in
+    let started=socket_write(first,"GET /about/ HTTP/1.0\r\nHost: x\r\n",soon(5000)) in
+    let slept=sleep_ms(50) in
+    let other=exchange(port,"GET / HTTP/1.0\r\n\r\n","") in
+    let ended=socket_write(first,"\r\n",soon(5000)) in
+    let answer=read_all(first) in
+    concat("=== concurrent\n--- B\n",normalized(other),"--- A\n",normalized(answer),"--- log\n",log_lines(drain(child,2)))
+effect fn serve_cases(borrow exe:Arr u8 _, borrow site:Arr u8 _, port:i64, borrow rows:Arr Arr u8 _ _) -> Arr u8 _
+  = using child=process_start(exe,serve_args(site,text_int(port)),env_list()) in
+    let up=wait_up(port) in
+    let head=concat("=== serve\n",text_replace(drain(child,1),concat(":",text_int(port)),":PORT")) in
+    let cases=loop (out=head, i=0) while i<len(rows) next (concat(out,run_case(child,port,text_word(rows,i))), i+1) yield out in
+    let both=concurrent(child,port) in
+    let stopped=process_signal(child,15) in
+    let st=wait_exit(child) in
+    concat(cases,both,"=== stop\nexit ",text_int(st.exit_code),"\n")
+
+; `neokit preview` run to its end: stdout, stderr and exit status.
+effect fn run_cli(borrow exe:Arr u8 _, borrow dir:Arr u8 _, borrow port:Arr u8 _) -> Arr u8 _
+  = using child=process_start(exe,serve_args(dir,port),env_list()) in
+    let st=wait_exit(child) in
+    concat("--- stdout\n",drain(child,1),"--- stderr\n",drain(child,2),"exit ",text_int(st.exit_code),"\n")
+effect fn in_use(borrow exe:Arr u8 _, borrow site:Arr u8 _) -> Arr u8 _
+  = let q=free_port(47700) in
+    using held=tcp_listen_ipv4("127.0.0.1",q,8) in
+    text_replace(run_cli(exe,site,text_int(q)),concat(":",text_int(q)),":PORT")
+
+effect fn run_fixture() -> unit
+  = let base=scratch() in
+    let problems=setup(base) in
+    let site=host_join(base,"site") in
+    let exe=process_executable_path() in
+    let port=free_port(47300) in
+    let served=serve_cases(exe.value,site,port,lines_of(host_join(here(),"cases.tsv"))) in
+    let errors=concat("=== no index.html\n",run_cli(exe.value,host_join(base,"outside"),text_int(port)),
+      "=== no directory\n",run_cli(exe.value,host_join(base,"nope"),text_int(port)),
+      "=== port in use\n",in_use(exe.value,site),
+      "=== port 70000\n",run_cli(exe.value,site,"70000")) in
+    let printed=print_out(concat(problems,served,errors)) in noop()
+
+effect fn main() -> unit
+  = let mode=arg(1) in
+    if text_equal(mode,"serve") then run_serve()
+    else if text_equal(mode,"fixture") then run_fixture()
+    else let printed=print_error("usage: driver.neo serve DIR PORT | fixture\n") in process_exit(2)

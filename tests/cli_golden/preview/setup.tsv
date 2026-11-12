@@ -1,0 +1,32 @@
+file	site/index.html	3c21646f63747970652068746d6c3e3c7469746c653e486f6d653c2f7469746c653e3c68313e486f6d653c2f68313e0a
+file	site/about/index.html	3c68313e41626f75743c2f68313e0a
+file	site/blog/post/index.html	3c68313e506f73743c2f68313e0a
+file	site/legacy/index.htm	3c68313e4c65676163793c2f68313e0a
+file	site/docs/readme.txt	72656164206d650a
+file	site/docs/Zeta.md	23205a6574610a
+file	site/docs/alpha b.txt	616c7068610a
+file	site/docs/é.txt	616363656e740a
+file	site/docs/q&a <x>.txt	71610a
+file	site/docs/sub/note.txt	6e6f74650a
+file	site/assets/site.css	626f64797b636f6c6f723a7265647d0a
+file	site/assets/app.js	636f6e736f6c652e6c6f672831290a
+file	site/assets/data.json	7b2261223a317d0a
+file	site/assets/logo.svg	3c73766720786d6c6e733d22687474703a2f2f7777772e77332e6f72672f323030302f737667222f3e0a
+file	site/assets/font.woff2	774f46320001
+file	site/assets/archive.tar.gz	1f8b0800
+file	site/assets/notes.md	23204e6f7465730a
+file	site/assets/blob.zzq	000102
+file	site/assets/noext	706c61696e0a
+file	site/indexlink/index.htm	3c68313e68746d3c2f68313e0a
+file	outside/secret.txt	7365637265740a
+file	outside/dir/index.html	3c68313e4f7574736964653c2f68313e0a
+file	site-secret/file.txt	707265666978207365637265740a
+dir	site/empty
+link	site/link-inside.txt	assets/site.css
+link	site/escape.txt	../outside/secret.txt
+link	site/escape-dir	../outside/dir
+abslink	site/abs-escape.txt	outside/secret.txt
+link	site/prefix.txt	../site-secret/file.txt
+link	site/dangling	nowhere
+link	site/docs/up	..
+link	site/indexlink/index.html	../../outside/secret.txt

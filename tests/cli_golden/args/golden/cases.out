@@ -1,0 +1,2824 @@
+=== [] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: the following arguments are required: command
+=== ['-h'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+
+NeoKit: native SSR and static sites with optional browser modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare             prepare reusable checked native framework libraries
+                        (no application code)
+    release             create a checksummed NeoKit SDK archive
+    password            hash a password using the shared native security
+                        library
+
+options:
+  -h, --help            show this help message and exit
+--- stderr
+=== ['--help'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+
+NeoKit: native SSR and static sites with optional browser modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare             prepare reusable checked native framework libraries
+                        (no application code)
+    release             create a checksummed NeoKit SDK archive
+    password            hash a password using the shared native security
+                        library
+
+options:
+  -h, --help            show this help message and exit
+--- stderr
+=== ['--he'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+
+NeoKit: native SSR and static sites with optional browser modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare             prepare reusable checked native framework libraries
+                        (no application code)
+    release             create a checksummed NeoKit SDK archive
+    password            hash a password using the shared native security
+                        library
+
+options:
+  -h, --help            show this help message and exit
+--- stderr
+=== ['-h', 'build'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+
+NeoKit: native SSR and static sites with optional browser modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare             prepare reusable checked native framework libraries
+                        (no application code)
+    release             create a checksummed NeoKit SDK archive
+    password            hash a password using the shared native security
+                        library
+
+options:
+  -h, --help            show this help message and exit
+--- stderr
+=== ['-hx'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+
+NeoKit: native SSR and static sites with optional browser modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare             prepare reusable checked native framework libraries
+                        (no application code)
+    release             create a checksummed NeoKit SDK archive
+    password            hash a password using the shared native security
+                        library
+
+options:
+  -h, --help            show this help message and exit
+--- stderr
+=== ['-h=1'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument -h/--help: ignored explicit argument '1'
+=== ['--help=1'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument -h/--help: ignored explicit argument '1'
+=== ['--help='] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument -h/--help: ignored explicit argument ''
+=== ['prepare', '-h'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit prepare [-h]
+
+options:
+  -h, --help  show this help message and exit
+--- stderr
+=== ['build', '-h'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit build [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+--- stderr
+=== ['serve', '-h'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit serve [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                    [--port PORT] [--no-build]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --port PORT
+  --no-build
+--- stderr
+=== ['dev', '-h'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit dev [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                  [--port PORT]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --port PORT
+--- stderr
+=== ['export', '-h'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit export [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                     [--dest DEST] [--strict]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --dest DEST
+  --strict              Reject an export that omits server-only routes
+--- stderr
+=== ['test', '-h'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit test [-h] [--extended] [--postgres]
+
+options:
+  -h, --help  show this help message and exit
+  --extended  also run the long, browser-free integration suites
+              (tests/extended)
+  --postgres  also run the PostgreSQL suites (tests/postgres) in a private
+              cluster; needs initdb and pg_ctl
+--- stderr
+=== ['init', '-h'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit init [-h] [--standalone] path
+
+positional arguments:
+  path
+
+options:
+  -h, --help    show this help message and exit
+  --standalone  include a relocatable NeoKit SDK in the application
+--- stderr
+=== ['release', '-h'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit release [-h] --out OUT [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+
+options:
+  -h, --help            show this help message and exit
+  --out OUT
+  --neo-archive NEO_ARCHIVE
+                        Neo 0.2.6 multi-platform native release archive
+  --neo-sha256 NEO_SHA256
+                        expected SHA-256 of the Neo archive
+--- stderr
+=== ['doctor', '-h'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit doctor [-h]
+
+options:
+  -h, --help  show this help message and exit
+--- stderr
+=== ['revalidate', '-h'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit revalidate [-h] [--app APP] [--out OUT]
+
+options:
+  -h, --help  show this help message and exit
+  --app APP
+  --out OUT
+--- stderr
+=== ['password', '-h'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit password [-h]
+
+options:
+  -h, --help  show this help message and exit
+--- stderr
+=== ['migrate', '-h'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit migrate [-h] [--app APP] [--out OUT] [--build-only]
+
+options:
+  -h, --help    show this help message and exit
+  --app APP
+  --out OUT
+  --build-only
+--- stderr
+=== ['preview', '-h'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit preview [-h] [--dir DIR] [--port PORT]
+
+options:
+  -h, --help   show this help message and exit
+  --dir DIR
+  --port PORT
+--- stderr
+=== ['-h'] COLUMNS=1 cwd=root
+exit 0
+--- stdout
+usage: neokit
+       [-h]
+       {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+       ...
+
+NeoKit:
+native SSR
+and static
+sites with
+optional
+browser
+modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare
+    prepare
+    reusable
+    checked
+    native
+    framework
+    libraries
+    (no
+    application
+    code)
+    release
+    create a
+    checksummed
+    NeoKit SDK
+    archive
+    password
+    hash a
+    password
+    using the
+    shared
+    native
+    security
+    library
+
+options:
+  -h, --help
+    show this
+    help
+    message and
+    exit
+--- stderr
+=== ['serve', '-h'] COLUMNS=1 cwd=root
+exit 0
+--- stdout
+usage: neokit serve
+       [-h]
+       [--app APP]
+       [--out OUT]
+       [--profile {release,dev}]
+       [--port PORT]
+       [--no-build]
+
+options:
+  -h, --help
+    show this
+    help
+    message and
+    exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --port PORT
+  --no-build
+--- stderr
+=== ['release', '-h'] COLUMNS=1 cwd=root
+exit 0
+--- stdout
+usage: neokit release
+       [-h]
+       --out
+       OUT
+       [--neo-archive NEO_ARCHIVE]
+       [--neo-sha256 NEO_SHA256]
+
+options:
+  -h, --help
+    show this
+    help
+    message and
+    exit
+  --out OUT
+  --neo-archive NEO_ARCHIVE
+    Neo 0.2.6
+    multi-
+    platform
+    native
+    release
+    archive
+  --neo-sha256 NEO_SHA256
+    expected
+    SHA-256 of
+    the Neo
+    archive
+--- stderr
+=== ['init', '-h'] COLUMNS=1 cwd=root
+exit 0
+--- stdout
+usage: neokit init
+       [-h]
+       [--standalone]
+       path
+
+positional arguments:
+  path
+
+options:
+  -h, --help
+    show this
+    help
+    message and
+    exit
+  --standalone
+    include a
+    relocatable
+    NeoKit SDK
+    in the
+    application
+--- stderr
+=== ['test', '-h'] COLUMNS=1 cwd=root
+exit 0
+--- stdout
+usage: neokit test
+       [-h]
+       [--extended]
+       [--postgres]
+
+options:
+  -h, --help
+    show this
+    help
+    message and
+    exit
+  --extended
+    also run
+    the long,
+    browser-
+    free
+    integration
+    suites (tes
+    ts/extended
+    )
+  --postgres
+    also run
+    the
+    PostgreSQL
+    suites (tes
+    ts/postgres
+    ) in a
+    private
+    cluster;
+    needs
+    initdb and
+    pg_ctl
+--- stderr
+=== ['export', '-h'] COLUMNS=1 cwd=root
+exit 0
+--- stdout
+usage: neokit export
+       [-h]
+       [--app APP]
+       [--out OUT]
+       [--profile {release,dev}]
+       [--dest DEST]
+       [--strict]
+
+options:
+  -h, --help
+    show this
+    help
+    message and
+    exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --dest DEST
+  --strict
+    Reject an
+    export that
+    omits
+    server-only
+    routes
+--- stderr
+=== ['prepare', '-h'] COLUMNS=1 cwd=root
+exit 0
+--- stdout
+usage: neokit prepare
+       [-h]
+
+options:
+  -h, --help
+    show this
+    help
+    message and
+    exit
+--- stderr
+=== ['release'] COLUMNS=1 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit release
+       [-h]
+       --out
+       OUT
+       [--neo-archive NEO_ARCHIVE]
+       [--neo-sha256 NEO_SHA256]
+neokit release: error: the following arguments are required: --out
+=== ['nope'] COLUMNS=1 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit
+       [-h]
+       {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+       ...
+neokit: error: argument command: invalid choice: 'nope' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['-h'] COLUMNS=20 cwd=root
+exit 0
+--- stdout
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+
+NeoKit: native SSR
+and static sites
+with optional
+browser modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare
+    prepare
+    reusable
+    checked native
+    framework
+    libraries (no
+    application
+    code)
+    release
+    create a
+    checksummed
+    NeoKit SDK
+    archive
+    password
+    hash a
+    password using
+    the shared
+    native
+    security
+    library
+
+options:
+  -h, --help
+    show this help
+    message and
+    exit
+--- stderr
+=== ['serve', '-h'] COLUMNS=20 cwd=root
+exit 0
+--- stdout
+usage: neokit serve
+       [-h]
+       [--app APP]
+       [--out OUT]
+       [--profile {release,dev}]
+       [--port PORT]
+       [--no-build]
+
+options:
+  -h, --help
+    show this help
+    message and
+    exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --port PORT
+  --no-build
+--- stderr
+=== ['release', '-h'] COLUMNS=20 cwd=root
+exit 0
+--- stdout
+usage: neokit release
+       [-h] --out
+       OUT
+       [--neo-archive NEO_ARCHIVE]
+       [--neo-sha256 NEO_SHA256]
+
+options:
+  -h, --help
+    show this help
+    message and
+    exit
+  --out OUT
+  --neo-archive NEO_ARCHIVE
+    Neo 0.2.6
+    multi-platform
+    native release
+    archive
+  --neo-sha256 NEO_SHA256
+    expected
+    SHA-256 of the
+    Neo archive
+--- stderr
+=== ['init', '-h'] COLUMNS=20 cwd=root
+exit 0
+--- stdout
+usage: neokit init
+       [-h]
+       [--standalone]
+       path
+
+positional arguments:
+  path
+
+options:
+  -h, --help
+    show this help
+    message and
+    exit
+  --standalone
+    include a
+    relocatable
+    NeoKit SDK in
+    the
+    application
+--- stderr
+=== ['test', '-h'] COLUMNS=20 cwd=root
+exit 0
+--- stdout
+usage: neokit test
+       [-h]
+       [--extended]
+       [--postgres]
+
+options:
+  -h, --help
+    show this help
+    message and
+    exit
+  --extended
+    also run the
+    long, browser-
+    free
+    integration
+    suites (tests/
+    extended)
+  --postgres
+    also run the
+    PostgreSQL
+    suites (tests/
+    postgres) in a
+    private
+    cluster; needs
+    initdb and
+    pg_ctl
+--- stderr
+=== ['export', '-h'] COLUMNS=20 cwd=root
+exit 0
+--- stdout
+usage: neokit export
+       [-h]
+       [--app APP]
+       [--out OUT]
+       [--profile {release,dev}]
+       [--dest DEST]
+       [--strict]
+
+options:
+  -h, --help
+    show this help
+    message and
+    exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --dest DEST
+  --strict
+    Reject an
+    export that
+    omits server-
+    only routes
+--- stderr
+=== ['prepare', '-h'] COLUMNS=20 cwd=root
+exit 0
+--- stdout
+usage: neokit prepare
+       [-h]
+
+options:
+  -h, --help
+    show this help
+    message and
+    exit
+--- stderr
+=== ['release'] COLUMNS=20 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit release
+       [-h] --out
+       OUT
+       [--neo-archive NEO_ARCHIVE]
+       [--neo-sha256 NEO_SHA256]
+neokit release: error: the following arguments are required: --out
+=== ['nope'] COLUMNS=20 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument command: invalid choice: 'nope' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['-h'] COLUMNS=30 cwd=root
+exit 0
+--- stdout
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+
+NeoKit: native SSR and
+static sites with optional
+browser modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare
+        prepare reusable
+        checked native
+        framework libraries
+        (no application
+        code)
+    release
+        create a checksummed
+        NeoKit SDK archive
+    password
+        hash a password
+        using the shared
+        native security
+        library
+
+options:
+  -h, --help
+        show this help
+        message and exit
+--- stderr
+=== ['serve', '-h'] COLUMNS=30 cwd=root
+exit 0
+--- stdout
+usage: neokit serve [-h]
+                    [--app APP]
+                    [--out OUT]
+                    [--profile {release,dev}]
+                    [--port PORT]
+                    [--no-build]
+
+options:
+  -h, --help
+        show this help
+        message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --port PORT
+  --no-build
+--- stderr
+=== ['release', '-h'] COLUMNS=30 cwd=root
+exit 0
+--- stdout
+usage: neokit release [-h]
+                      --out
+                      OUT
+                      [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+
+options:
+  -h, --help
+        show this help
+        message and exit
+  --out OUT
+  --neo-archive NEO_ARCHIVE
+        Neo 0.2.6 multi-
+        platform native
+        release archive
+  --neo-sha256 NEO_SHA256
+        expected SHA-256 of
+        the Neo archive
+--- stderr
+=== ['init', '-h'] COLUMNS=30 cwd=root
+exit 0
+--- stdout
+usage: neokit init [-h]
+                   [--standalone]
+                   path
+
+positional arguments:
+  path
+
+options:
+  -h, --help
+        show this help
+        message and exit
+  --standalone
+        include a
+        relocatable NeoKit
+        SDK in the
+        application
+--- stderr
+=== ['test', '-h'] COLUMNS=30 cwd=root
+exit 0
+--- stdout
+usage: neokit test [-h]
+                   [--extended]
+                   [--postgres]
+
+options:
+  -h, --help
+        show this help
+        message and exit
+  --extended
+        also run the long,
+        browser-free
+        integration suites
+        (tests/extended)
+  --postgres
+        also run the
+        PostgreSQL suites
+        (tests/postgres) in
+        a private cluster;
+        needs initdb and
+        pg_ctl
+--- stderr
+=== ['export', '-h'] COLUMNS=30 cwd=root
+exit 0
+--- stdout
+usage: neokit export [-h]
+                     [--app APP]
+                     [--out OUT]
+                     [--profile {release,dev}]
+                     [--dest DEST]
+                     [--strict]
+
+options:
+  -h, --help
+        show this help
+        message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --dest DEST
+  --strict
+        Reject an export
+        that omits server-
+        only routes
+--- stderr
+=== ['prepare', '-h'] COLUMNS=30 cwd=root
+exit 0
+--- stdout
+usage: neokit prepare [-h]
+
+options:
+  -h, --help
+        show this help
+        message and exit
+--- stderr
+=== ['release'] COLUMNS=30 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit release [-h]
+                      --out
+                      OUT
+                      [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+neokit release: error: the following arguments are required: --out
+=== ['nope'] COLUMNS=30 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument command: invalid choice: 'nope' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['-h'] COLUMNS=40 cwd=root
+exit 0
+--- stdout
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+
+NeoKit: native SSR and static sites
+with optional browser modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare       prepare reusable
+                  checked native
+                  framework libraries
+                  (no application
+                  code)
+    release       create a checksummed
+                  NeoKit SDK archive
+    password      hash a password
+                  using the shared
+                  native security
+                  library
+
+options:
+  -h, --help      show this help
+                  message and exit
+--- stderr
+=== ['serve', '-h'] COLUMNS=40 cwd=root
+exit 0
+--- stdout
+usage: neokit serve [-h] [--app APP]
+                    [--out OUT]
+                    [--profile {release,dev}]
+                    [--port PORT]
+                    [--no-build]
+
+options:
+  -h, --help      show this help
+                  message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --port PORT
+  --no-build
+--- stderr
+=== ['release', '-h'] COLUMNS=40 cwd=root
+exit 0
+--- stdout
+usage: neokit release [-h] --out OUT
+                      [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+
+options:
+  -h, --help      show this help
+                  message and exit
+  --out OUT
+  --neo-archive NEO_ARCHIVE
+                  Neo 0.2.6 multi-
+                  platform native
+                  release archive
+  --neo-sha256 NEO_SHA256
+                  expected SHA-256 of
+                  the Neo archive
+--- stderr
+=== ['init', '-h'] COLUMNS=40 cwd=root
+exit 0
+--- stdout
+usage: neokit init [-h] [--standalone]
+                   path
+
+positional arguments:
+  path
+
+options:
+  -h, --help    show this help message
+                and exit
+  --standalone  include a relocatable
+                NeoKit SDK in the
+                application
+--- stderr
+=== ['test', '-h'] COLUMNS=40 cwd=root
+exit 0
+--- stdout
+usage: neokit test [-h] [--extended]
+                   [--postgres]
+
+options:
+  -h, --help  show this help message
+              and exit
+  --extended  also run the long,
+              browser-free integration
+              suites (tests/extended)
+  --postgres  also run the PostgreSQL
+              suites (tests/postgres)
+              in a private cluster;
+              needs initdb and pg_ctl
+--- stderr
+=== ['export', '-h'] COLUMNS=40 cwd=root
+exit 0
+--- stdout
+usage: neokit export [-h] [--app APP]
+                     [--out OUT]
+                     [--profile {release,dev}]
+                     [--dest DEST]
+                     [--strict]
+
+options:
+  -h, --help      show this help
+                  message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --dest DEST
+  --strict        Reject an export
+                  that omits server-
+                  only routes
+--- stderr
+=== ['prepare', '-h'] COLUMNS=40 cwd=root
+exit 0
+--- stdout
+usage: neokit prepare [-h]
+
+options:
+  -h, --help  show this help message
+              and exit
+--- stderr
+=== ['release'] COLUMNS=40 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit release [-h] --out OUT
+                      [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+neokit release: error: the following arguments are required: --out
+=== ['nope'] COLUMNS=40 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument command: invalid choice: 'nope' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['-h'] COLUMNS=52 cwd=root
+exit 0
+--- stdout
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+
+NeoKit: native SSR and static sites with optional
+browser modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare             prepare reusable checked
+                        native framework libraries
+                        (no application code)
+    release             create a checksummed
+                        NeoKit SDK archive
+    password            hash a password using the
+                        shared native security
+                        library
+
+options:
+  -h, --help            show this help message and
+                        exit
+--- stderr
+=== ['serve', '-h'] COLUMNS=52 cwd=root
+exit 0
+--- stdout
+usage: neokit serve [-h] [--app APP] [--out OUT]
+                    [--profile {release,dev}]
+                    [--port PORT] [--no-build]
+
+options:
+  -h, --help            show this help message and
+                        exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --port PORT
+  --no-build
+--- stderr
+=== ['release', '-h'] COLUMNS=52 cwd=root
+exit 0
+--- stdout
+usage: neokit release [-h] --out OUT
+                      [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+
+options:
+  -h, --help            show this help message and
+                        exit
+  --out OUT
+  --neo-archive NEO_ARCHIVE
+                        Neo 0.2.6 multi-platform
+                        native release archive
+  --neo-sha256 NEO_SHA256
+                        expected SHA-256 of the
+                        Neo archive
+--- stderr
+=== ['init', '-h'] COLUMNS=52 cwd=root
+exit 0
+--- stdout
+usage: neokit init [-h] [--standalone] path
+
+positional arguments:
+  path
+
+options:
+  -h, --help    show this help message and exit
+  --standalone  include a relocatable NeoKit SDK
+                in the application
+--- stderr
+=== ['test', '-h'] COLUMNS=52 cwd=root
+exit 0
+--- stdout
+usage: neokit test [-h] [--extended] [--postgres]
+
+options:
+  -h, --help  show this help message and exit
+  --extended  also run the long, browser-free
+              integration suites (tests/extended)
+  --postgres  also run the PostgreSQL suites
+              (tests/postgres) in a private
+              cluster; needs initdb and pg_ctl
+--- stderr
+=== ['export', '-h'] COLUMNS=52 cwd=root
+exit 0
+--- stdout
+usage: neokit export [-h] [--app APP] [--out OUT]
+                     [--profile {release,dev}]
+                     [--dest DEST] [--strict]
+
+options:
+  -h, --help            show this help message and
+                        exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --dest DEST
+  --strict              Reject an export that
+                        omits server-only routes
+--- stderr
+=== ['prepare', '-h'] COLUMNS=52 cwd=root
+exit 0
+--- stdout
+usage: neokit prepare [-h]
+
+options:
+  -h, --help  show this help message and exit
+--- stderr
+=== ['release'] COLUMNS=52 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit release [-h] --out OUT
+                      [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+neokit release: error: the following arguments are required: --out
+=== ['nope'] COLUMNS=52 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument command: invalid choice: 'nope' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['-h'] COLUMNS=60 cwd=root
+exit 0
+--- stdout
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+
+NeoKit: native SSR and static sites with optional browser
+modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare             prepare reusable checked native
+                        framework libraries (no
+                        application code)
+    release             create a checksummed NeoKit SDK
+                        archive
+    password            hash a password using the shared
+                        native security library
+
+options:
+  -h, --help            show this help message and exit
+--- stderr
+=== ['serve', '-h'] COLUMNS=60 cwd=root
+exit 0
+--- stdout
+usage: neokit serve [-h] [--app APP] [--out OUT]
+                    [--profile {release,dev}]
+                    [--port PORT] [--no-build]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --port PORT
+  --no-build
+--- stderr
+=== ['release', '-h'] COLUMNS=60 cwd=root
+exit 0
+--- stdout
+usage: neokit release [-h] --out OUT
+                      [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+
+options:
+  -h, --help            show this help message and exit
+  --out OUT
+  --neo-archive NEO_ARCHIVE
+                        Neo 0.2.6 multi-platform native
+                        release archive
+  --neo-sha256 NEO_SHA256
+                        expected SHA-256 of the Neo
+                        archive
+--- stderr
+=== ['init', '-h'] COLUMNS=60 cwd=root
+exit 0
+--- stdout
+usage: neokit init [-h] [--standalone] path
+
+positional arguments:
+  path
+
+options:
+  -h, --help    show this help message and exit
+  --standalone  include a relocatable NeoKit SDK in the
+                application
+--- stderr
+=== ['test', '-h'] COLUMNS=60 cwd=root
+exit 0
+--- stdout
+usage: neokit test [-h] [--extended] [--postgres]
+
+options:
+  -h, --help  show this help message and exit
+  --extended  also run the long, browser-free integration
+              suites (tests/extended)
+  --postgres  also run the PostgreSQL suites
+              (tests/postgres) in a private cluster; needs
+              initdb and pg_ctl
+--- stderr
+=== ['export', '-h'] COLUMNS=60 cwd=root
+exit 0
+--- stdout
+usage: neokit export [-h] [--app APP] [--out OUT]
+                     [--profile {release,dev}]
+                     [--dest DEST] [--strict]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --dest DEST
+  --strict              Reject an export that omits
+                        server-only routes
+--- stderr
+=== ['prepare', '-h'] COLUMNS=60 cwd=root
+exit 0
+--- stdout
+usage: neokit prepare [-h]
+
+options:
+  -h, --help  show this help message and exit
+--- stderr
+=== ['release'] COLUMNS=60 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit release [-h] --out OUT
+                      [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+neokit release: error: the following arguments are required: --out
+=== ['nope'] COLUMNS=60 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument command: invalid choice: 'nope' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['-h'] COLUMNS=100 cwd=root
+exit 0
+--- stdout
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+
+NeoKit: native SSR and static sites with optional browser modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare             prepare reusable checked native framework libraries (no application code)
+    release             create a checksummed NeoKit SDK archive
+    password            hash a password using the shared native security library
+
+options:
+  -h, --help            show this help message and exit
+--- stderr
+=== ['serve', '-h'] COLUMNS=100 cwd=root
+exit 0
+--- stdout
+usage: neokit serve [-h] [--app APP] [--out OUT] [--profile {release,dev}] [--port PORT]
+                    [--no-build]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --port PORT
+  --no-build
+--- stderr
+=== ['release', '-h'] COLUMNS=100 cwd=root
+exit 0
+--- stdout
+usage: neokit release [-h] --out OUT [--neo-archive NEO_ARCHIVE] [--neo-sha256 NEO_SHA256]
+
+options:
+  -h, --help            show this help message and exit
+  --out OUT
+  --neo-archive NEO_ARCHIVE
+                        Neo 0.2.6 multi-platform native release archive
+  --neo-sha256 NEO_SHA256
+                        expected SHA-256 of the Neo archive
+--- stderr
+=== ['init', '-h'] COLUMNS=100 cwd=root
+exit 0
+--- stdout
+usage: neokit init [-h] [--standalone] path
+
+positional arguments:
+  path
+
+options:
+  -h, --help    show this help message and exit
+  --standalone  include a relocatable NeoKit SDK in the application
+--- stderr
+=== ['test', '-h'] COLUMNS=100 cwd=root
+exit 0
+--- stdout
+usage: neokit test [-h] [--extended] [--postgres]
+
+options:
+  -h, --help  show this help message and exit
+  --extended  also run the long, browser-free integration suites (tests/extended)
+  --postgres  also run the PostgreSQL suites (tests/postgres) in a private cluster; needs initdb
+              and pg_ctl
+--- stderr
+=== ['export', '-h'] COLUMNS=100 cwd=root
+exit 0
+--- stdout
+usage: neokit export [-h] [--app APP] [--out OUT] [--profile {release,dev}] [--dest DEST]
+                     [--strict]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --dest DEST
+  --strict              Reject an export that omits server-only routes
+--- stderr
+=== ['prepare', '-h'] COLUMNS=100 cwd=root
+exit 0
+--- stdout
+usage: neokit prepare [-h]
+
+options:
+  -h, --help  show this help message and exit
+--- stderr
+=== ['release'] COLUMNS=100 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit release [-h] --out OUT [--neo-archive NEO_ARCHIVE] [--neo-sha256 NEO_SHA256]
+neokit release: error: the following arguments are required: --out
+=== ['nope'] COLUMNS=100 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument command: invalid choice: 'nope' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['-h'] COLUMNS=200 cwd=root
+exit 0
+--- stdout
+usage: neokit [-h] {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview} ...
+
+NeoKit: native SSR and static sites with optional browser modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare             prepare reusable checked native framework libraries (no application code)
+    release             create a checksummed NeoKit SDK archive
+    password            hash a password using the shared native security library
+
+options:
+  -h, --help            show this help message and exit
+--- stderr
+=== ['serve', '-h'] COLUMNS=200 cwd=root
+exit 0
+--- stdout
+usage: neokit serve [-h] [--app APP] [--out OUT] [--profile {release,dev}] [--port PORT] [--no-build]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --port PORT
+  --no-build
+--- stderr
+=== ['release', '-h'] COLUMNS=200 cwd=root
+exit 0
+--- stdout
+usage: neokit release [-h] --out OUT [--neo-archive NEO_ARCHIVE] [--neo-sha256 NEO_SHA256]
+
+options:
+  -h, --help            show this help message and exit
+  --out OUT
+  --neo-archive NEO_ARCHIVE
+                        Neo 0.2.6 multi-platform native release archive
+  --neo-sha256 NEO_SHA256
+                        expected SHA-256 of the Neo archive
+--- stderr
+=== ['init', '-h'] COLUMNS=200 cwd=root
+exit 0
+--- stdout
+usage: neokit init [-h] [--standalone] path
+
+positional arguments:
+  path
+
+options:
+  -h, --help    show this help message and exit
+  --standalone  include a relocatable NeoKit SDK in the application
+--- stderr
+=== ['test', '-h'] COLUMNS=200 cwd=root
+exit 0
+--- stdout
+usage: neokit test [-h] [--extended] [--postgres]
+
+options:
+  -h, --help  show this help message and exit
+  --extended  also run the long, browser-free integration suites (tests/extended)
+  --postgres  also run the PostgreSQL suites (tests/postgres) in a private cluster; needs initdb and pg_ctl
+--- stderr
+=== ['export', '-h'] COLUMNS=200 cwd=root
+exit 0
+--- stdout
+usage: neokit export [-h] [--app APP] [--out OUT] [--profile {release,dev}] [--dest DEST] [--strict]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --dest DEST
+  --strict              Reject an export that omits server-only routes
+--- stderr
+=== ['prepare', '-h'] COLUMNS=200 cwd=root
+exit 0
+--- stdout
+usage: neokit prepare [-h]
+
+options:
+  -h, --help  show this help message and exit
+--- stderr
+=== ['release'] COLUMNS=200 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit release [-h] --out OUT [--neo-archive NEO_ARCHIVE] [--neo-sha256 NEO_SHA256]
+neokit release: error: the following arguments are required: --out
+=== ['nope'] COLUMNS=200 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h] {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview} ...
+neokit: error: argument command: invalid choice: 'nope' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['-h'] COLUMNS=abc cwd=root
+exit 0
+--- stdout
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+
+NeoKit: native SSR and static sites with optional browser modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare             prepare reusable checked native framework libraries
+                        (no application code)
+    release             create a checksummed NeoKit SDK archive
+    password            hash a password using the shared native security
+                        library
+
+options:
+  -h, --help            show this help message and exit
+--- stderr
+=== ['serve', '-h'] COLUMNS=abc cwd=root
+exit 0
+--- stdout
+usage: neokit serve [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                    [--port PORT] [--no-build]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --port PORT
+  --no-build
+--- stderr
+=== ['release', '-h'] COLUMNS=abc cwd=root
+exit 0
+--- stdout
+usage: neokit release [-h] --out OUT [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+
+options:
+  -h, --help            show this help message and exit
+  --out OUT
+  --neo-archive NEO_ARCHIVE
+                        Neo 0.2.6 multi-platform native release archive
+  --neo-sha256 NEO_SHA256
+                        expected SHA-256 of the Neo archive
+--- stderr
+=== ['init', '-h'] COLUMNS=abc cwd=root
+exit 0
+--- stdout
+usage: neokit init [-h] [--standalone] path
+
+positional arguments:
+  path
+
+options:
+  -h, --help    show this help message and exit
+  --standalone  include a relocatable NeoKit SDK in the application
+--- stderr
+=== ['test', '-h'] COLUMNS=abc cwd=root
+exit 0
+--- stdout
+usage: neokit test [-h] [--extended] [--postgres]
+
+options:
+  -h, --help  show this help message and exit
+  --extended  also run the long, browser-free integration suites
+              (tests/extended)
+  --postgres  also run the PostgreSQL suites (tests/postgres) in a private
+              cluster; needs initdb and pg_ctl
+--- stderr
+=== ['export', '-h'] COLUMNS=abc cwd=root
+exit 0
+--- stdout
+usage: neokit export [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                     [--dest DEST] [--strict]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --dest DEST
+  --strict              Reject an export that omits server-only routes
+--- stderr
+=== ['prepare', '-h'] COLUMNS=abc cwd=root
+exit 0
+--- stdout
+usage: neokit prepare [-h]
+
+options:
+  -h, --help  show this help message and exit
+--- stderr
+=== ['release'] COLUMNS=abc cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit release [-h] --out OUT [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+neokit release: error: the following arguments are required: --out
+=== ['nope'] COLUMNS=abc cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument command: invalid choice: 'nope' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['-h'] COLUMNS=0 cwd=root
+exit 0
+--- stdout
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+
+NeoKit: native SSR and static sites with optional browser modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare             prepare reusable checked native framework libraries
+                        (no application code)
+    release             create a checksummed NeoKit SDK archive
+    password            hash a password using the shared native security
+                        library
+
+options:
+  -h, --help            show this help message and exit
+--- stderr
+=== ['serve', '-h'] COLUMNS=0 cwd=root
+exit 0
+--- stdout
+usage: neokit serve [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                    [--port PORT] [--no-build]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --port PORT
+  --no-build
+--- stderr
+=== ['release', '-h'] COLUMNS=0 cwd=root
+exit 0
+--- stdout
+usage: neokit release [-h] --out OUT [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+
+options:
+  -h, --help            show this help message and exit
+  --out OUT
+  --neo-archive NEO_ARCHIVE
+                        Neo 0.2.6 multi-platform native release archive
+  --neo-sha256 NEO_SHA256
+                        expected SHA-256 of the Neo archive
+--- stderr
+=== ['init', '-h'] COLUMNS=0 cwd=root
+exit 0
+--- stdout
+usage: neokit init [-h] [--standalone] path
+
+positional arguments:
+  path
+
+options:
+  -h, --help    show this help message and exit
+  --standalone  include a relocatable NeoKit SDK in the application
+--- stderr
+=== ['test', '-h'] COLUMNS=0 cwd=root
+exit 0
+--- stdout
+usage: neokit test [-h] [--extended] [--postgres]
+
+options:
+  -h, --help  show this help message and exit
+  --extended  also run the long, browser-free integration suites
+              (tests/extended)
+  --postgres  also run the PostgreSQL suites (tests/postgres) in a private
+              cluster; needs initdb and pg_ctl
+--- stderr
+=== ['export', '-h'] COLUMNS=0 cwd=root
+exit 0
+--- stdout
+usage: neokit export [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                     [--dest DEST] [--strict]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --dest DEST
+  --strict              Reject an export that omits server-only routes
+--- stderr
+=== ['prepare', '-h'] COLUMNS=0 cwd=root
+exit 0
+--- stdout
+usage: neokit prepare [-h]
+
+options:
+  -h, --help  show this help message and exit
+--- stderr
+=== ['release'] COLUMNS=0 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit release [-h] --out OUT [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+neokit release: error: the following arguments are required: --out
+=== ['nope'] COLUMNS=0 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument command: invalid choice: 'nope' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['-h'] COLUMNS= 50  cwd=root
+exit 0
+--- stdout
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+
+NeoKit: native SSR and static sites with
+optional browser modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare             prepare reusable checked
+                        native framework
+                        libraries (no
+                        application code)
+    release             create a checksummed
+                        NeoKit SDK archive
+    password            hash a password using
+                        the shared native
+                        security library
+
+options:
+  -h, --help            show this help message
+                        and exit
+--- stderr
+=== ['serve', '-h'] COLUMNS= 50  cwd=root
+exit 0
+--- stdout
+usage: neokit serve [-h] [--app APP] [--out OUT]
+                    [--profile {release,dev}]
+                    [--port PORT] [--no-build]
+
+options:
+  -h, --help            show this help message
+                        and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --port PORT
+  --no-build
+--- stderr
+=== ['release', '-h'] COLUMNS= 50  cwd=root
+exit 0
+--- stdout
+usage: neokit release [-h] --out OUT
+                      [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+
+options:
+  -h, --help            show this help message
+                        and exit
+  --out OUT
+  --neo-archive NEO_ARCHIVE
+                        Neo 0.2.6 multi-platform
+                        native release archive
+  --neo-sha256 NEO_SHA256
+                        expected SHA-256 of the
+                        Neo archive
+--- stderr
+=== ['init', '-h'] COLUMNS= 50  cwd=root
+exit 0
+--- stdout
+usage: neokit init [-h] [--standalone] path
+
+positional arguments:
+  path
+
+options:
+  -h, --help    show this help message and exit
+  --standalone  include a relocatable NeoKit SDK
+                in the application
+--- stderr
+=== ['test', '-h'] COLUMNS= 50  cwd=root
+exit 0
+--- stdout
+usage: neokit test [-h] [--extended]
+                   [--postgres]
+
+options:
+  -h, --help  show this help message and exit
+  --extended  also run the long, browser-free
+              integration suites
+              (tests/extended)
+  --postgres  also run the PostgreSQL suites
+              (tests/postgres) in a private
+              cluster; needs initdb and pg_ctl
+--- stderr
+=== ['export', '-h'] COLUMNS= 50  cwd=root
+exit 0
+--- stdout
+usage: neokit export [-h] [--app APP]
+                     [--out OUT]
+                     [--profile {release,dev}]
+                     [--dest DEST] [--strict]
+
+options:
+  -h, --help            show this help message
+                        and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --dest DEST
+  --strict              Reject an export that
+                        omits server-only routes
+--- stderr
+=== ['prepare', '-h'] COLUMNS= 50  cwd=root
+exit 0
+--- stdout
+usage: neokit prepare [-h]
+
+options:
+  -h, --help  show this help message and exit
+--- stderr
+=== ['release'] COLUMNS= 50  cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit release [-h] --out OUT
+                      [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+neokit release: error: the following arguments are required: --out
+=== ['nope'] COLUMNS= 50  cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument command: invalid choice: 'nope' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['-h'] COLUMNS=-5 cwd=root
+exit 0
+--- stdout
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+
+NeoKit: native SSR and static sites with optional browser modules
+
+positional arguments:
+  {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+    prepare             prepare reusable checked native framework libraries
+                        (no application code)
+    release             create a checksummed NeoKit SDK archive
+    password            hash a password using the shared native security
+                        library
+
+options:
+  -h, --help            show this help message and exit
+--- stderr
+=== ['serve', '-h'] COLUMNS=-5 cwd=root
+exit 0
+--- stdout
+usage: neokit serve [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                    [--port PORT] [--no-build]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --port PORT
+  --no-build
+--- stderr
+=== ['release', '-h'] COLUMNS=-5 cwd=root
+exit 0
+--- stdout
+usage: neokit release [-h] --out OUT [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+
+options:
+  -h, --help            show this help message and exit
+  --out OUT
+  --neo-archive NEO_ARCHIVE
+                        Neo 0.2.6 multi-platform native release archive
+  --neo-sha256 NEO_SHA256
+                        expected SHA-256 of the Neo archive
+--- stderr
+=== ['init', '-h'] COLUMNS=-5 cwd=root
+exit 0
+--- stdout
+usage: neokit init [-h] [--standalone] path
+
+positional arguments:
+  path
+
+options:
+  -h, --help    show this help message and exit
+  --standalone  include a relocatable NeoKit SDK in the application
+--- stderr
+=== ['test', '-h'] COLUMNS=-5 cwd=root
+exit 0
+--- stdout
+usage: neokit test [-h] [--extended] [--postgres]
+
+options:
+  -h, --help  show this help message and exit
+  --extended  also run the long, browser-free integration suites
+              (tests/extended)
+  --postgres  also run the PostgreSQL suites (tests/postgres) in a private
+              cluster; needs initdb and pg_ctl
+--- stderr
+=== ['export', '-h'] COLUMNS=-5 cwd=root
+exit 0
+--- stdout
+usage: neokit export [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                     [--dest DEST] [--strict]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+  --dest DEST
+  --strict              Reject an export that omits server-only routes
+--- stderr
+=== ['prepare', '-h'] COLUMNS=-5 cwd=root
+exit 0
+--- stdout
+usage: neokit prepare [-h]
+
+options:
+  -h, --help  show this help message and exit
+--- stderr
+=== ['release'] COLUMNS=-5 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit release [-h] --out OUT [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+neokit release: error: the following arguments are required: --out
+=== ['nope'] COLUMNS=-5 cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument command: invalid choice: 'nope' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['prepare'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='prepare'
+--- stderr
+=== ['build'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='build'
+out=Path(ROOT/build/studio)
+profile='release'
+--- stderr
+=== ['serve'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='serve'
+no_build=False
+out=Path(ROOT/build/studio)
+port=8094
+profile='release'
+--- stderr
+=== ['dev'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='dev'
+out=Path(ROOT/build/studio)
+port=8094
+profile='dev'
+--- stderr
+=== ['export'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='export'
+dest=Path(ROOT/build/export)
+out=Path(ROOT/build/studio)
+profile='release'
+strict=False
+--- stderr
+=== ['test'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='test'
+extended=False
+postgres=False
+--- stderr
+=== ['init', 'x'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='init'
+path=Path(x)
+standalone=False
+--- stderr
+=== ['release', '--out', 'o'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='release'
+neo_archive=None
+neo_sha256=None
+out=Path(o)
+--- stderr
+=== ['doctor'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='doctor'
+--- stderr
+=== ['revalidate'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='revalidate'
+out=Path(ROOT/build/studio-revalidation)
+--- stderr
+=== ['password'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='password'
+--- stderr
+=== ['migrate'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+build_only=False
+command='migrate'
+out=Path(ROOT/build/studio-migrations)
+--- stderr
+=== ['preview'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='preview'
+dir=Path(ROOT/build/export)
+port=8095
+--- stderr
+=== ['prepare'] COLUMNS=- cwd=app
+exit 0
+--- stdout
+command='prepare'
+--- stderr
+=== ['build'] COLUMNS=- cwd=app
+exit 0
+--- stdout
+app=Path(ROOT/examples/blog)
+command='build'
+out=Path(ROOT/examples/blog/.neokit/build)
+profile='release'
+--- stderr
+=== ['serve'] COLUMNS=- cwd=app
+exit 0
+--- stdout
+app=Path(ROOT/examples/blog)
+command='serve'
+no_build=False
+out=Path(ROOT/examples/blog/.neokit/build)
+port=8094
+profile='release'
+--- stderr
+=== ['dev'] COLUMNS=- cwd=app
+exit 0
+--- stdout
+app=Path(ROOT/examples/blog)
+command='dev'
+out=Path(ROOT/examples/blog/.neokit/build)
+port=8094
+profile='dev'
+--- stderr
+=== ['export'] COLUMNS=- cwd=app
+exit 0
+--- stdout
+app=Path(ROOT/examples/blog)
+command='export'
+dest=Path(ROOT/examples/blog-export)
+out=Path(ROOT/examples/blog/.neokit/build)
+profile='release'
+strict=False
+--- stderr
+=== ['test'] COLUMNS=- cwd=app
+exit 0
+--- stdout
+command='test'
+extended=False
+postgres=False
+--- stderr
+=== ['init', 'x'] COLUMNS=- cwd=app
+exit 0
+--- stdout
+command='init'
+path=Path(x)
+standalone=False
+--- stderr
+=== ['release', '--out', 'o'] COLUMNS=- cwd=app
+exit 0
+--- stdout
+command='release'
+neo_archive=None
+neo_sha256=None
+out=Path(o)
+--- stderr
+=== ['doctor'] COLUMNS=- cwd=app
+exit 0
+--- stdout
+command='doctor'
+--- stderr
+=== ['revalidate'] COLUMNS=- cwd=app
+exit 0
+--- stdout
+app=Path(ROOT/examples/blog)
+command='revalidate'
+out=Path(ROOT/examples/blog/.neokit/build-revalidation)
+--- stderr
+=== ['password'] COLUMNS=- cwd=app
+exit 0
+--- stdout
+command='password'
+--- stderr
+=== ['migrate'] COLUMNS=- cwd=app
+exit 0
+--- stdout
+app=Path(ROOT/examples/blog)
+build_only=False
+command='migrate'
+out=Path(ROOT/examples/blog/.neokit/build-migrations)
+--- stderr
+=== ['preview'] COLUMNS=- cwd=app
+exit 0
+--- stdout
+command='preview'
+dir=Path(ROOT/examples/blog-export)
+port=8095
+--- stderr
+=== ['prepare'] COLUMNS=- cwd=studio
+exit 0
+--- stdout
+command='prepare'
+--- stderr
+=== ['build'] COLUMNS=- cwd=studio
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='build'
+out=Path(ROOT/build/studio)
+profile='release'
+--- stderr
+=== ['serve'] COLUMNS=- cwd=studio
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='serve'
+no_build=False
+out=Path(ROOT/build/studio)
+port=8094
+profile='release'
+--- stderr
+=== ['dev'] COLUMNS=- cwd=studio
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='dev'
+out=Path(ROOT/build/studio)
+port=8094
+profile='dev'
+--- stderr
+=== ['export'] COLUMNS=- cwd=studio
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='export'
+dest=Path(ROOT/build/export)
+out=Path(ROOT/build/studio)
+profile='release'
+strict=False
+--- stderr
+=== ['test'] COLUMNS=- cwd=studio
+exit 0
+--- stdout
+command='test'
+extended=False
+postgres=False
+--- stderr
+=== ['init', 'x'] COLUMNS=- cwd=studio
+exit 0
+--- stdout
+command='init'
+path=Path(x)
+standalone=False
+--- stderr
+=== ['release', '--out', 'o'] COLUMNS=- cwd=studio
+exit 0
+--- stdout
+command='release'
+neo_archive=None
+neo_sha256=None
+out=Path(o)
+--- stderr
+=== ['doctor'] COLUMNS=- cwd=studio
+exit 0
+--- stdout
+command='doctor'
+--- stderr
+=== ['revalidate'] COLUMNS=- cwd=studio
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='revalidate'
+out=Path(ROOT/build/studio-revalidation)
+--- stderr
+=== ['password'] COLUMNS=- cwd=studio
+exit 0
+--- stdout
+command='password'
+--- stderr
+=== ['migrate'] COLUMNS=- cwd=studio
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+build_only=False
+command='migrate'
+out=Path(ROOT/build/studio-migrations)
+--- stderr
+=== ['preview'] COLUMNS=- cwd=studio
+exit 0
+--- stdout
+command='preview'
+dir=Path(ROOT/build/export)
+port=8095
+--- stderr
+=== ['nope'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument command: invalid choice: 'nope' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['help'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument command: invalid choice: 'help' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['--', 'build'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument command: invalid choice: '--' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['--', '--'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument command: invalid choice: '--' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['nope-é'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: argument command: invalid choice: 'nope-é' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')
+=== ['-x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: the following arguments are required: command
+=== ['-x', 'build'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: unrecognized arguments: -x
+=== ['--x', 'build', '--y'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: unrecognized arguments: --x --y
+=== ['build', '--port', '1'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: unrecognized arguments: --port 1
+=== ['build', '--strict'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: unrecognized arguments: --strict
+=== ['build', '-h-x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit build [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+neokit build: error: argument -h/--help: ignored explicit argument '-x'
+=== ['build', '-hx'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit build [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+
+options:
+  -h, --help            show this help message and exit
+  --app APP
+  --out OUT
+  --profile {release,dev}
+--- stderr
+=== ['build', '--a'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit build [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+neokit build: error: argument --app: expected one argument
+=== ['build', '--app'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit build [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+neokit build: error: argument --app: expected one argument
+=== ['build', '--app', '--', 'x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit build [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+neokit build: error: argument --app: expected one argument
+=== ['build', '--app=', 'x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: unrecognized arguments: x
+=== ['build', '--app', 'a b'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(a b)
+command='build'
+out=Path(ROOT/build/studio)
+profile='release'
+--- stderr
+=== ['build', '--app', '-x y'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(-x y)
+command='build'
+out=Path(ROOT/build/studio)
+profile='release'
+--- stderr
+=== ['build', '--app', 'a//b/./c/', '--out', '//o', '--profile', 'dev'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(a/b/c)
+command='build'
+out=Path(//o)
+profile='dev'
+--- stderr
+=== ['build', '--out', 'é', '--app', '~/x'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(~/x)
+command='build'
+out=Path(é)
+profile='release'
+--- stderr
+=== ['build', '--', '--app', 'x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: unrecognized arguments: -- --app x
+=== ['build', '--app', 'a', '--app', 'b'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(b)
+command='build'
+out=Path(ROOT/build/studio)
+profile='release'
+--- stderr
+=== ['build', '--profile', 'x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit build [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+neokit build: error: argument --profile: invalid choice: 'x' (choose from 'release', 'dev')
+=== ['build', '--profile'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit build [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+neokit build: error: argument --profile: expected one argument
+=== ['build', '--profile', '--app', 'x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit build [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+neokit build: error: argument --profile: expected one argument
+=== ['build', '--pro=dev'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='build'
+out=Path(ROOT/build/studio)
+profile='dev'
+--- stderr
+=== ['build', '--profile=', 'x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit build [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+neokit build: error: argument --profile: invalid choice: '' (choose from 'release', 'dev')
+=== ['build', '-', 'x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: unrecognized arguments: - x
+=== ['serve', '--port', 'abc'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit serve [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                    [--port PORT] [--no-build]
+neokit serve: error: argument --port: invalid int value: 'abc'
+=== ['serve', '--port='] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit serve [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                    [--port PORT] [--no-build]
+neokit serve: error: argument --port: invalid int value: ''
+=== ['serve', '--port', '-5'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='serve'
+no_build=False
+out=Path(ROOT/build/studio)
+port=-5
+profile='release'
+--- stderr
+=== ['serve', '--port', '1_000'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='serve'
+no_build=False
+out=Path(ROOT/build/studio)
+port=1000
+profile='release'
+--- stderr
+=== ['serve', '--port', ' 7 '] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='serve'
+no_build=False
+out=Path(ROOT/build/studio)
+port=7
+profile='release'
+--- stderr
+=== ['serve', '--port', '-1.5'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit serve [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                    [--port PORT] [--no-build]
+neokit serve: error: argument --port: invalid int value: '-1.5'
+=== ['serve', '--port', '+3'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='serve'
+no_build=False
+out=Path(ROOT/build/studio)
+port=3
+profile='release'
+--- stderr
+=== ['serve', '--port', '1__0'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit serve [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                    [--port PORT] [--no-build]
+neokit serve: error: argument --port: invalid int value: '1__0'
+=== ['serve', '--p', '1'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit serve [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                    [--port PORT] [--no-build]
+neokit serve: error: ambiguous option: --p could match --profile, --port
+=== ['serve', '--po', '1'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='serve'
+no_build=False
+out=Path(ROOT/build/studio)
+port=1
+profile='release'
+--- stderr
+=== ['serve', '--no'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='serve'
+no_build=True
+out=Path(ROOT/build/studio)
+port=8094
+profile='release'
+--- stderr
+=== ['serve', '--no-build=x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit serve [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                    [--port PORT] [--no-build]
+neokit serve: error: argument --no-build: ignored explicit argument 'x'
+=== ['serve', '--no-build', '--port', '9', '--app', 'x'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(x)
+command='serve'
+no_build=True
+out=Path(ROOT/build/studio)
+port=9
+profile='release'
+--- stderr
+=== ['serve', '--p=1'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit serve [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                    [--port PORT] [--no-build]
+neokit serve: error: ambiguous option: --p=1 could match --profile, --port
+=== ['serve', '--=x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit serve [-h] [--app APP] [--out OUT] [--profile {release,dev}]
+                    [--port PORT] [--no-build]
+neokit serve: error: ambiguous option: --=x could match --help, --app, --out, --profile, --port, --no-build
+=== ['dev', '--port', '70000'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='dev'
+out=Path(ROOT/build/studio)
+port=70000
+profile='dev'
+--- stderr
+=== ['dev', '--profile', 'release'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='dev'
+out=Path(ROOT/build/studio)
+port=8094
+profile='release'
+--- stderr
+=== ['export', '--strict', '--dest', 'd'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='export'
+dest=Path(d)
+out=Path(ROOT/build/studio)
+profile='release'
+strict=True
+--- stderr
+=== ['export', '--d', 'x'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='export'
+dest=Path(x)
+out=Path(ROOT/build/studio)
+profile='release'
+strict=False
+--- stderr
+=== ['export', '--s'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='export'
+dest=Path(ROOT/build/export)
+out=Path(ROOT/build/studio)
+profile='release'
+strict=True
+--- stderr
+=== ['test', '--extended', '--postgres'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='test'
+extended=True
+postgres=True
+--- stderr
+=== ['test', '--e', '--p'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='test'
+extended=True
+postgres=True
+--- stderr
+=== ['test', 'x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: unrecognized arguments: x
+=== ['init'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit init [-h] [--standalone] path
+neokit init: error: the following arguments are required: path
+=== ['init', 'a', 'b'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: unrecognized arguments: b
+=== ['init', '--', '-x'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='init'
+path=Path(-x)
+standalone=False
+--- stderr
+=== ['init', '-x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit init [-h] [--standalone] path
+neokit init: error: the following arguments are required: path
+=== ['init', '--standalone=1'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit init [-h] [--standalone] path
+neokit init: error: argument --standalone: ignored explicit argument '1'
+=== ['init', '--standalone', 'p/q/'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='init'
+path=Path(p/q)
+standalone=True
+--- stderr
+=== ['init', 'x', '--'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='init'
+path=Path(x)
+standalone=False
+--- stderr
+=== ['init', '--', '--', 'x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: unrecognized arguments: x
+=== ['init', ''] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='init'
+path=Path(.)
+standalone=False
+--- stderr
+=== ['release'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit release [-h] --out OUT [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+neokit release: error: the following arguments are required: --out
+=== ['release', '--out', 'o', '--neo', 'x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit release [-h] --out OUT [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+neokit release: error: ambiguous option: --neo could match --neo-archive, --neo-sha256
+=== ['release', '--out', 'o', '--neo-s', 'abc'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='release'
+neo_archive=None
+neo_sha256='abc'
+out=Path(o)
+--- stderr
+=== ['release', '--out=o', '--neo-archive', 'a//b/'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='release'
+neo_archive=Path(a/b)
+neo_sha256=None
+out=Path(o)
+--- stderr
+=== ['release', '--out', 'o', '--neo-sha256', ''] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='release'
+neo_archive=None
+neo_sha256=''
+out=Path(o)
+--- stderr
+=== ['release', '--neo-archive', 'a'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit release [-h] --out OUT [--neo-archive NEO_ARCHIVE]
+                      [--neo-sha256 NEO_SHA256]
+neokit release: error: the following arguments are required: --out
+=== ['doctor', 'extra'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: unrecognized arguments: extra
+=== ['password', '--x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit [-h]
+              {prepare,build,serve,dev,export,test,init,release,doctor,revalidate,password,migrate,preview}
+              ...
+neokit: error: unrecognized arguments: --x
+=== ['prepare', '-h', '--bad'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit prepare [-h]
+
+options:
+  -h, --help  show this help message and exit
+--- stderr
+=== ['prepare', '--bad', '-h'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+usage: neokit prepare [-h]
+
+options:
+  -h, --help  show this help message and exit
+--- stderr
+=== ['revalidate', '--out', 'r'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+command='revalidate'
+out=Path(r)
+--- stderr
+=== ['migrate', '--build-only', '--app', 'm'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(m)
+build_only=True
+command='migrate'
+out=Path(ROOT/build/studio-migrations)
+--- stderr
+=== ['migrate', '--b'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+build_only=True
+command='migrate'
+out=Path(ROOT/build/studio-migrations)
+--- stderr
+=== ['preview', '--dir', 'x', '--port', '9'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='preview'
+dir=Path(x)
+port=9
+--- stderr
+=== ['preview', '--port', 'x'] COLUMNS=- cwd=root
+exit 2
+--- stdout
+--- stderr
+usage: neokit preview [-h] [--dir DIR] [--port PORT]
+neokit preview: error: argument --port: invalid int value: 'x'
+=== ['preview', '--d=y'] COLUMNS=- cwd=root
+exit 0
+--- stdout
+command='preview'
+dir=Path(y)
+port=8095
+--- stderr
+=== ['preview'] COLUMNS=- cwd=app
+exit 0
+--- stdout
+command='preview'
+dir=Path(ROOT/examples/blog-export)
+port=8095
+--- stderr
+=== ['revalidate'] COLUMNS=- cwd=app
+exit 0
+--- stdout
+app=Path(ROOT/examples/blog)
+command='revalidate'
+out=Path(ROOT/examples/blog/.neokit/build-revalidation)
+--- stderr
+=== ['migrate'] COLUMNS=- cwd=studio
+exit 0
+--- stdout
+app=Path(ROOT/examples/studio)
+build_only=False
+command='migrate'
+out=Path(ROOT/build/studio-migrations)
+--- stderr
+=== ['export', '--app', 'elsewhere'] COLUMNS=- cwd=app
+exit 0
+--- stdout
+app=Path(elsewhere)
+command='export'
+dest=Path(ROOT/examples/blog-export)
+out=Path(ROOT/examples/blog/.neokit/build)
+profile='release'
+strict=False
+--- stderr

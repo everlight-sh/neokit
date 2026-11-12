@@ -1,0 +1,238 @@
+=== sdk
+ok
+=== plain
+Created BASE/apps/plain. Run ./neokit dev --app BASE/apps/plain
+  .gitignore 420 40 b040e35de5f77aafbfd07aa773c056d4ce87103e0d7afd615fec52d3689ef84d
+    | .neokit/
+    | .neo-build/
+    | node_modules/
+    | .env
+  app/ 493
+  app/layout.view 420 410 1c5c61becc31f813fbacebf53823fe37e9f493502c8cc8d3afe99cfa1b775ee2
+    | @props(title:text,content:html,client:bool,mode:text)
+    | <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ title }}</title><link rel="stylesheet" href="/site.css"></head><body><main id="web-page" tabindex="-1">{{ content }}</main>{% if client %}<script type="module" src="@asset(client.js)"></script>{% endif %}</body></html>
+  app/page.neo 420 129 cd3ae5c975b910052f94eb28f721b3d04069f47ce0dfcbd4e85c0a86a1f94474
+    | import "pkg:neokit"
+    | type PageProps={title:Arr u8 _}
+    | fn load(request:WebRequest)->PageProps=PageProps {title="Hello from NeoKit"}
+  app/page.toml 420 26 7d108cb2d962a97d4fcc01e6c7e093386f5ff6ccfcf870ee29823009ebe91abb
+    | loader="load"
+    | client=true
+  app/page.view 420 75 6f6f007292641d68de2af352e93e6a8304158100710a1b4be12a89a2955505d1
+    | @props(title:text)
+    | <h1>{{ title }}</h1><p>Edit app/page.view to begin.</p>
+  client/ 493
+  client/index.js 420 75 d4df9f6175c85c08cc64da157632af86eb38ab8b1755317ccac67cc694152ef8
+    | import { start } from "../../../sdk/framework/client/runtime.js";
+    | start();
+  neo.lock 420 20 9cffebbb23b91cd14b4e9a6b29e788bca181b4efa8993b987279e1221709a165
+    | {"locked": "plain"}
+  neo.toml 420 138 6f480ba7751df4ea67270693675084d0fd79e7eefe757171b9ca7a3a16bcb10c
+    | [package]
+    | name="plain"
+    | version="0.1.0"
+    | entry="app/page.neo"
+    | 
+    | [dependencies]
+    | neokit={path="../../sdk/framework",version="9.8.7-fixture.1"}
+  public/ 493
+  public/site.css 420 113 2c473070b7d0d42043896f75103503a8f4c1b681328c44e801e91403a9cd14ed
+    | body{font-family:system-ui;max-width:60rem;margin:4rem auto;padding:1rem;color:#172033}h1{letter-spacing:-.03em}
+  web.toml 420 20 6cec74417fe269e47556221b9a3df754d92fc2d1d953adb56a269c97ff096c4c
+    | [site]
+    | name="plain"
+=== standalone
+Created BASE/apps/standalone. Run ./neokit dev from the project directory.
+  .gitignore 420 40 b040e35de5f77aafbfd07aa773c056d4ce87103e0d7afd615fec52d3689ef84d
+    | .neokit/
+    | .neo-build/
+    | node_modules/
+    | .env
+  app/ 493
+  app/layout.view 420 410 1c5c61becc31f813fbacebf53823fe37e9f493502c8cc8d3afe99cfa1b775ee2
+    | @props(title:text,content:html,client:bool,mode:text)
+    | <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ title }}</title><link rel="stylesheet" href="/site.css"></head><body><main id="web-page" tabindex="-1">{{ content }}</main>{% if client %}<script type="module" src="@asset(client.js)"></script>{% endif %}</body></html>
+  app/page.neo 420 129 cd3ae5c975b910052f94eb28f721b3d04069f47ce0dfcbd4e85c0a86a1f94474
+    | import "pkg:neokit"
+    | type PageProps={title:Arr u8 _}
+    | fn load(request:WebRequest)->PageProps=PageProps {title="Hello from NeoKit"}
+  app/page.toml 420 26 7d108cb2d962a97d4fcc01e6c7e093386f5ff6ccfcf870ee29823009ebe91abb
+    | loader="load"
+    | client=true
+  app/page.view 420 75 6f6f007292641d68de2af352e93e6a8304158100710a1b4be12a89a2955505d1
+    | @props(title:text)
+    | <h1>{{ title }}</h1><p>Edit app/page.view to begin.</p>
+  client/ 493
+  client/index.js 420 83 61438c914d9a46e523b3920a0d68179687546e8c01a77b390074d03c82894756
+    | import { start } from "../vendor/neokit-sdk/framework/client/runtime.js";
+    | start();
+  neo.lock 420 25 6ead30c3d09f17c4e02b3935208556a5b6d3674d9906aa4859ea293241a6c280
+    | {"locked": "standalone"}
+  neo.toml 420 151 216a517d3b22f3c58c33d4607a72cc42868b09c067eb3da61e483c4bad0d9a7d
+    | [package]
+    | name="standalone"
+    | version="0.1.0"
+    | entry="app/page.neo"
+    | 
+    | [dependencies]
+    | neokit={path="vendor/neokit-sdk/framework",version="9.8.7-fixture.1"}
+  neokit 493 190 5ac8dfd006adc3fddb7117fcd8123bf5d0ce35e941857f8315e7456b132221cf
+    | #!/bin/sh
+    | set -eu
+    | project=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+    | cd "$project"
+    | export NEO_HOME="$project/vendor/neokit-sdk/neo"
+    | exec "$project/vendor/neokit-sdk/framework/neokit" "$@"
+  public/ 493
+  public/site.css 420 113 2c473070b7d0d42043896f75103503a8f4c1b681328c44e801e91403a9cd14ed
+    | body{font-family:system-ui;max-width:60rem;margin:4rem auto;padding:1rem;color:#172033}h1{letter-spacing:-.03em}
+  vendor/ 493
+  vendor/neokit-sdk/ 493
+  vendor/neokit-sdk/MANIFEST.json 420 3906 cb88962d3cf58e597bbbe7a3d8b3cc7b9625877624202cd9d42759e83b67250a
+  vendor/neokit-sdk/README.md 420 62 220957a5269ef167a83d420c2d550f8df7621696d2e45a4f3d83776a0a8d3b19
+  vendor/neokit-sdk/SHA256SUMS 420 3551 df246447221b91fbc64524590aabbafaf77fe96df2c9f9080d0ab5b16d2e54b2
+  vendor/neokit-sdk/VERSION 420 16 8dae7ef23e5afaabf410e4a1ad97f398d1473e3c14d7a4255536a7087d87774a
+  vendor/neokit-sdk/framework/ 493
+  vendor/neokit-sdk/framework/.dockerignore 420 6 f10ec3ffef16a8dace9b58801e0da28819c98af4c8933410d7e7cacc952f9e9b
+  vendor/neokit-sdk/framework/AGENTS.md 420 9 070a8ff8c31696dd57f1d0f8dfbfb1c9151ebd903c5d7e41d9dbf4133d54f84e
+  vendor/neokit-sdk/framework/CHANGELOG.md 420 10 22b4d00e94ada42bb05305dcf122bdd3cea690e9bc42015c4fae814024dd2926
+  vendor/neokit-sdk/framework/Dockerfile 420 13 bb57c7da220a8753d7bdabac0d3afdb6efa742e4c736c5bc93ab40dfd5e23b9b
+  vendor/neokit-sdk/framework/LICENSE 420 16 f570e537a1e682351461f2f7019f91a321328bebac9648381b514c628785bdd0
+  vendor/neokit-sdk/framework/README.md 420 10 7e98df7437f1b50bc0ea2ba7180f28bdb7a043cd2c6045e1783124cdba2fdcc5
+  vendor/neokit-sdk/framework/SECURITY.md 420 11 9efcc3ccba113a86dcca90b2b899588159b48b270014ffb47558b04ae2fef1b3
+  vendor/neokit-sdk/framework/bun.lock 420 3 ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356
+  vendor/neokit-sdk/framework/cli/ 493
+  vendor/neokit-sdk/framework/cli/launcher.sh 493 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb
+  vendor/neokit-sdk/framework/cli/main.neo 420 21 e2ca17504fda5beeb29f6f37cbc9765483dd2820354a212368d2e846094e12bb
+  vendor/neokit-sdk/framework/client/ 493
+  vendor/neokit-sdk/framework/client/runtime.js 420 27 1bf006ef3daca2797aaab7f6f6474b31e1d47694dd3334b0d812703331235792
+  vendor/neokit-sdk/framework/client/types.ts 420 24 62fedd8f7f6014812cc4a0b5d0fd44767fa07e76e2b9c8105cef7f87a5d48cd1
+  vendor/neokit-sdk/framework/deploy/ 493
+  vendor/neokit-sdk/framework/deploy/Caddyfile.local 420 4 35bba7869b69140ec44ab0ef93bc13f1a3b0ae15f5ee7293b425a0ddbd102da2
+  vendor/neokit-sdk/framework/deploy/install.sh 493 31 3fe187a259f605690a72ef15e919027b11743ac2fa7f71cb22b3ca3b8dd91bbf
+  vendor/neokit-sdk/framework/docs/ 493
+  vendor/neokit-sdk/framework/docs/alpha-release.md 420 48 de330ef6fdd82ad2c6fa9a0f9f771846abab1c85fdab46c625c9e011529584e6
+  vendor/neokit-sdk/framework/examples/ 493
+  vendor/neokit-sdk/framework/examples/a-very-long-directory-name-for-the-ustar-prefix-field-0123456789/ 493
+  vendor/neokit-sdk/framework/examples/a-very-long-directory-name-for-the-ustar-prefix-field-0123456789/another-long-directory-name-abcdefghij/ 493
+  vendor/neokit-sdk/framework/examples/a-very-long-directory-name-for-the-ustar-prefix-field-0123456789/another-long-directory-name-abcdefghij/page.view 420 12 7eb3296fc33043fa06999040f25574249116ef652fa56b76f05dcb3ffe4d575b
+  vendor/neokit-sdk/framework/examples/app/ 493
+  vendor/neokit-sdk/framework/examples/app/.env.example 420 10 c283007d8774ef7af9ef9242045d49e726f834624768abf670d1e9a6634ee651
+  vendor/neokit-sdk/framework/examples/app/app/ 493
+  vendor/neokit-sdk/framework/examples/app/app/page.view 420 10 11e6d60e8d8b1830e6ebe95ad0d470f546936d07a5109b8b2004e3f81fbdf847
+  vendor/neokit-sdk/framework/neo.lock 420 621 c4e0bd20c937429f38c6f2ba0909b64c039d0154e9da68a5faf89a4b31b3a264
+  vendor/neokit-sdk/framework/neo.toml 420 143 89fb429561ede5af0ab81883b61e917e3e20647e39ef1a318ef4b23889eb7497
+  vendor/neokit-sdk/framework/neokit 493 32 bc275ece5d505c20b91e6c5409f717ba93bd27ae894dc51fbef55de7da3bb97d
+  vendor/neokit-sdk/framework/package.json 420 44 aa2cdee5d3d6f0d2d2d607d14154d3af92cd753a524f26073af8f768295d0b81
+  vendor/neokit-sdk/framework/src/ 493
+  vendor/neokit-sdk/framework/src/lib.neo 420 20 980f1dc180fd43a144915b972b03ab7e0d994c68af132fed91e57e7013033990
+  vendor/neokit-sdk/framework/tests/ 493
+  vendor/neokit-sdk/framework/tests/LICENSE 420 13 06467702816a95afc79289ab870981f8b6e2da17bcc722b5c7322e04b97a08c9
+  vendor/neokit-sdk/framework/tests/lib.ts 420 11 8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881
+  vendor/neokit-sdk/framework/tools/ 493
+  vendor/neokit-sdk/framework/tools/run.py 420 9 cc42155088fca5730758db72b2a5bca33112a941dfaa2d43098ec422ce4ea213
+  vendor/neokit-sdk/framework/web 493 27 fe3be3011800c281bd763d104e4edc75e9bf0628087790a3060fc5abe1de28e0
+  vendor/neokit-sdk/install.sh 493 31 3fe187a259f605690a72ef15e919027b11743ac2fa7f71cb22b3ca3b8dd91bbf
+  vendor/neokit-sdk/neo/ 493
+  vendor/neokit-sdk/neo/VERSION 420 6 be3c6d2c6c406a64d44f0b6464a887e290416dd90c524094485b1be00936d6d7
+  vendor/neokit-sdk/neo/bin/ 493
+  vendor/neokit-sdk/neo/bin/neoc-darwin-arm64 493 33 32b4157b71902aa571292fb3c23316ae5ab56aa8c6bae18963dd51e7b7296862
+  vendor/neokit-sdk/neo/bin/neoc-linux-arm64 493 32 cbf79fe27374891acc8358e738c2d074b3a9c3f3383cc28fee096bd757564911
+  vendor/neokit-sdk/neo/bin/neoc-linux-x86_64 493 33 e2a214629801a34eb64a30f989e86415fe275941ef0137d9f8b295ade068bbed
+  vendor/neokit-sdk/neo/neo 493 268 956e29eea8c81efbdd3d80d983599ec45ea742e19b30eac800b555f75dfac4ea
+  vendor/neokit-sdk/neo-libs/ 493
+  vendor/neokit-sdk/neo-libs/sample/ 493
+  vendor/neokit-sdk/neo-libs/sample/LICENSE 420 15 0b8f88b94eacb00c34b77bfce908dddbc2aa7719ff0aeba42d01025e206d8429
+  vendor/neokit-sdk/neo-libs/sample/LICENSE-THIRD-PARTY 420 12 bd66581b2e6f7c4d902f990d9c192a46b0066b685c0ece9ac48ff76f5c8b5905
+  vendor/neokit-sdk/neo-libs/sample/lib.neo 420 23 ad71479100798fe6a798978a845397461ad5612f44dcecbd59ea390e35a777eb
+  web.toml 420 25 e4dd56cb755291bad67bc22fab1d18f3f63d90632009f4763def638288db62e6
+    | [site]
+    | name="standalone"
+=== existing empty directory
+Created BASE/apps/empty. Run ./neokit dev --app BASE/apps/empty
+=== nested and quoted name
+Created BASE/apps/deep/er/my "app" é. Run ./neokit dev --app BASE/apps/deep/er/my "app" é
+  .gitignore 420 40 b040e35de5f77aafbfd07aa773c056d4ce87103e0d7afd615fec52d3689ef84d
+    | .neokit/
+    | .neo-build/
+    | node_modules/
+    | .env
+  app/ 493
+  app/layout.view 420 410 1c5c61becc31f813fbacebf53823fe37e9f493502c8cc8d3afe99cfa1b775ee2
+    | @props(title:text,content:html,client:bool,mode:text)
+    | <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ title }}</title><link rel="stylesheet" href="/site.css"></head><body><main id="web-page" tabindex="-1">{{ content }}</main>{% if client %}<script type="module" src="@asset(client.js)"></script>{% endif %}</body></html>
+  app/page.neo 420 129 cd3ae5c975b910052f94eb28f721b3d04069f47ce0dfcbd4e85c0a86a1f94474
+    | import "pkg:neokit"
+    | type PageProps={title:Arr u8 _}
+    | fn load(request:WebRequest)->PageProps=PageProps {title="Hello from NeoKit"}
+  app/page.toml 420 26 7d108cb2d962a97d4fcc01e6c7e093386f5ff6ccfcf870ee29823009ebe91abb
+    | loader="load"
+    | client=true
+  app/page.view 420 75 6f6f007292641d68de2af352e93e6a8304158100710a1b4be12a89a2955505d1
+    | @props(title:text)
+    | <h1>{{ title }}</h1><p>Edit app/page.view to begin.</p>
+  client/ 493
+  client/index.js 420 81 db923ff9ae19f209f16f339151ace54f5102bc6cee4ebf766bce467225a54268
+    | import { start } from "../../../../../sdk/framework/client/runtime.js";
+    | start();
+  neo.lock 420 26 db63f50aa6409984dc5183979c32b6649e352c9543661b570274d1b74de9c2d2
+    | {"locked": "my "app" é"}
+  neo.toml 420 156 0e7b503e7f3945389b48f5133215d0fcdedb5fa99fb41a1a8b2d2e4397049399
+    | [package]
+    | name="my \"app\" \u00e9"
+    | version="0.1.0"
+    | entry="app/page.neo"
+    | 
+    | [dependencies]
+    | neokit={path="../../../../sdk/framework",version="9.8.7-fixture.1"}
+  public/ 493
+  public/site.css 420 113 2c473070b7d0d42043896f75103503a8f4c1b681328c44e801e91403a9cd14ed
+    | body{font-family:system-ui;max-width:60rem;margin:4rem auto;padding:1rem;color:#172033}h1{letter-spacing:-.03em}
+  web.toml 420 32 3e38bda4e0d5037a4ff33f3bec2eaeb004be0f65299110dc8725ce3079cb17b5
+    | [site]
+    | name="my \"app\" \u00e9"
+=== not empty
+error: Project destination must be empty
+=== a file
+error: [Errno 20] Not a directory: 'BASE/apps/file'
+=== standalone without a Neo beside the root
+error: Use a released SDK for standalone scaffolding, or build a release with --neo-archive and --neo-sha256
+=== lock fails
+error: Command '['BASE/failing-neo/neo', 'pkg', 'lock', 'BASE/apps/failing']' returned non-zero exit status 3.
+  .gitignore 420 40 b040e35de5f77aafbfd07aa773c056d4ce87103e0d7afd615fec52d3689ef84d
+    | .neokit/
+    | .neo-build/
+    | node_modules/
+    | .env
+  app/ 493
+  app/layout.view 420 410 1c5c61becc31f813fbacebf53823fe37e9f493502c8cc8d3afe99cfa1b775ee2
+    | @props(title:text,content:html,client:bool,mode:text)
+    | <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ title }}</title><link rel="stylesheet" href="/site.css"></head><body><main id="web-page" tabindex="-1">{{ content }}</main>{% if client %}<script type="module" src="@asset(client.js)"></script>{% endif %}</body></html>
+  app/page.neo 420 129 cd3ae5c975b910052f94eb28f721b3d04069f47ce0dfcbd4e85c0a86a1f94474
+    | import "pkg:neokit"
+    | type PageProps={title:Arr u8 _}
+    | fn load(request:WebRequest)->PageProps=PageProps {title="Hello from NeoKit"}
+  app/page.toml 420 26 7d108cb2d962a97d4fcc01e6c7e093386f5ff6ccfcf870ee29823009ebe91abb
+    | loader="load"
+    | client=true
+  app/page.view 420 75 6f6f007292641d68de2af352e93e6a8304158100710a1b4be12a89a2955505d1
+    | @props(title:text)
+    | <h1>{{ title }}</h1><p>Edit app/page.view to begin.</p>
+  client/ 493
+  client/index.js 420 75 d4df9f6175c85c08cc64da157632af86eb38ab8b1755317ccac67cc694152ef8
+    | import { start } from "../../../sdk/framework/client/runtime.js";
+    | start();
+  neo.toml 420 140 726ce1cd12a18801b0008971975a58de52bd75c1c4a9b63a54365fc79aa91327
+    | [package]
+    | name="failing"
+    | version="0.1.0"
+    | entry="app/page.neo"
+    | 
+    | [dependencies]
+    | neokit={path="../../sdk/framework",version="9.8.7-fixture.1"}
+  public/ 493
+  public/site.css 420 113 2c473070b7d0d42043896f75103503a8f4c1b681328c44e801e91403a9cd14ed
+    | body{font-family:system-ui;max-width:60rem;margin:4rem auto;padding:1rem;color:#172033}h1{letter-spacing:-.03em}
+  web.toml 420 22 d8056d6cb8bac693e35ab2f1ef9d299e1e29343c82a76db3eafd35d8255bee16
+    | [site]
+    | name="failing"

@@ -1,0 +1,124 @@
+; Driver for cli/release.neo's effectful functions, as release.neo.toml and
+; parity.sh run it.
+;
+; Usage (paths relative to the working directory):
+;   driver.neo bundle OUT ROOT ARCHIVE SHA256   rel_bundle; prints its JSON
+;   driver.neo assemble DEST ROOT ARCHIVE SHA256 rel_assemble; prints VERSION
+;   driver.neo unpack ARCHIVE SHA256 DEST       rel_unpack_neo; prints the
+;                                               file count or the error
+;   driver.neo fixture                          the golden cases (see
+;                                               release.neo.toml)
+; ARCHIVE "-" means None (the Neo installed beside ROOT). Errors print as
+; "error: MESSAGE" on stdout and exit 1, as `neokit` prints them on stderr.
+import "std:io"
+import "std:fs"
+import "std:process"
+import "std:deflate"
+import "../../../cli/release.neo"
+
+effect fn arg(i:i64) -> Arr u8 _ = let value=cli_arg(i) in if value.present then value.value else text_empty()
+effect fn none_dash(borrow text:Arr u8 _) -> Arr u8 _ = if text_equal(text,"-") then text_empty() else text
+effect fn finish(borrow output:Arr u8 _, failed:bool) -> unit
+  = let printed=print_out(output) in if failed then process_exit(1) else noop()
+
+effect fn run_bundle() -> unit
+  = match rel_bundle(arg(2),arg(3),env_list(),none_dash(arg(4)),arg(5)) {
+      Ok(bundle) => finish(concat(rel_bundle_json(bundle),"\n"),false),
+      Err(message) => finish(concat("error: ",message,"\n"),true)
+    }
+effect fn run_assemble() -> unit
+  = match rel_assemble(arg(2),arg(3),env_list(),none_dash(arg(4)),arg(5)) {
+      Ok(sdk) => finish(concat(sdk.version,"\n"),false),
+      Err(message) => finish(concat("error: ",message,"\n"),true)
+    }
+effect fn run_unpack() -> unit
+  = match rel_unpack_neo(arg(2),arg(3),arg(4)) {
+      Ok(count) => finish(concat(text_int(count)," entries\n"),false),
+      Err(message) => finish(concat("error: ",message,"\n"),true)
+    }
+
+; ---- golden cases on tests/cli_golden/release/fixture ----
+
+effect fn fixture_dir() -> Arr u8 _ = "tests/cli_golden/release/fixture"
+effect fn scratch() -> Arr u8 _
+  = let cwd=host_cwd() in let base=match cwd { Ok(path) => host_join(path,"build/cli-golden-release"), Err(message) => "build/cli-golden-release" } in
+    let removed=if host_exists(base) then host_remove_tree(base) else Ok::<i64,Arr u8 _>(0) in
+    let made=host_mkdirs(base) in base
+effect fn read_or(borrow path:Arr u8 _) -> Arr u8 _ = match host_read_bytes(path) { Ok(data) => data, Err(message) => concat("error: ",message) }
+effect fn shown(borrow result:Result<i64,Arr u8 _>) -> Arr u8 _ = match result { Ok(count) => concat("ok ",text_int(count)), Err(message) => concat("error: ",message) }
+effect fn archive_sha(borrow name:Arr u8 _) -> Arr u8 _ = host_sha256_hex(read_or(host_join(fixture_dir(),name)))
+; The stand-in Neo archive generate.py writes, named after rel_neo_version.
+fn neo_archive_name() -> Arr u8 _ = concat("neo-",rel_neo_version(),".tar.gz")
+
+; Each member of the SDK archive: mode, size, SHA-256 and name, then the
+; SHA-256 and size of the whole uncompressed tar.
+fn listing(borrow tar:Arr u8 _) -> Arr u8 _
+  = match rel_tar_entries(tar) {
+      Err(message) => concat("tar error: ",message,"\n"),
+      Ok(entries) => loop (out=text_empty(), i:i64{i>=0}=0) while i<len(entries)
+        next (concat(out,text_int(entries[i].mode)," ",text_int(entries[i].size)," ",
+               host_sha256_hex(text_slice(tar,entries[i].offset,entries[i].offset+entries[i].size))," ",entries[i].name,"\n"), i+1) yield out
+    }
+effect fn bundle_case(borrow base:Arr u8 _, borrow environment:Arr Arr u8 _ _) -> Arr u8 _
+  = let output=host_join(base,"out/neokit.tar.gz") in
+    let archive=host_join(fixture_dir(),neo_archive_name()) in
+    match rel_bundle(output,host_join(fixture_dir(),"root"),environment,archive,archive_sha(neo_archive_name())) {
+      Err(message) => concat("bundle error: ",message,"\n"),
+      Ok(bundle) =>
+        let packed=read_or(output) in
+        let tar=gzip_decode(packed,1073741824) in
+        if !tar.ok then "bundle: not gzip\n" else
+        concat("version ",bundle.version,"\n",
+          "gzip header ",host_hex(text_slice(packed,0,10)),"\n",
+          "sha256 matches file ",if text_equal(bundle.sha256,host_sha256_hex(packed)) then "yes" else "no","\n",
+          listing(tar.value),
+          "tar ",host_sha256_hex(tar.value)," ",text_int(len(tar.value)),"\n")
+    }
+effect fn assemble_case(borrow base:Arr u8 _, borrow environment:Arr Arr u8 _ _) -> Arr u8 _
+  = let sdk=host_join(base,"sdk") in
+    let archive=host_join(fixture_dir(),neo_archive_name()) in
+    match rel_assemble(sdk,host_join(fixture_dir(),"root"),environment,archive,archive_sha(neo_archive_name())) {
+      Err(message) => concat("assemble error: ",message,"\n"),
+      Ok(done) =>
+        let again=match rel_assemble(sdk,host_join(fixture_dir(),"root"),environment,archive,archive_sha(neo_archive_name())) {
+          Ok(twice) => "ok", Err(message) => concat("error: ",message) } in
+        concat("--- MANIFEST.json\n",read_or(host_join(sdk,"MANIFEST.json")),
+          "--- SHA256SUMS\n",read_or(host_join(sdk,"SHA256SUMS")),
+          "--- VERSION\n",read_or(host_join(sdk,"VERSION")),
+          "--- README.md\n",read_or(host_join(sdk,"README.md")),
+          "--- again\n",text_replace(again,base,"BASE"),"\n")
+    }
+; unpack_neo on each archive of fixture/unpack/ (as generate.py names them:
+; CASE.tar.gz or CASE.tar), with its own checksum, a wrong one and none.
+effect fn unpack_cases(borrow base:Arr u8 _) -> Arr u8 _
+  = let names=match host_listdir(host_join(fixture_dir(),"unpack")) { Ok(found) => found, Err(message) => text_words() } in
+    loop (out=text_empty(), i=0) while i<len(names)
+      next (let name=text_word(names,i) in let archive=host_join(host_join(fixture_dir(),"unpack"),name) in
+            let target=host_join(base,concat("unpack-",text_int(i))) in
+            let result=shown(rel_unpack_neo(archive,text_upper(host_sha256_hex(read_or(archive))),target)) in
+            let files=if text_starts(result,"ok") then
+              loop (o=text_empty(), j=0) while j<len(host_rglob(target,"*"))
+                next (let path=text_word(host_rglob(target,"*"),j) in
+                      concat(o,"  ",match host_relative_to(path,target) { Ok(r) => r, Err(m) => path },
+                        if host_is_dir(path) then "/" else concat(" ",text_int(match host_mode(path) { Ok(mode) => mode, Err(m) => -1 })," ",host_sha256_hex(read_or(path))),"\n"), j+1) yield o
+              else text_empty() in
+            concat(out,name,": ",text_replace(result,base,"BASE"),"\n",files,
+              name," wrong sum: ",shown(rel_unpack_neo(archive,"00",host_join(base,"never"))),"\n",
+              name," no sum: ",shown(rel_unpack_neo(archive,"",host_join(base,"never"))),"\n"), i+1) yield out
+
+effect fn run_fixture() -> unit
+  = let base=scratch() in
+    let environment=host_env_set(env_list(),"SOURCE_DATE_EPOCH","1700000000") in
+    let output=concat("=== bundle\n",bundle_case(base,environment),
+      "=== assemble\n",assemble_case(base,environment),
+      "=== unpack\n",unpack_cases(base)) in
+    let removed=host_remove_tree(base) in
+    finish(output,false)
+
+effect fn main() -> unit
+  = let mode=arg(1) in
+    if text_equal(mode,"bundle") then run_bundle()
+    else if text_equal(mode,"assemble") then run_assemble()
+    else if text_equal(mode,"unpack") then run_unpack()
+    else if text_equal(mode,"fixture") then run_fixture()
+    else finish("usage: driver.neo bundle|assemble|unpack|fixture ...\n",true)

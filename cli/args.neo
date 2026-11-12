@@ -1,0 +1,563 @@
+; `neokit`'s command line, natively: compiler/cli.py main()'s argparse
+; parser (Python 3.12) with the same commands, options, defaults, help and
+; usage errors.
+;
+; cmd_parse_with(argv, root, cwd, web, columns) parses the arguments after
+; the program name. root is the framework root (cli.py's ROOT), cwd the
+; working directory and web whether cwd/web.toml is a file (the defaults of
+; --app, --out, --dest and --dir follow from them, as cli.py computes them
+; from Path.cwd()), columns the COLUMNS variable ("" when unset). The result
+; is either the parsed CmdArgs (ok) or what argparse would print and the
+; exit status: help on stdout with 0, or the usage and
+; "PROG: error: MESSAGE" on stderr with 2. cmd_parse reads cwd and web.toml
+; itself.
+;
+; The parser follows argparse's algorithm, not just its output for common
+; cases: option prefixes (--pro for --profile, "ambiguous option" when
+; several match), --opt=value, -hVALUE, "--" ending the options, negative
+; numbers as values, required arguments, unrecognized arguments (reported
+; by the top-level parser with its usage, as argparse's subparsers do) and
+; HelpFormatter's layout, usage wrapping and textwrap line breaking at
+; COLUMNS-2 columns.
+;
+; Differences: Python reads the terminal's width when COLUMNS is unset or
+; not a positive integer and stdout is a terminal; this uses 80 columns
+; then. --port, like Python's int(), accepts surrounding whitespace, a sign
+; and single underscores between digits, but only ASCII digits, and values
+; beyond i64 saturate (Python keeps them exact; the commands then reject
+; them as out of range). Negative numbers are recognized with ASCII digits.
+import "std:option"
+import "std:result"
+import "host.neo"
+import "release.neo"
+
+; ---------------------------------------------------------------- specification
+
+; One argparse action. kind: 0 -h/--help, 1 store_true, 2 an option with
+; one value, 3 a positional (one value), 4 the subcommand (nargs PARSER).
+; path values are Path(value) (str(Path) normalizes them), number values
+; int(value); choices are checked after conversion. help "" is None.
+type CmdAction = { strings:Arr Arr u8 _ _, dest:Arr u8 _, kind:i64, path:bool, number:bool,
+                   choices:Arr Arr u8 _ _, required:bool, help:Arr u8 _ }
+; One parser: its prog, description, actions in add order and, for the
+; top-level parser, the subcommands added with help= (only those are
+; listed under the subcommand in the help).
+type CmdSpec = { prog:Arr u8 _, description:Arr u8 _, actions:Arr CmdAction _,
+                 subnames:Arr Arr u8 _ _, subhelps:Arr Arr u8 _ _ }
+
+; The subcommands, in cli.py's order.
+fn cmd_commands() -> Arr Arr u8 _ _
+  = text_split("prepare build serve dev export test init release doctor revalidate password migrate preview"," ")
+
+private fn cmd_one(borrow a:Arr u8 _) -> Arr Arr u8 _ _ = push(text_words(),a)
+private fn cmd_two(borrow a:Arr u8 _, borrow b:Arr u8 _) -> Arr Arr u8 _ _ = push(push(text_words(),a),b)
+private fn cmd_help_action() -> CmdAction
+  = CmdAction { strings=cmd_two("-h","--help"), dest="help", kind=0, path=false, number=false, choices=text_words(),
+                required=false, help="show this help message and exit" }
+private fn cmd_no_actions() -> Arr CmdAction _ = arr(i in 0..0) cmd_help_action()
+; The dest argparse derives from a long option: "--no-build" is no_build.
+private fn cmd_dest_of(borrow option:Arr u8 _) -> Arr u8 _ = text_replace(text_from(option,2),"-","_")
+private fn cmd_flag(borrow option:Arr u8 _, borrow help:Arr u8 _) -> CmdAction
+  = CmdAction { strings=cmd_one(option), dest=cmd_dest_of(option), kind=1, path=false, number=false, choices=text_words(),
+                required=false, help=help }
+private fn cmd_value(borrow option:Arr u8 _, path:bool, number:bool, borrow choices:Arr Arr u8 _ _, required:bool, borrow help:Arr u8 _) -> CmdAction
+  = CmdAction { strings=cmd_one(option), dest=cmd_dest_of(option), kind=2, path=path, number=number, choices=choices,
+                required=required, help=help }
+private fn cmd_path_option(borrow option:Arr u8 _) -> CmdAction = cmd_value(option,true,false,text_words(),false,text_empty())
+private fn cmd_port() -> CmdAction = cmd_value("--port",false,true,text_words(),false,text_empty())
+
+; The parser of a subcommand, or the top-level parser for "".
+fn cmd_spec(borrow command:Arr u8 _) -> CmdSpec
+  = let help=push(cmd_no_actions(),cmd_help_action()) in
+    let site=push(push(push(help,cmd_path_option("--app")),cmd_path_option("--out")),
+      cmd_value("--profile",false,false,cmd_two("release","dev"),false,text_empty())) in
+    let top=len(command)==0 in
+    let actions=
+      if top then push(help,CmdAction { strings=text_words(), dest="command", kind=4, path=false, number=false,
+                                        choices=cmd_commands(), required=true, help=text_empty() })
+      else if text_equal(command,"build") then site
+      else if text_equal(command,"serve") then push(push(site,cmd_port()),cmd_flag("--no-build",text_empty()))
+      else if text_equal(command,"dev") then push(site,cmd_port())
+      else if text_equal(command,"export") then
+        push(push(site,cmd_path_option("--dest")),cmd_flag("--strict","Reject an export that omits server-only routes"))
+      else if text_equal(command,"test") then
+        push(push(help,cmd_flag("--extended","also run the long, browser-free integration suites (tests/extended)")),
+          cmd_flag("--postgres","also run the PostgreSQL suites (tests/postgres) in a private cluster; needs initdb and pg_ctl"))
+      else if text_equal(command,"init") then
+        push(push(help,CmdAction { strings=text_words(), dest="path", kind=3, path=true, number=false, choices=text_words(),
+                                   required=true, help=text_empty() }),
+          cmd_flag("--standalone","include a relocatable NeoKit SDK in the application"))
+      else if text_equal(command,"release") then
+        push(push(push(help,cmd_value("--out",true,false,text_words(),true,text_empty())),
+          cmd_value("--neo-archive",true,false,text_words(),false,concat("Neo ",rel_neo_version()," multi-platform native release archive"))),
+          cmd_value("--neo-sha256",false,false,text_words(),false,"expected SHA-256 of the Neo archive"))
+      else if text_equal(command,"revalidate") then push(push(help,cmd_path_option("--app")),cmd_path_option("--out"))
+      else if text_equal(command,"migrate") then
+        push(push(push(help,cmd_path_option("--app")),cmd_path_option("--out")),cmd_flag("--build-only",text_empty()))
+      else if text_equal(command,"preview") then push(push(help,cmd_path_option("--dir")),cmd_port())
+      else help in
+    CmdSpec { prog=if top then "neokit" else concat("neokit ",command),
+              description=if top then "NeoKit: native SSR and static sites with optional browser modules" else text_empty(),
+              actions=actions,
+              subnames=if top then text_split("prepare release password"," ") else text_words(),
+              subhelps=if top then push(push(push(text_words(),"prepare reusable checked native framework libraries (no application code)"),
+                "create a checksummed NeoKit SDK archive"),"hash a password using the shared native security library") else text_words() }
+
+private fn cmd_action_at(borrow spec:CmdSpec, i:i64) -> CmdAction
+  = if i>=0 && i<len(spec.actions) then spec.actions[i] else cmd_help_action()
+; _get_action_name: "-h/--help", "--port", "path", "command".
+private fn cmd_name(borrow action:CmdAction) -> Arr u8 _
+  = if len(action.strings)>0 then text_join(action.strings,"/") else action.dest
+
+; ---------------------------------------------------------------- help and usage
+
+private fn cmd_spaces(count:i64) -> Arr u8 _ = text_repeat(" ",count)
+private fn cmd_choices_text(borrow choices:Arr Arr u8 _ _) -> Arr u8 _ = concat("{",text_join(choices,","),"}")
+; _metavar_formatter: the choices, or the dest (upper case for options).
+private fn cmd_metavar(borrow action:CmdAction) -> Arr u8 _
+  = if len(action.choices)>0 then cmd_choices_text(action.choices)
+    else if action.kind==3 then action.dest else text_upper(action.dest)
+; The action in the usage line.
+private fn cmd_usage_part(borrow action:CmdAction) -> Arr u8 _
+  = if action.kind==3 then cmd_metavar(action)
+    else if action.kind==4 then concat(cmd_metavar(action)," ...")
+    else let part=if action.kind==2 then concat(text_word(action.strings,0)," ",cmd_metavar(action)) else text_word(action.strings,0) in
+      if action.required then part else concat("[",part,"]")
+; The action in the help listing.
+private fn cmd_invocation(borrow action:CmdAction) -> Arr u8 _
+  = if action.kind==3 || action.kind==4 then cmd_metavar(action)
+    else if action.kind==2 then
+      text_join(loop (out=text_words(), i=0) while i<len(action.strings)
+        next (push(out,concat(text_word(action.strings,i)," ",cmd_metavar(action))), i+1) yield out,", ")
+    else text_join(action.strings,", ")
+private fn cmd_usage_parts(borrow spec:CmdSpec, optional:bool) -> Arr u8 _
+  = text_join(loop (out=text_words(), i=0) while i<len(spec.actions)
+      next (let action=cmd_action_at(spec,i) in if (len(action.strings)>0)==optional then push(out,cmd_usage_part(action)) else out, i+1) yield out," ")
+
+; The end of the part HelpFormatter's usage regexp
+; (\(.*?\)+(?=\s|$) | \[.*?\]+(?=\s|$) | \S+) matches at at.
+private fn cmd_space(code:i64) -> bool = code==32 || (code>=9 && code<=13)
+private fn cmd_group_end(borrow text:Arr u8 _, at:i64, close:i64) -> i64
+  = loop (q=at+1, found= -1) while found<0 && q<len(text)
+      next (q+1, if text_byte(text,q)!=close then -1 else
+                 (let r=loop (k=q) while k<len(text) && text_byte(text,k)==close next (k+1) yield k in
+                  if r>=len(text) || cmd_space(text_byte(text,r)) then r else -1)) yield found
+private fn cmd_word_end(borrow text:Arr u8 _, at:i64) -> i64
+  = loop (k=at) while k<len(text) && !cmd_space(text_byte(text,k)) next (k+1) yield k
+private fn cmd_part_end(borrow text:Arr u8 _, at:i64) -> i64
+  = let open=text_byte(text,at) in
+    let group=if open==40 then cmd_group_end(text,at,41) else if open==91 then cmd_group_end(text,at,93) else -1 in
+    if group>0 then group else cmd_word_end(text,at)
+private fn cmd_usage_split(borrow text:Arr u8 _) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=0) while i<len(text)
+      next (if cmd_space(text_byte(text,i)) then out else push(out,text_slice(text,i,cmd_part_end(text,i))),
+            if cmd_space(text_byte(text,i)) then i+1 else cmd_part_end(text,i)) yield out
+
+; get_lines(parts, indent, prefix) of _format_usage.
+type CmdLines = { lines:Arr Arr u8 _ _, line:Arr Arr u8 _ _, length:i64 }
+private fn cmd_get_lines(borrow parts:Arr Arr u8 _ _, indent:i64, prefixed:bool, borrow prefix:Arr u8 _, width:i64) -> Arr Arr u8 _ _
+  = let start=CmdLines { lines=text_words(), line=text_words(), length=if prefixed then len(prefix)-1 else indent-1 } in
+    let done=loop (s=start, i=0) while i<len(parts)
+      next (let part=text_word(parts,i) in
+            let broken=if s.length+1+len(part)>width && len(s.line)>0
+              then CmdLines { lines=push(s.lines,concat(cmd_spaces(indent),text_join(s.line," "))), line=text_words(), length=indent-1 } else s in
+            CmdLines { lines=broken.lines, line=push(broken.line,part), length=broken.length+len(part)+1 }, i+1) yield s in
+    let lines=if len(done.line)>0 then push(done.lines,concat(cmd_spaces(indent),text_join(done.line," "))) else done.lines in
+    if prefixed && len(lines)>0
+    then loop (out=text_words(), i=0) while i<len(lines) next (push(out,if i==0 then text_from(text_word(lines,0),indent) else text_word(lines,i)), i+1) yield out
+    else lines
+private fn cmd_words_concat(borrow a:Arr Arr u8 _ _, borrow b:Arr Arr u8 _ _) -> Arr Arr u8 _ _
+  = loop (out=a, i=0) while i<len(b) next (push(out,text_word(b,i)), i+1) yield out
+
+; HelpFormatter._format_usage: the text after "usage: ".
+private fn cmd_usage_body(borrow spec:CmdSpec, width:i64) -> Arr u8 _
+  = let prefix="usage: " in
+    let optionals=cmd_usage_parts(spec,true) in let positionals=cmd_usage_parts(spec,false) in
+    let actions=if len(optionals)==0 then positionals else if len(positionals)==0 then optionals else concat(optionals," ",positionals) in
+    let usage=if len(actions)==0 then spec.prog else concat(spec.prog," ",actions) in
+    if len(prefix)+len(usage)<=width then usage else
+    let opt_parts=cmd_usage_split(optionals) in let pos_parts=cmd_usage_split(positionals) in
+    let prog=spec.prog in
+    let lines=if 4*(len(prefix)+len(prog))<=3*width then
+        (let indent=len(prefix)+len(prog)+1 in
+         if len(opt_parts)>0 then cmd_words_concat(cmd_get_lines(cmd_words_concat(cmd_one(prog),opt_parts),indent,true,prefix,width),
+                                                   cmd_get_lines(pos_parts,indent,false,prefix,width))
+         else if len(pos_parts)>0 then cmd_get_lines(cmd_words_concat(cmd_one(prog),pos_parts),indent,true,prefix,width)
+         else cmd_one(prog))
+      else
+        (let indent=len(prefix) in
+         let joined=cmd_get_lines(cmd_words_concat(opt_parts,pos_parts),indent,false,prefix,width) in
+         let split=if len(joined)>1 then cmd_words_concat(cmd_get_lines(opt_parts,indent,false,prefix,width),cmd_get_lines(pos_parts,indent,false,prefix,width)) else joined in
+         cmd_words_concat(cmd_one(prog),split)) in
+    text_join(lines,"\n")
+
+; format_usage(): what print_usage writes.
+fn cmd_usage(borrow spec:CmdSpec, width:i64) -> Arr u8 _ = concat("usage: ",cmd_usage_body(spec,width),"\n")
+
+; textwrap's chunks for ASCII text: runs of spaces, and words split after
+; a hyphen between letters (TextWrapper.wordsep_re's hyphenated words).
+private fn cmd_letter(code:i64) -> bool = (code>=65 && code<=90) || (code>=97 && code<=122) || code==95
+private fn cmd_hyphen_break(borrow text:Arr u8 _, j:i64) -> bool
+  = let b=text_byte(text,j-1) in let bb=text_byte(text,j-2) in
+    let behind=(cmd_letter(bb) && cmd_letter(b)) || (cmd_letter(text_byte(text,j-3)) && bb==45 && cmd_letter(b)) in
+    let a=text_byte(text,j+1) in let aa=text_byte(text,j+2) in
+    behind && cmd_letter(a) && (cmd_letter(aa) || (aa==45 && cmd_letter(text_byte(text,j+3))))
+private fn cmd_chunk_end(borrow text:Arr u8 _, at:i64) -> i64
+  = if cmd_space(text_byte(text,at)) then loop (k=at) while k<len(text) && cmd_space(text_byte(text,k)) next (k+1) yield k else
+    let word=cmd_word_end(text,at) in
+    loop (k=at+1, found= -1) while found<0 && k<word next (k+1, if text_byte(text,k)==45 && cmd_hyphen_break(text,k) then k+1 else -1) yield (if found>0 then found else word)
+private fn cmd_chunks(borrow text:Arr u8 _) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=0) while i<len(text)
+      next (push(out,text_slice(text,i,cmd_chunk_end(text,i))), cmd_chunk_end(text,i)) yield out
+private fn cmd_blank(borrow chunk:Arr u8 _) -> bool
+  = loop (i=0, blank=true) while blank && i<len(chunk) next (i+1, cmd_space(text_byte(chunk,i))) yield blank
+private fn cmd_put(borrow words:Arr Arr u8 _ _, at:i64, borrow value:Arr u8 _) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=0) while i<len(words) next (push(out,if i==at then value else text_word(words,i)), i+1) yield out
+private fn cmd_total(borrow words:Arr Arr u8 _ _) -> i64 = loop (n=0, i=0) while i<len(words) next (n+len(text_word(words,i)), i+1) yield n
+; TextWrapper._wrap_chunks, one line per step (break_long_words and
+; break_on_hyphens on, whitespace dropped at line ends).
+type CmdWrap = { chunks:Arr Arr u8 _ _, k:i64, lines:Arr Arr u8 _ _ }
+type CmdFill = { line:Arr Arr u8 _ _, size:i64, k:i64 }
+private fn cmd_wrap_step(move s:CmdWrap, width:i64) -> CmdWrap
+  = let k0=if len(s.lines)>0 && s.k<len(s.chunks) && cmd_blank(text_word(s.chunks,s.k)) then s.k+1 else s.k in
+    let fill=loop (f=CmdFill { line=text_words(), size=0, k=k0 }) while f.k<len(s.chunks) && f.size+len(text_word(s.chunks,f.k))<=width
+      next (CmdFill { line=push(f.line,text_word(s.chunks,f.k)), size=f.size+len(text_word(s.chunks,f.k)), k=f.k+1 }) yield f in
+    let chunk=text_word(s.chunks,fill.k) in
+    let long=fill.k<len(s.chunks) && len(chunk)>width in
+    let space_left=if width<1 then 1 else width-fill.size in
+    let hyphen=if long && len(chunk)>space_left then text_rfind(text_slice(chunk,0,space_left),"-") else -1 in
+    let cut=if hyphen>0 && !cmd_only_byte(text_slice(chunk,0,hyphen),45) then hyphen+1 else space_left in
+    let line=if long then push(fill.line,text_slice(chunk,0,cut)) else fill.line in
+    let chunks=if long then cmd_put(s.chunks,fill.k,text_from(chunk,cut)) else s.chunks in
+    let trimmed=if len(line)>0 && cmd_blank(text_word(line,len(line)-1))
+      then loop (out=text_words(), i=0) while i<len(line)-1 next (push(out,text_word(line,i)), i+1) yield out else line in
+    CmdWrap { chunks=chunks, k=fill.k, lines=if len(trimmed)>0 then push(s.lines,text_join(trimmed,"")) else s.lines }
+private fn cmd_only_byte(borrow text:Arr u8 _, code:i64) -> bool
+  = loop (i=0, only=true) while only && i<len(text) next (i+1, text_byte(text,i)==code) yield only
+; textwrap.wrap(text, width) after HelpFormatter's whitespace folding.
+fn cmd_wrap(borrow text:Arr u8 _, width:i64) -> Arr Arr u8 _ _
+  = let folded=text_join(text_split_ws(text)," ") in
+    let done=loop (s=CmdWrap { chunks=cmd_chunks(folded), k=0, lines=text_words() }) while s.k<len(s.chunks) next (cmd_wrap_step(s,width)) yield s in
+    done.lines
+
+; The parts of the help listing.
+type CmdLayout = { width:i64, position:i64, help_width:i64 }
+private fn cmd_layout(borrow spec:CmdSpec, width:i64) -> CmdLayout
+  = let longest=loop (m=0, i=0) while i<len(spec.actions)
+      next (let action=cmd_action_at(spec,i) in
+            let own=len(cmd_invocation(action)) in
+            let subs=if action.kind==4 then loop (n=0, j=0) while j<len(spec.subnames) next (if len(text_word(spec.subnames,j))>n then len(text_word(spec.subnames,j)) else n, j+1) yield n else 0 in
+            let item=(if own>subs then own else subs)+2 in if item>m then item else m, i+1) yield m in
+    let most=if width-20>4 then width-20 else 4 in
+    let max_position=if most<24 then most else 24 in
+    let position=if longest+2<max_position then longest+2 else max_position in
+    CmdLayout { width=width, position=position, help_width=if width-position>11 then width-position else 11 }
+; HelpFormatter._format_action for a header and help at indent.
+private fn cmd_format_item(borrow header:Arr u8 _, borrow help:Arr u8 _, indent:i64, borrow layout:CmdLayout) -> Arr u8 _
+  = let action_width=layout.position-indent-2 in
+    if len(help)==0 then concat(cmd_spaces(indent),header,"\n") else
+    let lines=cmd_wrap(help,layout.help_width) in
+    let short=len(header)<=action_width in
+    let head=if short then concat(cmd_spaces(indent),header,cmd_spaces(action_width-len(header)),"  ") else concat(cmd_spaces(indent),header,"\n") in
+    if len(lines)==0 then (if short then concat(head,"\n") else head) else
+    loop (out=concat(head,cmd_spaces(if short then 0 else layout.position),text_word(lines,0),"\n"), i=1) while i<len(lines)
+      next (concat(out,cmd_spaces(layout.position),text_word(lines,i),"\n"), i+1) yield out
+private fn cmd_format_action(borrow spec:CmdSpec, borrow action:CmdAction, borrow layout:CmdLayout) -> Arr u8 _
+  = let own=cmd_format_item(cmd_invocation(action),action.help,2,layout) in
+    if action.kind!=4 then own else
+    loop (out=own, j=0) while j<len(spec.subnames)
+      next (concat(out,cmd_format_item(text_word(spec.subnames,j),text_word(spec.subhelps,j),4,layout)), j+1) yield out
+private fn cmd_section(borrow spec:CmdSpec, borrow layout:CmdLayout, borrow title:Arr u8 _, optional:bool) -> Arr u8 _
+  = let items=loop (out=text_empty(), i=0) while i<len(spec.actions)
+      next (let action=cmd_action_at(spec,i) in if (len(action.strings)>0)==optional then concat(out,cmd_format_action(spec,action,layout)) else out, i+1) yield out in
+    if len(items)==0 then text_empty() else concat("\n",title,":\n",items,"\n")
+; format_help()'s final clean-up: runs of three or more newlines become two,
+; and the text is stripped of newlines and ends with one.
+private fn cmd_tidy(borrow text:Arr u8 _) -> Arr u8 _
+  = let folded=loop (out=text_empty(), i=0) while i<len(text)
+      next (if text_byte(text,i)==10 && text_ends(out,"\n\n") then out else push(out,u8(text_byte(text,i))), i+1) yield out in
+    concat(text_strip_chars(folded,"\n"),"\n")
+
+; format_help(): what -h prints. width is HelpFormatter's (COLUMNS - 2).
+fn cmd_help(borrow spec:CmdSpec, width:i64) -> Arr u8 _
+  = let layout=cmd_layout(spec,width) in
+    let description=if len(spec.description)==0 then text_empty()
+      else concat(text_join(cmd_wrap(spec.description,if width>11 then width else 11),"\n"),"\n\n") in
+    cmd_tidy(concat("usage: ",cmd_usage_body(spec,width),"\n\n",description,
+      cmd_section(spec,layout,"positional arguments",false),cmd_section(spec,layout,"options",true)))
+
+; HelpFormatter's width: shutil.get_terminal_size().columns - 2, where the
+; columns are COLUMNS when it is a positive integer and 80 otherwise.
+fn cmd_width(borrow columns:Arr u8 _) -> i64
+  = let parsed=rel_int(columns) in if parsed.ok && parsed.value>0 then parsed.value-2 else 78
+
+; ---------------------------------------------------------------- parsing
+
+; One argument string as _parse_optional classifies it: kind 0 a
+; positional ("A"), 1 an option ("O") of action (-1 for an unknown one)
+; spelt option, with an explicit value (after "=" when eq, or attached to a
+; single-dash option).
+type CmdTuple = { kind:i64, action:i64, option:Arr u8 _, eq:bool, explicit:bool, value:Arr u8 _ }
+private fn cmd_positional_tuple() -> CmdTuple = CmdTuple { kind=0, action= -1, option=text_empty(), eq=false, explicit=false, value=text_empty() }
+private fn cmd_option_tuple(action:i64, borrow option:Arr u8 _, eq:bool, explicit:bool, borrow value:Arr u8 _) -> CmdTuple
+  = CmdTuple { kind=1, action=action, option=option, eq=eq, explicit=explicit, value=value }
+private fn cmd_no_tuples() -> Arr CmdTuple _ = arr(i in 0..0) cmd_positional_tuple()
+private fn cmd_tuple_at(borrow tuples:Arr CmdTuple _, i:i64) -> CmdTuple = if i>=0 && i<len(tuples) then tuples[i] else cmd_positional_tuple()
+
+; The option strings in insertion order and the action of each.
+type CmdNames = { names:Arr Arr u8 _ _, owners:Arr i64 _ }
+private fn cmd_names(borrow spec:CmdSpec) -> CmdNames
+  = loop (s=CmdNames { names=text_words(), owners=arr(i in 0..0) 0 }, i=0) while i<len(spec.actions)
+      next (let action=cmd_action_at(spec,i) in
+            loop (t=s, j=0) while j<len(action.strings) next (CmdNames { names=push(t.names,text_word(action.strings,j)), owners=push(t.owners,i) }, j+1) yield t, i+1) yield s
+private fn cmd_owner_at(borrow names:CmdNames, i:i64) -> i64 = if i>=0 && i<len(names.owners) then names.owners[i] else -1
+private fn cmd_owner(borrow names:CmdNames, borrow option:Arr u8 _) -> i64
+  = loop (i=0, found= -1) while found<0 && i<len(names.names)
+      next (i+1, if text_equal(text_word(names.names,i),option) then cmd_owner_at(names,i) else -1) yield found
+; _get_option_tuples: the options this prefix (or "-xVALUE") may mean.
+private fn cmd_option_tuples(borrow names:CmdNames, borrow arg:Arr u8 _) -> Arr CmdTuple _
+  = if text_byte(arg,1)==45 then
+      (let parts=text_partition(arg,"=") in
+       loop (out=cmd_no_tuples(), i=0) while i<len(names.names)
+         next (if text_starts(text_word(names.names,i),parts.before) && cmd_owner_at(names,i)>=0
+               then push(out,cmd_option_tuple(cmd_owner_at(names,i),text_word(names.names,i),parts.found,parts.found,parts.after)) else out, i+1) yield out)
+    else
+      (let short=text_slice(arg,0,2) in
+       loop (out=cmd_no_tuples(), i=0) while i<len(names.names)
+         next (let name=text_word(names.names,i) in
+               if cmd_owner_at(names,i)<0 then out
+               else if text_equal(name,short) then push(out,cmd_option_tuple(cmd_owner_at(names,i),name,false,true,text_from(arg,2)))
+               else if text_starts(name,arg) then push(out,cmd_option_tuple(cmd_owner_at(names,i),name,false,false,text_empty()))
+               else out, i+1) yield out)
+private fn cmd_digits(borrow text:Arr u8 _, start:i64, end:i64) -> bool
+  = loop (i=start, ok=true) while ok && i<end next (i+1, text_byte(text,i)>=48 && text_byte(text,i)<=57) yield ok
+; argparse's negative number matcher: ^-\d+$|^-\d*\.\d+$.
+private fn cmd_negative_number(borrow arg:Arr u8 _) -> bool
+  = let dot=text_find(arg,".",0) in
+    text_starts(arg,"-") && (if dot<0 then len(arg)>1 && cmd_digits(arg,1,len(arg)) else dot+1<len(arg) && cmd_digits(arg,1,dot) && cmd_digits(arg,dot+1,len(arg)))
+type CmdClassified = { tuple:CmdTuple, error:Arr u8 _ }
+private fn cmd_classified(borrow t:CmdTuple) -> CmdClassified = CmdClassified { tuple=t, error=text_empty() }
+; _parse_optional.
+private fn cmd_parse_optional(borrow names:CmdNames, borrow arg:Arr u8 _) -> CmdClassified
+  = if len(arg)==0 || text_byte(arg,0)!=45 then cmd_classified(cmd_positional_tuple()) else
+    let exact=cmd_owner(names,arg) in
+    if exact>=0 then cmd_classified(cmd_option_tuple(exact,arg,false,false,text_empty())) else
+    if len(arg)==1 then cmd_classified(cmd_positional_tuple()) else
+    let parts=text_partition(arg,"=") in
+    let assigned=if parts.found then cmd_owner(names,parts.before) else -1 in
+    if assigned>=0 then cmd_classified(cmd_option_tuple(assigned,parts.before,true,true,parts.after)) else
+    let matches=cmd_option_tuples(names,arg) in
+    if len(matches)>1 then
+      CmdClassified { tuple=cmd_positional_tuple(), error=concat("ambiguous option: ",arg," could match ",
+        text_join(loop (out=text_words(), i:i64{i>=0}=0) while i<len(matches) next (push(out,matches[i].option), i+1) yield out,", ")) }
+    else if len(matches)==1 then cmd_classified(cmd_tuple_at(matches,0))
+    else if cmd_negative_number(arg) || text_contains(arg," ") then cmd_classified(cmd_positional_tuple())
+    else cmd_classified(cmd_option_tuple(-1,arg,false,false,text_empty()))
+
+; The tuples and the pattern ("A", "O", "-" for the first "--") of the
+; argument strings, or the first ambiguity.
+type CmdScan = { tuples:Arr CmdTuple _, pattern:Arr u8 _, error:Arr u8 _, after:bool }
+private fn cmd_scan(borrow names:CmdNames, borrow args:Arr Arr u8 _ _) -> CmdScan
+  = loop (s=CmdScan { tuples=cmd_no_tuples(), pattern=text_empty(), error=text_empty(), after=false }, i=0)
+      while len(s.error)==0 && i<len(args)
+      next (let arg=text_word(args,i) in
+            if s.after then s with { tuples=push(s.tuples,cmd_positional_tuple()), pattern=concat(s.pattern,"A") }
+            else if text_equal(arg,"--") then s with { tuples=push(s.tuples,cmd_positional_tuple()), pattern=concat(s.pattern,"-"), after=true }
+            else (let c=cmd_parse_optional(names,arg) in
+                  if len(c.error)>0 then s with { error=c.error }
+                  else s with { tuples=push(s.tuples,c.tuple), pattern=concat(s.pattern,if c.tuple.kind==1 then "O" else "A") }), i+1) yield s
+
+; The parse of one parser's argument strings. outcome: 0 parsing, 1 done,
+; 2 help requested, 3 error (message). values and seen are per action;
+; command and rest are what the subcommand action received.
+type CmdRun = { start:i64, extras:Arr Arr u8 _ _, values:Arr Arr u8 _ _, seen:Arr i64 _, pending:bool,
+                outcome:i64, message:Arr u8 _, command:Arr u8 _, rest:Arr Arr u8 _ _ }
+private fn cmd_fail(move s:CmdRun, borrow message:Arr u8 _) -> CmdRun = s with { outcome=3, message=message }
+private fn cmd_slice(borrow words:Arr Arr u8 _ _, start:i64, end:i64) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=start) while i<end && i<len(words) next (push(out,text_word(words,i)), i+1) yield out
+private fn cmd_mark(borrow seen:Arr i64 _, at:i64) -> Arr i64 _ = arr(i in 0..len(seen)) check i>=0 && i<len(seen) in if i==at then 1 else seen[i]
+private fn cmd_seen(borrow s:CmdRun, at:i64) -> bool = at>=0 && at<len(s.seen) && s.seen[at]==1
+private fn cmd_choices_repr(borrow choices:Arr Arr u8 _ _) -> Arr u8 _
+  = text_join(loop (out=text_words(), i=0) while i<len(choices) next (push(out,text_repr(text_word(choices,i))), i+1) yield out,", ")
+; take_action with the value (has false for options without one).
+private fn cmd_take(borrow spec:CmdSpec, move s:CmdRun, at:i64, borrow value:Arr u8 _) -> CmdRun
+  = let action=cmd_action_at(spec,at) in
+    let marked=s with { seen=cmd_mark(s.seen,at) } in
+    if action.kind==0 then marked with { outcome=2 }
+    else if action.kind==1 then marked with { values=cmd_put(marked.values,at,"True") }
+    else if action.kind==4 then
+      (if !text_member(action.choices,value) then cmd_fail(marked,concat("argument ",cmd_name(action),": invalid choice: ",text_repr(value)," (choose from ",cmd_choices_repr(action.choices),")"))
+       else marked with { command=value })
+    else
+      let number=rel_int(value) in
+      if action.number && !number.ok then cmd_fail(marked,concat("argument ",cmd_name(action),": invalid int value: ",text_repr(value))) else
+      let converted=if action.number then text_int(number.value) else if action.path then host_normalize(value) else value in
+      if len(action.choices)>0 && !text_member(action.choices,converted)
+      then cmd_fail(marked,concat("argument ",cmd_name(action),": invalid choice: ",text_repr(converted)," (choose from ",cmd_choices_repr(action.choices),")"))
+      else marked with { values=cmd_put(marked.values,at,converted) }
+
+; The positional (each parser here has at most one) and its pattern:
+; (-*A-*) for one value, (-*A[-AO]*) for the subcommand. -1 when it does
+; not match.
+private fn cmd_positional_index(borrow spec:CmdSpec) -> i64
+  = loop (i=0, found= -1) while found<0 && i<len(spec.actions) next (i+1, if len(cmd_action_at(spec,i).strings)==0 then i else -1) yield found
+private fn cmd_match_positional(borrow pattern:Arr u8 _, start:i64, rest:bool) -> i64
+  = let k=loop (k=start) while text_byte(pattern,k)==45 next (k+1) yield k in
+    if text_byte(pattern,k)!=65 then -1
+    else if rest then len(pattern)-start
+    else (loop (m=k+1) while text_byte(pattern,m)==45 next (m+1) yield m)-start
+; consume_positionals(start).
+private fn cmd_positionals(borrow spec:CmdSpec, borrow args:Arr Arr u8 _ _, borrow scan:CmdScan, move s:CmdRun) -> CmdRun
+  = if !s.pending then s else
+    let at=cmd_positional_index(spec) in
+    let action=cmd_action_at(spec,at) in
+    let count=cmd_match_positional(scan.pattern,s.start,action.kind==4) in
+    if count<0 then s else
+    let strings=cmd_slice(args,s.start,s.start+count) in
+    let moved=s with { start=s.start+count, pending=false } in
+    if action.kind==4 then cmd_take(spec,moved with { rest=cmd_slice(strings,1,len(strings)) },at,text_word(strings,0))
+    else
+      (let marker=loop (i=0, found= -1) while found<0 && i<len(strings) next (i+1, if text_equal(text_word(strings,i),"--") then i else -1) yield found in
+       let kept=loop (out=text_words(), i=0) while i<len(strings) next (if i==marker then out else push(out,text_word(strings,i)), i+1) yield out in
+       cmd_take(spec,moved,at,text_word(kept,0)))
+
+; consume_optional(start): the option at start, any options attached to a
+; single-dash one (-hx is -h then -x) and their values; actions are taken
+; once the whole string is understood.
+type CmdChain = { actions:Arr i64 _, values:Arr Arr u8 _ _, action:i64, option:Arr u8 _, eq:bool, explicit:bool, value:Arr u8 _,
+                  stop:i64, extra:Arr u8 _, error:Arr u8 _, done:bool }
+private fn cmd_chain_step(borrow spec:CmdSpec, borrow names:CmdNames, borrow args:Arr Arr u8 _ _, borrow scan:CmdScan, start:i64, move c:CmdChain) -> CmdChain
+  = let action=cmd_action_at(spec,c.action) in
+    let count=if action.kind==2 then 1 else 0 in
+    let ignored=concat("argument ",cmd_name(action),": ignored explicit argument ",text_repr(c.value)) in
+    if c.explicit then
+      (if count==0 && text_byte(c.option,1)!=45 && len(c.value)>0 then
+         (if c.eq || text_byte(c.value,0)==45 then c with { error=ignored, done=true } else
+          let taken=c with { actions=push(c.actions,c.action), values=push(c.values,text_empty()) } in
+          let width=text_char_width(c.value,0) in
+          let option=concat("-",text_slice(c.value,0,width)) in
+          let next_action=cmd_owner(names,option) in
+          if next_action<0 then taken with { extra=concat("-",c.value), stop=start+1, done=true } else
+          let tail=text_from(c.value,width) in
+          if len(tail)==0 then taken with { action=next_action, option=option, eq=false, explicit=false, value=text_empty() }
+          else if text_byte(tail,0)==61 then taken with { action=next_action, option=option, eq=true, explicit=true, value=text_from(tail,1) }
+          else taken with { action=next_action, option=option, eq=false, explicit=true, value=tail })
+       else if count==1 then c with { actions=push(c.actions,c.action), values=push(c.values,c.value), stop=start+1, done=true }
+       else c with { error=ignored, done=true })
+    else if count==1 && text_byte(scan.pattern,start+1)!=65 then c with { error=concat("argument ",cmd_name(action),": expected one argument"), done=true }
+    else c with { actions=push(c.actions,c.action), values=push(c.values,if count==1 then text_word(args,start+1) else text_empty()),
+                  stop=start+1+count, done=true }
+private fn cmd_optional(borrow spec:CmdSpec, borrow names:CmdNames, borrow args:Arr Arr u8 _ _, borrow scan:CmdScan, move s:CmdRun) -> CmdRun
+  = let t=cmd_tuple_at(scan.tuples,s.start) in
+    if t.action<0 then s with { extras=push(s.extras,text_word(args,s.start)), start=s.start+1 } else
+    let chain=loop (c=CmdChain { actions=arr(i in 0..0) 0, values=text_words(), action=t.action, option=t.option, eq=t.eq, explicit=t.explicit,
+                                 value=t.value, stop=s.start+1, extra=text_empty(), error=text_empty(), done=false })
+      while !c.done next (cmd_chain_step(spec,names,args,scan,s.start,c)) yield c in
+    if len(chain.error)>0 then cmd_fail(s,chain.error) else
+    let with_extra=if len(chain.extra)>0 then s with { extras=push(s.extras,chain.extra) } else s in
+    let taken=loop (r=with_extra, i:i64{i>=0}=0) while r.outcome==0 && i<len(chain.actions)
+      next (cmd_take(spec,r,chain.actions[i],text_word(chain.values,i)), i+1) yield r in
+    taken with { start=chain.stop }
+
+; One round of _parse_known_args' main loop: positionals before the next
+; option, strings no positional takes, then that option.
+private fn cmd_next_option(borrow scan:CmdScan, start:i64) -> i64
+  = loop (i=start) while i<len(scan.pattern) && text_byte(scan.pattern,i)!=79 next (i+1) yield i
+private fn cmd_round(borrow spec:CmdSpec, borrow names:CmdNames, borrow args:Arr Arr u8 _ _, borrow scan:CmdScan, move s:CmdRun) -> CmdRun
+  = let next_option=cmd_next_option(scan,s.start) in
+    let before=s.start in
+    let p=if before!=next_option then cmd_positionals(spec,args,scan,s) else s in
+    if p.outcome!=0 || p.start>before then p else
+    let skipped=if text_byte(scan.pattern,p.start)!=79 then p with { extras=cmd_words_concat(p.extras,cmd_slice(args,p.start,next_option)), start=next_option } else p in
+    cmd_optional(spec,names,args,scan,skipped)
+
+; parse_known_args for one parser: the result, its extras and, for the
+; top-level parser, the subcommand and its strings.
+fn cmd_run(borrow spec:CmdSpec, borrow args:Arr Arr u8 _ _) -> CmdRun
+  = let names=cmd_names(spec) in
+    let scan=cmd_scan(names,args) in
+    let count=len(spec.actions) in
+    let fresh=CmdRun { start=0, extras=text_words(), values=arr(i in 0..count) text_empty(), seen=arr(i in 0..count) 0,
+                       pending=cmd_positional_index(spec)>=0, outcome=0, message=text_empty(), command=text_empty(), rest=text_words() } in
+    if len(scan.error)>0 then cmd_fail(fresh,scan.error) else
+    let last=loop (i=0, found= -1) while i<len(scan.pattern) next (i+1, if text_byte(scan.pattern,i)==79 then i else found) yield found in
+    let looped=loop (s=fresh) while s.outcome==0 && s.start<=last next (cmd_round(spec,names,args,scan,s)) yield s in
+    if looped.outcome!=0 then looped else
+    let tail=cmd_positionals(spec,args,scan,looped) in
+    if tail.outcome!=0 then tail else
+    let finished=tail with { extras=cmd_words_concat(tail.extras,cmd_slice(args,tail.start,len(args))) } in
+    let missing=loop (out=text_words(), i=0) while i<count
+      next (let action=cmd_action_at(spec,i) in if action.required && !cmd_seen(finished,i) then push(out,cmd_name(action)) else out, i+1) yield out in
+    if len(missing)>0 then cmd_fail(finished,concat("the following arguments are required: ",text_join(missing,", ")))
+    else finished with { outcome=1 }
+
+; ---------------------------------------------------------------- the result
+
+; The parsed command line: cli.py's args namespace. Paths are str(Path) of
+; the given value or of the default; port is the int; neo_archive and
+; neo_sha256 are None when has_neo_archive and has_neo_sha256 are false.
+; Fields a command does not have keep their defaults.
+type CmdArgs = { command:Arr u8 _, app:Arr u8 _, out:Arr u8 _, profile:Arr u8 _, port:i64, no_build:bool, dest:Arr u8 _,
+                 strict:bool, extended:bool, postgres:bool, path:Arr u8 _, standalone:bool, neo_archive:Arr u8 _,
+                 has_neo_archive:bool, neo_sha256:Arr u8 _, has_neo_sha256:bool, build_only:bool, dir:Arr u8 _ }
+; ok: run args. Otherwise print stdout and stderr and exit with exit (0
+; after help, 2 after a usage error).
+type CmdParsed = { ok:bool, exit:i64, stdout:Arr u8 _, stderr:Arr u8 _, args:CmdArgs }
+
+private fn cmd_given(borrow spec:CmdSpec, borrow run:CmdRun, borrow dest:Arr u8 _) -> i64
+  = loop (i=0, found= -1) while found<0 && i<len(spec.actions)
+      next (i+1, if text_equal(cmd_action_at(spec,i).dest,dest) && cmd_seen(run,i) then i else -1) yield found
+private fn cmd_text(borrow spec:CmdSpec, borrow run:CmdRun, borrow dest:Arr u8 _, borrow fallback:Arr u8 _) -> Arr u8 _
+  = let at=cmd_given(spec,run,dest) in if at>=0 then text_word(run.values,at) else fallback
+private fn cmd_flag_set(borrow spec:CmdSpec, borrow run:CmdRun, borrow dest:Arr u8 _) -> bool = cmd_given(spec,run,dest)>=0
+; Path.with_name(name + suffix).
+private fn cmd_sibling(borrow path:Arr u8 _, borrow suffix:Arr u8 _) -> Arr u8 _ = host_join(host_parent(path),concat(host_name(path),suffix))
+
+private fn cmd_args(borrow command:Arr u8 _, borrow spec:CmdSpec, borrow run:CmdRun, borrow root:Arr u8 _, borrow cwd:Arr u8 _, web:bool) -> CmdArgs
+  = let default_app=host_join(root,"examples/studio") in
+    let project=if web then cwd else default_app in
+    let own=!text_equal(project,default_app) in
+    let output=if own then host_join(project,".neokit/build") else host_join(root,"build/studio") in
+    let exported=if own then cmd_sibling(project,"-export") else host_join(root,"build/export") in
+    let out_default=if text_equal(command,"revalidate") then cmd_sibling(output,"-revalidation")
+      else if text_equal(command,"migrate") then cmd_sibling(output,"-migrations") else output in
+    let port=rel_int(cmd_text(spec,run,"port",if text_equal(command,"preview") then "8095" else "8094")) in
+    CmdArgs { command=command, app=cmd_text(spec,run,"app",project), out=cmd_text(spec,run,"out",out_default),
+              profile=cmd_text(spec,run,"profile",if text_equal(command,"dev") then "dev" else "release"),
+              port=port.value, no_build=cmd_flag_set(spec,run,"no_build"), dest=cmd_text(spec,run,"dest",exported),
+              strict=cmd_flag_set(spec,run,"strict"), extended=cmd_flag_set(spec,run,"extended"), postgres=cmd_flag_set(spec,run,"postgres"),
+              path=cmd_text(spec,run,"path",text_empty()), standalone=cmd_flag_set(spec,run,"standalone"),
+              neo_archive=cmd_text(spec,run,"neo_archive",text_empty()), has_neo_archive=cmd_flag_set(spec,run,"neo_archive"),
+              neo_sha256=cmd_text(spec,run,"neo_sha256",text_empty()), has_neo_sha256=cmd_flag_set(spec,run,"neo_sha256"),
+              build_only=cmd_flag_set(spec,run,"build_only"), dir=cmd_text(spec,run,"dir",exported) }
+
+private fn cmd_no_args() -> CmdArgs
+  = CmdArgs { command=text_empty(), app=text_empty(), out=text_empty(), profile=text_empty(), port=0, no_build=false, dest=text_empty(),
+              strict=false, extended=false, postgres=false, path=text_empty(), standalone=false, neo_archive=text_empty(),
+              has_neo_archive=false, neo_sha256=text_empty(), has_neo_sha256=false, build_only=false, dir=text_empty() }
+private fn cmd_stop(borrow spec:CmdSpec, borrow run:CmdRun, width:i64) -> CmdParsed
+  = if run.outcome==2 then CmdParsed { ok=false, exit=0, stdout=cmd_help(spec,width), stderr=text_empty(), args=cmd_no_args() }
+    else CmdParsed { ok=false, exit=2, stdout=text_empty(), stderr=concat(cmd_usage(spec,width),spec.prog,": error: ",run.message,"\n"), args=cmd_no_args() }
+
+; parse_args() of cli.py's parser on argv (without the program name).
+fn cmd_parse_with(borrow argv:Arr Arr u8 _ _, borrow root:Arr u8 _, borrow cwd:Arr u8 _, web:bool, borrow columns:Arr u8 _) -> CmdParsed
+  = let width=cmd_width(columns) in
+    let top=cmd_spec(text_empty()) in
+    let first=cmd_run(top,argv) in
+    if first.outcome!=1 then cmd_stop(top,first,width) else
+    let spec=cmd_spec(first.command) in
+    let second=cmd_run(spec,first.rest) in
+    if second.outcome!=1 then cmd_stop(spec,second,width) else
+    let extras=cmd_words_concat(first.extras,second.extras) in
+    if len(extras)>0 then cmd_stop(top,first with { outcome=3, message=concat("unrecognized arguments: ",text_join(extras," ")) },width)
+    else CmdParsed { ok=true, exit=0, stdout=text_empty(), stderr=text_empty(), args=cmd_args(first.command,spec,second,root,cwd,web) }
+
+; cmd_parse_with in the working directory, with COLUMNS from environment.
+; A working directory that cannot be read is an error (exit 1).
+effect(fs) fn cmd_parse(borrow argv:Arr Arr u8 _ _, borrow root:Arr u8 _, borrow environment:Arr Arr u8 _ _) -> CmdParsed
+  = match host_cwd() {
+      Err(message) => CmdParsed { ok=false, exit=1, stdout=text_empty(), stderr=concat("neokit: ",message,"\n"), args=cmd_no_args() },
+      Ok(cwd) =>
+        let columns=host_env_get(environment,"COLUMNS") in
+        cmd_parse_with(argv,root,cwd,host_is_file(host_join(cwd,"web.toml")),if columns.present then columns.value else text_empty())
+    }

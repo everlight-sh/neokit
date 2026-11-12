@@ -1,0 +1,192 @@
+=== bundle
+version 9.8.7-fixture.1
+gzip header 1f8b080000f1536502ff
+sha256 matches file yes
+420 3906 cb88962d3cf58e597bbbe7a3d8b3cc7b9625877624202cd9d42759e83b67250a neokit-9.8.7-fixture.1/MANIFEST.json
+420 62 220957a5269ef167a83d420c2d550f8df7621696d2e45a4f3d83776a0a8d3b19 neokit-9.8.7-fixture.1/README.md
+420 3551 df246447221b91fbc64524590aabbafaf77fe96df2c9f9080d0ab5b16d2e54b2 neokit-9.8.7-fixture.1/SHA256SUMS
+420 16 8dae7ef23e5afaabf410e4a1ad97f398d1473e3c14d7a4255536a7087d87774a neokit-9.8.7-fixture.1/VERSION
+420 6 f10ec3ffef16a8dace9b58801e0da28819c98af4c8933410d7e7cacc952f9e9b neokit-9.8.7-fixture.1/framework/.dockerignore
+420 9 070a8ff8c31696dd57f1d0f8dfbfb1c9151ebd903c5d7e41d9dbf4133d54f84e neokit-9.8.7-fixture.1/framework/AGENTS.md
+420 10 22b4d00e94ada42bb05305dcf122bdd3cea690e9bc42015c4fae814024dd2926 neokit-9.8.7-fixture.1/framework/CHANGELOG.md
+420 13 bb57c7da220a8753d7bdabac0d3afdb6efa742e4c736c5bc93ab40dfd5e23b9b neokit-9.8.7-fixture.1/framework/Dockerfile
+420 16 f570e537a1e682351461f2f7019f91a321328bebac9648381b514c628785bdd0 neokit-9.8.7-fixture.1/framework/LICENSE
+420 10 7e98df7437f1b50bc0ea2ba7180f28bdb7a043cd2c6045e1783124cdba2fdcc5 neokit-9.8.7-fixture.1/framework/README.md
+420 11 9efcc3ccba113a86dcca90b2b899588159b48b270014ffb47558b04ae2fef1b3 neokit-9.8.7-fixture.1/framework/SECURITY.md
+420 3 ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356 neokit-9.8.7-fixture.1/framework/bun.lock
+493 17 306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb neokit-9.8.7-fixture.1/framework/cli/launcher.sh
+420 21 e2ca17504fda5beeb29f6f37cbc9765483dd2820354a212368d2e846094e12bb neokit-9.8.7-fixture.1/framework/cli/main.neo
+420 27 1bf006ef3daca2797aaab7f6f6474b31e1d47694dd3334b0d812703331235792 neokit-9.8.7-fixture.1/framework/client/runtime.js
+420 24 62fedd8f7f6014812cc4a0b5d0fd44767fa07e76e2b9c8105cef7f87a5d48cd1 neokit-9.8.7-fixture.1/framework/client/types.ts
+420 4 35bba7869b69140ec44ab0ef93bc13f1a3b0ae15f5ee7293b425a0ddbd102da2 neokit-9.8.7-fixture.1/framework/deploy/Caddyfile.local
+493 31 3fe187a259f605690a72ef15e919027b11743ac2fa7f71cb22b3ca3b8dd91bbf neokit-9.8.7-fixture.1/framework/deploy/install.sh
+420 48 de330ef6fdd82ad2c6fa9a0f9f771846abab1c85fdab46c625c9e011529584e6 neokit-9.8.7-fixture.1/framework/docs/alpha-release.md
+420 12 7eb3296fc33043fa06999040f25574249116ef652fa56b76f05dcb3ffe4d575b neokit-9.8.7-fixture.1/framework/examples/a-very-long-directory-name-for-the-ustar-prefix-field-0123456789/another-long-directory-name-abcdefghij/page.view
+420 10 c283007d8774ef7af9ef9242045d49e726f834624768abf670d1e9a6634ee651 neokit-9.8.7-fixture.1/framework/examples/app/.env.example
+420 10 11e6d60e8d8b1830e6ebe95ad0d470f546936d07a5109b8b2004e3f81fbdf847 neokit-9.8.7-fixture.1/framework/examples/app/app/page.view
+420 621 c4e0bd20c937429f38c6f2ba0909b64c039d0154e9da68a5faf89a4b31b3a264 neokit-9.8.7-fixture.1/framework/neo.lock
+420 143 89fb429561ede5af0ab81883b61e917e3e20647e39ef1a318ef4b23889eb7497 neokit-9.8.7-fixture.1/framework/neo.toml
+493 32 bc275ece5d505c20b91e6c5409f717ba93bd27ae894dc51fbef55de7da3bb97d neokit-9.8.7-fixture.1/framework/neokit
+420 44 aa2cdee5d3d6f0d2d2d607d14154d3af92cd753a524f26073af8f768295d0b81 neokit-9.8.7-fixture.1/framework/package.json
+420 20 980f1dc180fd43a144915b972b03ab7e0d994c68af132fed91e57e7013033990 neokit-9.8.7-fixture.1/framework/src/lib.neo
+420 13 06467702816a95afc79289ab870981f8b6e2da17bcc722b5c7322e04b97a08c9 neokit-9.8.7-fixture.1/framework/tests/LICENSE
+420 11 8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881 neokit-9.8.7-fixture.1/framework/tests/lib.ts
+420 9 cc42155088fca5730758db72b2a5bca33112a941dfaa2d43098ec422ce4ea213 neokit-9.8.7-fixture.1/framework/tools/run.py
+493 27 fe3be3011800c281bd763d104e4edc75e9bf0628087790a3060fc5abe1de28e0 neokit-9.8.7-fixture.1/framework/web
+493 31 3fe187a259f605690a72ef15e919027b11743ac2fa7f71cb22b3ca3b8dd91bbf neokit-9.8.7-fixture.1/install.sh
+420 6 be3c6d2c6c406a64d44f0b6464a887e290416dd90c524094485b1be00936d6d7 neokit-9.8.7-fixture.1/neo/VERSION
+493 33 32b4157b71902aa571292fb3c23316ae5ab56aa8c6bae18963dd51e7b7296862 neokit-9.8.7-fixture.1/neo/bin/neoc-darwin-arm64
+493 32 cbf79fe27374891acc8358e738c2d074b3a9c3f3383cc28fee096bd757564911 neokit-9.8.7-fixture.1/neo/bin/neoc-linux-arm64
+493 33 e2a214629801a34eb64a30f989e86415fe275941ef0137d9f8b295ade068bbed neokit-9.8.7-fixture.1/neo/bin/neoc-linux-x86_64
+493 268 956e29eea8c81efbdd3d80d983599ec45ea742e19b30eac800b555f75dfac4ea neokit-9.8.7-fixture.1/neo/neo
+420 15 0b8f88b94eacb00c34b77bfce908dddbc2aa7719ff0aeba42d01025e206d8429 neokit-9.8.7-fixture.1/neo-libs/sample/LICENSE
+420 12 bd66581b2e6f7c4d902f990d9c192a46b0066b685c0ece9ac48ff76f5c8b5905 neokit-9.8.7-fixture.1/neo-libs/sample/LICENSE-THIRD-PARTY
+420 23 ad71479100798fe6a798978a845397461ad5612f44dcecbd59ea390e35a777eb neokit-9.8.7-fixture.1/neo-libs/sample/lib.neo
+tar 3814324b984a240217cb7b2caa952fb7ee385a9a636a1b8935fdeab9386ad357 51200
+=== assemble
+--- MANIFEST.json
+{
+  "format": 1,
+  "version": "9.8.7-fixture.1",
+  "neo_version": "0.2.6",
+  "files": {
+    "README.md": "220957a5269ef167a83d420c2d550f8df7621696d2e45a4f3d83776a0a8d3b19",
+    "VERSION": "8dae7ef23e5afaabf410e4a1ad97f398d1473e3c14d7a4255536a7087d87774a",
+    "framework/.dockerignore": "f10ec3ffef16a8dace9b58801e0da28819c98af4c8933410d7e7cacc952f9e9b",
+    "framework/AGENTS.md": "070a8ff8c31696dd57f1d0f8dfbfb1c9151ebd903c5d7e41d9dbf4133d54f84e",
+    "framework/CHANGELOG.md": "22b4d00e94ada42bb05305dcf122bdd3cea690e9bc42015c4fae814024dd2926",
+    "framework/Dockerfile": "bb57c7da220a8753d7bdabac0d3afdb6efa742e4c736c5bc93ab40dfd5e23b9b",
+    "framework/LICENSE": "f570e537a1e682351461f2f7019f91a321328bebac9648381b514c628785bdd0",
+    "framework/README.md": "7e98df7437f1b50bc0ea2ba7180f28bdb7a043cd2c6045e1783124cdba2fdcc5",
+    "framework/SECURITY.md": "9efcc3ccba113a86dcca90b2b899588159b48b270014ffb47558b04ae2fef1b3",
+    "framework/bun.lock": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+    "framework/cli/launcher.sh": "306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb",
+    "framework/cli/main.neo": "e2ca17504fda5beeb29f6f37cbc9765483dd2820354a212368d2e846094e12bb",
+    "framework/client/runtime.js": "1bf006ef3daca2797aaab7f6f6474b31e1d47694dd3334b0d812703331235792",
+    "framework/client/types.ts": "62fedd8f7f6014812cc4a0b5d0fd44767fa07e76e2b9c8105cef7f87a5d48cd1",
+    "framework/deploy/Caddyfile.local": "35bba7869b69140ec44ab0ef93bc13f1a3b0ae15f5ee7293b425a0ddbd102da2",
+    "framework/deploy/install.sh": "3fe187a259f605690a72ef15e919027b11743ac2fa7f71cb22b3ca3b8dd91bbf",
+    "framework/docs/alpha-release.md": "de330ef6fdd82ad2c6fa9a0f9f771846abab1c85fdab46c625c9e011529584e6",
+    "framework/examples/a-very-long-directory-name-for-the-ustar-prefix-field-0123456789/another-long-directory-name-abcdefghij/page.view": "7eb3296fc33043fa06999040f25574249116ef652fa56b76f05dcb3ffe4d575b",
+    "framework/examples/app/.env.example": "c283007d8774ef7af9ef9242045d49e726f834624768abf670d1e9a6634ee651",
+    "framework/examples/app/app/page.view": "11e6d60e8d8b1830e6ebe95ad0d470f546936d07a5109b8b2004e3f81fbdf847",
+    "framework/neo.lock": "c4e0bd20c937429f38c6f2ba0909b64c039d0154e9da68a5faf89a4b31b3a264",
+    "framework/neo.toml": "89fb429561ede5af0ab81883b61e917e3e20647e39ef1a318ef4b23889eb7497",
+    "framework/neokit": "bc275ece5d505c20b91e6c5409f717ba93bd27ae894dc51fbef55de7da3bb97d",
+    "framework/package.json": "aa2cdee5d3d6f0d2d2d607d14154d3af92cd753a524f26073af8f768295d0b81",
+    "framework/src/lib.neo": "980f1dc180fd43a144915b972b03ab7e0d994c68af132fed91e57e7013033990",
+    "framework/tests/LICENSE": "06467702816a95afc79289ab870981f8b6e2da17bcc722b5c7322e04b97a08c9",
+    "framework/tests/lib.ts": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+    "framework/tools/run.py": "cc42155088fca5730758db72b2a5bca33112a941dfaa2d43098ec422ce4ea213",
+    "framework/web": "fe3be3011800c281bd763d104e4edc75e9bf0628087790a3060fc5abe1de28e0",
+    "install.sh": "3fe187a259f605690a72ef15e919027b11743ac2fa7f71cb22b3ca3b8dd91bbf",
+    "neo/VERSION": "be3c6d2c6c406a64d44f0b6464a887e290416dd90c524094485b1be00936d6d7",
+    "neo/bin/neoc-darwin-arm64": "32b4157b71902aa571292fb3c23316ae5ab56aa8c6bae18963dd51e7b7296862",
+    "neo/bin/neoc-linux-arm64": "cbf79fe27374891acc8358e738c2d074b3a9c3f3383cc28fee096bd757564911",
+    "neo/bin/neoc-linux-x86_64": "e2a214629801a34eb64a30f989e86415fe275941ef0137d9f8b295ade068bbed",
+    "neo/neo": "956e29eea8c81efbdd3d80d983599ec45ea742e19b30eac800b555f75dfac4ea",
+    "neo-libs/sample/LICENSE": "0b8f88b94eacb00c34b77bfce908dddbc2aa7719ff0aeba42d01025e206d8429",
+    "neo-libs/sample/LICENSE-THIRD-PARTY": "bd66581b2e6f7c4d902f990d9c192a46b0066b685c0ece9ac48ff76f5c8b5905",
+    "neo-libs/sample/lib.neo": "ad71479100798fe6a798978a845397461ad5612f44dcecbd59ea390e35a777eb"
+  }
+}
+--- SHA256SUMS
+cb88962d3cf58e597bbbe7a3d8b3cc7b9625877624202cd9d42759e83b67250a  MANIFEST.json
+220957a5269ef167a83d420c2d550f8df7621696d2e45a4f3d83776a0a8d3b19  README.md
+8dae7ef23e5afaabf410e4a1ad97f398d1473e3c14d7a4255536a7087d87774a  VERSION
+f10ec3ffef16a8dace9b58801e0da28819c98af4c8933410d7e7cacc952f9e9b  framework/.dockerignore
+070a8ff8c31696dd57f1d0f8dfbfb1c9151ebd903c5d7e41d9dbf4133d54f84e  framework/AGENTS.md
+22b4d00e94ada42bb05305dcf122bdd3cea690e9bc42015c4fae814024dd2926  framework/CHANGELOG.md
+bb57c7da220a8753d7bdabac0d3afdb6efa742e4c736c5bc93ab40dfd5e23b9b  framework/Dockerfile
+f570e537a1e682351461f2f7019f91a321328bebac9648381b514c628785bdd0  framework/LICENSE
+7e98df7437f1b50bc0ea2ba7180f28bdb7a043cd2c6045e1783124cdba2fdcc5  framework/README.md
+9efcc3ccba113a86dcca90b2b899588159b48b270014ffb47558b04ae2fef1b3  framework/SECURITY.md
+ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356  framework/bun.lock
+306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb  framework/cli/launcher.sh
+e2ca17504fda5beeb29f6f37cbc9765483dd2820354a212368d2e846094e12bb  framework/cli/main.neo
+1bf006ef3daca2797aaab7f6f6474b31e1d47694dd3334b0d812703331235792  framework/client/runtime.js
+62fedd8f7f6014812cc4a0b5d0fd44767fa07e76e2b9c8105cef7f87a5d48cd1  framework/client/types.ts
+35bba7869b69140ec44ab0ef93bc13f1a3b0ae15f5ee7293b425a0ddbd102da2  framework/deploy/Caddyfile.local
+3fe187a259f605690a72ef15e919027b11743ac2fa7f71cb22b3ca3b8dd91bbf  framework/deploy/install.sh
+de330ef6fdd82ad2c6fa9a0f9f771846abab1c85fdab46c625c9e011529584e6  framework/docs/alpha-release.md
+7eb3296fc33043fa06999040f25574249116ef652fa56b76f05dcb3ffe4d575b  framework/examples/a-very-long-directory-name-for-the-ustar-prefix-field-0123456789/another-long-directory-name-abcdefghij/page.view
+c283007d8774ef7af9ef9242045d49e726f834624768abf670d1e9a6634ee651  framework/examples/app/.env.example
+11e6d60e8d8b1830e6ebe95ad0d470f546936d07a5109b8b2004e3f81fbdf847  framework/examples/app/app/page.view
+c4e0bd20c937429f38c6f2ba0909b64c039d0154e9da68a5faf89a4b31b3a264  framework/neo.lock
+89fb429561ede5af0ab81883b61e917e3e20647e39ef1a318ef4b23889eb7497  framework/neo.toml
+bc275ece5d505c20b91e6c5409f717ba93bd27ae894dc51fbef55de7da3bb97d  framework/neokit
+aa2cdee5d3d6f0d2d2d607d14154d3af92cd753a524f26073af8f768295d0b81  framework/package.json
+980f1dc180fd43a144915b972b03ab7e0d994c68af132fed91e57e7013033990  framework/src/lib.neo
+06467702816a95afc79289ab870981f8b6e2da17bcc722b5c7322e04b97a08c9  framework/tests/LICENSE
+8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881  framework/tests/lib.ts
+cc42155088fca5730758db72b2a5bca33112a941dfaa2d43098ec422ce4ea213  framework/tools/run.py
+fe3be3011800c281bd763d104e4edc75e9bf0628087790a3060fc5abe1de28e0  framework/web
+3fe187a259f605690a72ef15e919027b11743ac2fa7f71cb22b3ca3b8dd91bbf  install.sh
+be3c6d2c6c406a64d44f0b6464a887e290416dd90c524094485b1be00936d6d7  neo/VERSION
+32b4157b71902aa571292fb3c23316ae5ab56aa8c6bae18963dd51e7b7296862  neo/bin/neoc-darwin-arm64
+cbf79fe27374891acc8358e738c2d074b3a9c3f3383cc28fee096bd757564911  neo/bin/neoc-linux-arm64
+e2a214629801a34eb64a30f989e86415fe275941ef0137d9f8b295ade068bbed  neo/bin/neoc-linux-x86_64
+956e29eea8c81efbdd3d80d983599ec45ea742e19b30eac800b555f75dfac4ea  neo/neo
+0b8f88b94eacb00c34b77bfce908dddbc2aa7719ff0aeba42d01025e206d8429  neo-libs/sample/LICENSE
+bd66581b2e6f7c4d902f990d9c192a46b0066b685c0ece9ac48ff76f5c8b5905  neo-libs/sample/LICENSE-THIRD-PARTY
+ad71479100798fe6a798978a845397461ad5612f44dcecbd59ea390e35a777eb  neo-libs/sample/lib.neo
+--- VERSION
+9.8.7-fixture.1
+--- README.md
+# Alpha
+
+See framework/SECURITY.md and framework/SECURITY.md.
+--- again
+error: SDK destination already exists: BASE/sdk
+=== unpack
+01-good.tar.gz: ok 11
+  VERSION 420 be3c6d2c6c406a64d44f0b6464a887e290416dd90c524094485b1be00936d6d7
+  bin/
+  bin/dotted 420 58838a98a0f73d9490c60bc281eb8c07dec070d2177f39197d3cad830b6e6c78
+  bin/neoc-darwin-arm64 493 32b4157b71902aa571292fb3c23316ae5ab56aa8c6bae18963dd51e7b7296862
+  bin/neoc-linux-arm64 493 cbf79fe27374891acc8358e738c2d074b3a9c3f3383cc28fee096bd757564911
+  bin/neoc-linux-x86_64 493 e2a214629801a34eb64a30f989e86415fe275941ef0137d9f8b295ade068bbed
+  empty 420 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  lib/
+  lib/deep/
+  lib/deep/x.txt 493 887a4f88342832c91ec165fb0e071da3f2ede20596a9bbdefebe7e0050460bd5
+  neo 493 956e29eea8c81efbdd3d80d983599ec45ea742e19b30eac800b555f75dfac4ea
+  share/
+  share/readme 384 65ce01fcc3e22e78b63419ef0f4493b0950daac7cee97329b428f5cafd395cda
+01-good.tar.gz wrong sum: error: Neo archive SHA-256 does not match --neo-sha256
+01-good.tar.gz no sum: error: Neo archive SHA-256 does not match --neo-sha256
+02-plain.tar: ok 1
+  VERSION 420 be3c6d2c6c406a64d44f0b6464a887e290416dd90c524094485b1be00936d6d7
+02-plain.tar wrong sum: error: Neo archive SHA-256 does not match --neo-sha256
+02-plain.tar no sum: error: Neo archive SHA-256 does not match --neo-sha256
+03-dotdot.tar.gz: error: Unexpected compiler archive entry: neo-0.2.6/../escape
+03-dotdot.tar.gz wrong sum: error: Neo archive SHA-256 does not match --neo-sha256
+03-dotdot.tar.gz no sum: error: Neo archive SHA-256 does not match --neo-sha256
+04-absolute.tar.gz: error: Unexpected compiler archive entry: /neo-0.2.6/VERSION
+04-absolute.tar.gz wrong sum: error: Neo archive SHA-256 does not match --neo-sha256
+04-absolute.tar.gz no sum: error: Neo archive SHA-256 does not match --neo-sha256
+05-other-top.tar.gz: error: Unexpected compiler archive entry: neo-0.2.4/VERSION
+05-other-top.tar.gz wrong sum: error: Neo archive SHA-256 does not match --neo-sha256
+05-other-top.tar.gz no sum: error: Neo archive SHA-256 does not match --neo-sha256
+06-symlink.tar.gz: error: Unexpected compiler archive entry type: neo-0.2.6/link
+06-symlink.tar.gz wrong sum: error: Neo archive SHA-256 does not match --neo-sha256
+06-symlink.tar.gz no sum: error: Neo archive SHA-256 does not match --neo-sha256
+07-hardlink.tar.gz: error: Unexpected compiler archive entry type: neo-0.2.6/hard
+07-hardlink.tar.gz wrong sum: error: Neo archive SHA-256 does not match --neo-sha256
+07-hardlink.tar.gz no sum: error: Neo archive SHA-256 does not match --neo-sha256
+08-gnu-long-name.tar.gz: ok 1
+  gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg/
+  gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg/file 420 307ef1117d7124e7b80527fbc30fb8de42da797c7bc4714d682b023b42094473
+08-gnu-long-name.tar.gz wrong sum: error: Neo archive SHA-256 does not match --neo-sha256
+08-gnu-long-name.tar.gz no sum: error: Neo archive SHA-256 does not match --neo-sha256
+09-pax-long-name.tar.gz: ok 1
+  pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp/
+  pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp/file 493 d0a5fb2e3d323d934006976084f40e7d21ddb72156f9c21083096a02d8ff7af9
+09-pax-long-name.tar.gz wrong sum: error: Neo archive SHA-256 does not match --neo-sha256
+09-pax-long-name.tar.gz no sum: error: Neo archive SHA-256 does not match --neo-sha256
+10-top-only.tar.gz: ok 2
+10-top-only.tar.gz wrong sum: error: Neo archive SHA-256 does not match --neo-sha256
+10-top-only.tar.gz no sum: error: Neo archive SHA-256 does not match --neo-sha256
+11-empty-name.tar.gz: error: Unexpected compiler archive entry: .
+11-empty-name.tar.gz wrong sum: error: Neo archive SHA-256 does not match --neo-sha256
+11-empty-name.tar.gz no sum: error: Neo archive SHA-256 does not match --neo-sha256

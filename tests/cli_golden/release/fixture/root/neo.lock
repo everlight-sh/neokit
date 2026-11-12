@@ -1,0 +1,26 @@
+{
+  "format": 1,
+  "packages": {
+    "neo-sample@1.0.0": {
+      "dependencies": {},
+      "dependency_paths": {},
+      "name": "neo-sample",
+      "path": "../neo-libs/sample",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "version": "1.0.0"
+    },
+    "neokit@9.8.7-fixture.1": {
+      "dependencies": {
+        "sample": "neo-sample@1.0.0"
+      },
+      "dependency_paths": {
+        "sample": "../neo-libs/sample"
+      },
+      "name": "neokit",
+      "path": ".",
+      "sha256": null,
+      "version": "9.8.7-fixture.1"
+    }
+  },
+  "root": "neokit@9.8.7-fixture.1"
+}

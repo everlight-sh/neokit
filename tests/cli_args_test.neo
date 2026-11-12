@@ -1,0 +1,57 @@
+; Unit tests for cli/args.neo. The full comparison with Python's argparse
+; (help at several widths, every usage error) is tests/cli_golden/args/;
+; these pin the parsed values and the pieces of the formatter.
+import "std:option"
+import "std:result"
+import "../cli/args.neo"
+
+fn same(actual:Arr u8 _, expected:Arr u8 _) -> bool = text_equal(actual,expected)
+fn parsed(borrow line:Arr u8 _) -> CmdParsed = cmd_parse_with(text_split_ws(line),"/srv/neokit","/home/me/site",true,"")
+fn parsed_in_root(borrow line:Arr u8 _) -> CmdParsed = cmd_parse_with(text_split_ws(line),"/srv/neokit","/srv/neokit",false,"")
+fn error_of(borrow p:CmdParsed) -> Arr u8 _ = let lines=text_split(text_rstrip_chars(p.stderr,"\n"),"\n") in text_word(lines,len(lines)-1)
+
+fn test_defaults_follow_the_working_directory() -> bool
+  = let p=parsed("serve") in let q=parsed_in_root("serve") in
+    p.ok && same(p.args.command,"serve") && same(p.args.app,"/home/me/site") && same(p.args.out,"/home/me/site/.neokit/build")
+    && same(p.args.profile,"release") && p.args.port==8094 && !p.args.no_build
+    && q.ok && same(q.args.app,"/srv/neokit/examples/studio") && same(q.args.out,"/srv/neokit/build/studio")
+    && same(parsed("export").args.dest,"/home/me/site-export") && same(parsed_in_root("export").args.dest,"/srv/neokit/build/export")
+    && same(parsed("dev").args.profile,"dev") && parsed("preview").args.port==8095 && same(parsed("preview").args.dir,"/home/me/site-export")
+    && same(parsed("revalidate").args.out,"/home/me/site/.neokit/build-revalidation")
+    && same(parsed_in_root("migrate").args.out,"/srv/neokit/build/studio-migrations")
+
+fn test_values() -> bool
+  = let p=parsed("serve --po=9 --no --pro dev --app a//b/./c/") in
+    p.ok && p.args.port==9 && p.args.no_build && same(p.args.profile,"dev") && same(p.args.app,"a/b/c")
+    && parsed("serve --port -5").args.port== -5 && parsed("serve --port 1_000").args.port==1000
+    && (let r=parsed("release --out o --neo-sha256 ab") in r.ok && same(r.args.out,"o") && !r.args.has_neo_archive && r.args.has_neo_sha256 && same(r.args.neo_sha256,"ab"))
+    && (let i=parsed("init -- -x") in i.ok && same(i.args.path,"-x") && !i.args.standalone)
+    && (let t=parsed("test --e --p") in t.ok && t.args.extended && t.args.postgres)
+
+fn test_help_exits_zero_on_stdout() -> bool
+  = let h=parsed("build -h") in let top=parsed("-hx") in
+    !h.ok && h.exit==0 && text_starts(h.stdout,"usage: neokit build [-h] [--app APP] [--out OUT] [--profile {release,dev}]\n")
+    && len(h.stderr)==0 && !top.ok && top.exit==0 && text_contains(top.stdout,"\nNeoKit: native SSR")
+
+fn test_usage_errors() -> bool
+  = same(error_of(parsed("")),"neokit: error: the following arguments are required: command")
+    && same(error_of(parsed("nope")),"neokit: error: argument command: invalid choice: 'nope' (choose from 'prepare', 'build', 'serve', 'dev', 'export', 'test', 'init', 'release', 'doctor', 'revalidate', 'password', 'migrate', 'preview')")
+    && same(error_of(parsed("serve --p 1")),"neokit serve: error: ambiguous option: --p could match --profile, --port")
+    && same(error_of(parsed("serve --port x")),"neokit serve: error: argument --port: invalid int value: 'x'")
+    && same(error_of(parsed("build --profile x")),"neokit build: error: argument --profile: invalid choice: 'x' (choose from 'release', 'dev')")
+    && same(error_of(parsed("build --app")),"neokit build: error: argument --app: expected one argument")
+    && same(error_of(parsed("release")),"neokit release: error: the following arguments are required: --out")
+    && same(error_of(parsed("--x build --y")),"neokit: error: unrecognized arguments: --x --y")
+    && same(error_of(parsed("init --standalone=1")),"neokit init: error: argument --standalone: ignored explicit argument '1'")
+    && parsed("build --app").exit==2 && text_starts(parsed("build --app").stderr,"usage: neokit build [-h]")
+
+fn test_width() -> bool
+  = cmd_width("")==78 && cmd_width("100")==98 && cmd_width(" 50 ")==48 && cmd_width("0")==78 && cmd_width("-5")==78 && cmd_width("abc")==78
+
+; textwrap.wrap: hyphenated words break after the hyphen, long words are
+; cut, "SHA-256" is one word.
+fn test_wrap_like_textwrap() -> bool
+  = same(text_join(cmd_wrap("Neo 0.2.6 multi-platform native release archive",11),"|"),"Neo 0.2.6|multi-|platform|native|release|archive")
+    && same(text_join(cmd_wrap("expected SHA-256 of the Neo archive",11),"|"),"expected|SHA-256 of|the Neo|archive")
+    && same(text_join(cmd_wrap("abcdefghijklmnop  q",11),"|"),"abcdefghijk|lmnop q")
+    && same(text_join(cmd_wrap("  a   b ",11),"|"),"a b")

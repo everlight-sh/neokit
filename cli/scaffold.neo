@@ -1,0 +1,116 @@
+; `neokit init`: compiler/scaffold.py's init, natively. A new application
+; directory with a locked path dependency on the framework, the same files
+; and bytes as the Python writes, and the same errors.
+;
+; The framework root, the environment the package lock runs with and the
+; Neo command (compiler_command(environment) in build.py: [NEO_HOME/neo])
+; are explicit arguments, so this module does not depend on build.neo.
+; --standalone first assembles an SDK into vendor/neokit-sdk with
+; rel_assemble, then locks against its framework with its Neo.
+import "std:option"
+import "std:result"
+import "std:json"
+import "std:io"
+import "host.neo"
+import "toml.neo"
+import "pyjson.neo"
+import "release.neo"
+
+; The project launcher of a standalone application.
+fn scf_launcher() -> Arr u8 _
+  = "#!/bin/sh\nset -eu\nproject=$(CDPATH= cd -- \"$(dirname -- \"$0\")\" && pwd)\ncd \"$project\"\nexport NEO_HOME=\"$project/vendor/neokit-sdk/neo\"\nexec \"$project/vendor/neokit-sdk/framework/neokit\" \"$@\"\n"
+
+; The text of each file init writes. name is the project directory's name,
+; relative the framework root relative to it, version the framework's
+; package version and runtime client/runtime.js relative to client/.
+fn scf_neo_toml(borrow name:Arr u8 _, borrow relative:Arr u8 _, borrow version:Arr u8 _) -> Arr u8 _
+  = concat("[package]\nname=",pj_quote(name),"\nversion=\"0.1.0\"\nentry=\"app/page.neo\"\n\n[dependencies]\nneokit={path=",pj_quote(relative),",version=",pj_quote(version),"}\n")
+fn scf_web_toml(borrow name:Arr u8 _) -> Arr u8 _ = concat("[site]\nname=",pj_quote(name),"\n")
+fn scf_page_neo() -> Arr u8 _
+  = "import \"pkg:neokit\"\ntype PageProps={title:Arr u8 _}\nfn load(request:WebRequest)->PageProps=PageProps {title=\"Hello from NeoKit\"}\n"
+fn scf_page_toml() -> Arr u8 _ = "loader=\"load\"\nclient=true\n"
+fn scf_page_view() -> Arr u8 _ = "@props(title:text)\n<h1>{{ title }}</h1><p>Edit app/page.view to begin.</p>\n"
+fn scf_layout_view() -> Arr u8 _
+  = "@props(title:text,content:html,client:bool,mode:text)\n<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{{ title }}</title><link rel=\"stylesheet\" href=\"/site.css\"></head><body><main id=\"web-page\" tabindex=\"-1\">{{ content }}</main>{% if client %}<script type=\"module\" src=\"@asset(client.js)\"></script>{% endif %}</body></html>\n"
+fn scf_index_js(borrow runtime:Arr u8 _) -> Arr u8 _ = concat("import { start } from ",pj_quote(runtime),";\nstart();\n")
+fn scf_site_css() -> Arr u8 _
+  = "body{font-family:system-ui;max-width:60rem;margin:4rem auto;padding:1rem;color:#172033}h1{letter-spacing:-.03em}\n"
+fn scf_gitignore() -> Arr u8 _ = ".neokit/\n.neo-build/\nnode_modules/\n.env\n"
+
+private fn scf_fail(borrow message:Arr u8 _) -> Result<i64,Arr u8 _> = Err::<i64,Arr u8 _>(message)
+private fn scf_done() -> Result<i64,Arr u8 _> = Ok::<i64,Arr u8 _>(0)
+
+; The framework's [package] version, as tomllib reads it.
+private effect(fs) fn scf_version(borrow root:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = let path=host_join(root,"neo.toml") in
+    let raw=host_read_bytes(path)? in
+    let config=toml_load(path,raw)? in
+    let package=toml_get(config,"package") in
+    match package {
+      None => Err::<Arr u8 _,Arr u8 _>("'package'"),
+      Some(table) => let version=toml_get(table,"version") in
+        match version { None => Err::<Arr u8 _,Arr u8 _>("'version'"), Some(value) => Ok::<Arr u8 _,Arr u8 _>(toml_text(value)) }
+    }
+
+; Path(path).exists() and any(path.iterdir()): a non-directory is
+; NotADirectoryError, as iterdir raises it.
+private effect(fs) fn scf_check_empty(borrow path:Arr u8 _) -> Result<i64,Arr u8 _>
+  = if !host_exists(path) then scf_done() else
+    let names=host_listdir(path)? in
+    if len(names)>0 then scf_fail("Project destination must be empty") else scf_done()
+
+type ScfSetup = { root:Arr u8 _, environment:Arr Arr u8 _ _, neo:Arr Arr u8 _ _ }
+; --standalone: the SDK in vendor/neokit-sdk (assembled from root, with the
+; multi-platform Neo installed beside it) and the project launcher. The
+; rest of init then uses the SDK's framework and Neo.
+private effect(fs,env,process,time) fn scf_standalone(borrow path:Arr u8 _, borrow root:Arr u8 _, borrow environment:Arr Arr u8 _ _) -> Result<ScfSetup,Arr u8 _>
+  = let sdk=host_join(path,"vendor/neokit-sdk") in
+    let assembled=rel_assemble(sdk,root,environment,text_empty(),text_empty())? in
+    let neo=host_join(sdk,"neo") in
+    let launcher=host_write_mode(host_join(path,"neokit"),scf_launcher(),493)? in
+    Ok::<ScfSetup,Arr u8 _>(ScfSetup { root=host_join(sdk,"framework"),
+      environment=host_env_set(host_env_set(environment,"NEO_HOME",neo),"NEO_ROOT",neo),
+      neo=push(text_words(),host_join(neo,"neo")) })
+
+private effect(fs,env,process,time) fn scf_setup(borrow path:Arr u8 _, borrow root:Arr u8 _, borrow environment:Arr Arr u8 _ _,
+    borrow neo:Arr Arr u8 _ _, standalone:bool) -> Result<ScfSetup,Arr u8 _>
+  = if standalone then scf_standalone(path,root,environment)
+    else Ok::<ScfSetup,Arr u8 _>(ScfSetup { root=root, environment=environment, neo=neo })
+
+private effect(fs,process) fn scf_write(borrow path:Arr u8 _, borrow name:Arr u8 _, borrow text:Arr u8 _) -> Arr u8 _
+  = match host_write_text(host_join(path,name),text) { Ok(count) => text_empty(), Err(message) => message }
+
+; scaffold.py's init(path, root, environment, standalone): creates the
+; project at path (which must be missing or empty), locks it with
+; `NEO pkg lock PATH` (neo is the command, environment its variables; the
+; child shares stdin, stdout and stderr) and returns the resolved path.
+effect(fs,env,process,time) fn scf_init(borrow path:Arr u8 _, borrow root:Arr u8 _, borrow environment:Arr Arr u8 _ _,
+    borrow neo:Arr Arr u8 _ _, standalone:bool) -> Result<Arr u8 _,Arr u8 _>
+  = let project=host_resolve(path)? in
+    let empty=scf_check_empty(project)? in
+    let made=host_mkdir(project,true,true)? in
+    let setup=scf_setup(project,root,environment,neo,standalone)? in
+    let folders=push(push(push(text_words(),"app"),"client"),"public") in
+    let created=loop (err=text_empty(), i=0) while len(err)==0 && i<len(folders)
+      next (match host_mkdir(host_join(project,text_word(folders,i)),false,true) { Ok(done) => text_empty(), Err(message) => message }, i+1) yield err in
+    if len(created)>0 then Err::<Arr u8 _,Arr u8 _>(created) else
+    let relative=host_relpath(setup.root,project)? in
+    let version=scf_version(setup.root)? in
+    let runtime=host_relpath(host_join(setup.root,"client/runtime.js"),host_join(project,"client"))? in
+    let name=host_name(project) in
+    let names=text_split("neo.toml web.toml app/page.neo app/page.toml app/page.view app/layout.view client/index.js public/site.css .gitignore"," ") in
+    let texts=push(push(push(push(push(push(push(push(push(text_words(),scf_neo_toml(name,relative,version)),scf_web_toml(name)),scf_page_neo()),
+      scf_page_toml()),scf_page_view()),scf_layout_view()),scf_index_js(runtime)),scf_site_css()),scf_gitignore()) in
+    let written=loop (err=text_empty(), i=0) while len(err)==0 && i<len(names)
+      next (scf_write(project,text_word(names,i),text_word(texts,i)), i+1) yield err in
+    if len(written)>0 then Err::<Arr u8 _,Arr u8 _>(written) else
+    let argv=push(push(setup.neo,"pkg"),"lock") in
+    let command=push(argv,project) in
+    let run=host_run_inherit(command,setup.environment,text_empty()) in
+    if !run.ok then Err::<Arr u8 _,Arr u8 _>(run.error)
+    else if run.code!=0 then Err::<Arr u8 _,Arr u8 _>(host_process_error(command,run))
+    else Ok::<Arr u8 _,Arr u8 _>(project)
+
+; The line `neokit init` prints after scf_init returns target.
+fn scf_created(borrow target:Arr u8 _, standalone:bool) -> Arr u8 _
+  = concat("Created ",target,". ",if standalone then "Run ./neokit dev from the project directory." else concat("Run ./neokit dev --app ",target))

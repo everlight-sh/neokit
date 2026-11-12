@@ -1,0 +1,95 @@
+; Driver for cli/scaffold.neo, as scaffold.neo.toml and parity.py run it.
+;
+; Usage (paths relative to the working directory):
+;   driver.neo init PATH ROOT STANDALONE   scf_init(PATH, ROOT, the process
+;                                          environment, [$NEO_HOME/neo],
+;                                          STANDALONE "1" or "0"); prints
+;                                          scf_created's line
+;   driver.neo fixture                     the golden cases (see generate.py)
+; Errors print as "error: MESSAGE" on stdout and exit 1.
+import "std:io"
+import "std:fs"
+import "std:process"
+import "../../../cli/scaffold.neo"
+
+effect fn arg(i:i64) -> Arr u8 _ = let value=cli_arg(i) in if value.present then value.value else text_empty()
+effect fn finish(borrow output:Arr u8 _, failed:bool) -> unit
+  = let printed=print_out(output) in if failed then process_exit(1) else noop()
+; compiler_command(environment): [NEO_HOME/neo].
+fn neo_of(borrow environment:Arr Arr u8 _ _) -> Arr Arr u8 _ _
+  = let home=host_env_get(environment,"NEO_HOME") in push(text_words(),host_join(if home.present then home.value else text_empty(),"neo"))
+
+effect fn run_init() -> unit
+  = let environment=env_list() in
+    let standalone=text_equal(arg(4),"1") in
+    match scf_init(arg(2),arg(3),environment,neo_of(environment),standalone) {
+      Ok(target) => finish(concat(scf_created(target,standalone),"\n"),false),
+      Err(message) => finish(concat("error: ",message,"\n"),true)
+    }
+
+; ---- golden cases ----
+
+effect fn scratch() -> Arr u8 _
+  = let cwd=host_cwd() in let base=match cwd { Ok(path) => host_join(path,"build/cli-golden-scaffold"), Err(message) => "build/cli-golden-scaffold" } in
+    let removed=if host_lexists(base) then host_remove_tree(base) else Ok::<i64,Arr u8 _>(0) in
+    let made=host_mkdirs(base) in base
+effect fn read_or(borrow path:Arr u8 _) -> Arr u8 _ = match host_read_bytes(path) { Ok(data) => data, Err(message) => concat("error: ",message) }
+effect fn mode_of(borrow path:Arr u8 _) -> Arr u8 _ = match host_mode(path) { Ok(mode) => text_int(mode), Err(message) => message }
+; Each path below top in sorted(Path) order: directories with their mode,
+; files with mode, size and SHA-256, and the text of files outside vendor/.
+effect fn tree(borrow top:Arr u8 _) -> Arr u8 _
+  = let paths=host_rglob(top,"*") in
+    loop (out=text_empty(), i=0) while i<len(paths)
+      next (let path=text_word(paths,i) in
+            let relative=match host_relative_to(path,top) { Ok(r) => r, Err(m) => path } in
+            concat(out,
+              if host_is_symlink(path) then concat("  ",relative," -> link\n")
+              else if host_is_dir(path) then concat("  ",relative,"/ ",mode_of(path),"\n")
+              else (let data=read_or(path) in
+                    concat("  ",relative," ",mode_of(path)," ",text_int(len(data))," ",host_sha256_hex(data),"\n",
+                      if text_starts(relative,"vendor/") then text_empty()
+                      else concat("    | ",text_replace(text_rstrip_chars(data,"\n"),"\n","\n    | "),"\n")))), i+1) yield out
+effect fn init_case(borrow label:Arr u8 _, borrow base:Arr u8 _, borrow path:Arr u8 _, borrow root:Arr u8 _,
+    borrow environment:Arr Arr u8 _ _, borrow neo:Arr Arr u8 _ _, standalone:bool, listed:bool) -> Arr u8 _
+  = let result=match scf_init(path,root,environment,neo,standalone) {
+      Ok(target) => scf_created(target,standalone), Err(message) => concat("error: ",message) } in
+    concat("=== ",label,"\n",text_replace(result,base,"BASE"),"\n",
+      if listed && host_is_dir(path) then text_replace(tree(path),base,"BASE") else text_empty())
+
+effect fn run_fixture() -> unit
+  = let base=scratch() in
+    let release=host_join(host_cwd_or("."),"tests/cli_golden/release/fixture") in
+    let archive=host_join(release,concat("neo-",rel_neo_version(),".tar.gz")) in
+    let environment=host_env_set(env_list(),"SOURCE_DATE_EPOCH","1700000000") in
+    let sdk=host_join(base,"sdk") in
+    let assembled=match rel_assemble(sdk,host_join(release,"root"),environment,archive,host_sha256_hex(read_or(archive))) {
+      Ok(done) => "ok", Err(message) => concat("error: ",message) } in
+    let neo=host_join(sdk,"neo") in
+    let bundled=host_env_set(host_env_set(environment,"NEO_HOME",neo),"NEO_ROOT",neo) in
+    let command=neo_of(bundled) in
+    let framework=host_join(sdk,"framework") in
+    let apps=host_join(base,"apps") in
+    let made=host_mkdirs(host_join(apps,"empty")) in
+    let file=host_write_text(host_join(apps,"file"),"x") in
+    let failing=host_join(base,"failing-neo") in
+    let fail_made=host_mkdirs(failing) in
+    let fail_neo=host_write_mode(host_join(failing,"neo"),"#!/bin/sh\nexit 3\n",493) in
+    let failing_env=host_env_set(host_env_set(environment,"NEO_HOME",failing),"NEO_ROOT",failing) in
+    let output=concat("=== sdk\n",assembled,"\n",
+      init_case("plain",base,host_join(apps,"plain"),framework,bundled,command,false,true),
+      init_case("standalone",base,host_join(apps,"standalone"),framework,bundled,command,true,true),
+      init_case("existing empty directory",base,host_join(apps,"empty"),framework,bundled,command,false,false),
+      init_case("nested and quoted name",base,host_join(apps,"deep/er/my \"app\" \xc3\xa9"),framework,bundled,command,false,true),
+      init_case("not empty",base,host_join(apps,"plain"),framework,bundled,command,false,false),
+      init_case("a file",base,host_join(apps,"file"),framework,bundled,command,false,false),
+      init_case("standalone without a Neo beside the root",base,host_join(apps,"no-neo"),host_join(release,"root"),bundled,command,true,true),
+      init_case("lock fails",base,host_join(apps,"failing"),framework,failing_env,neo_of(failing_env),false,true)) in
+    let removed=host_remove_tree(base) in
+    finish(output,false)
+effect fn host_cwd_or(borrow fallback:Arr u8 _) -> Arr u8 _ = match host_cwd() { Ok(path) => path, Err(message) => fallback }
+
+effect fn main() -> unit
+  = let mode=arg(1) in
+    if text_equal(mode,"init") then run_init()
+    else if text_equal(mode,"fixture") then run_fixture()
+    else finish("usage: driver.neo init PATH ROOT 0|1 | fixture\n",true)

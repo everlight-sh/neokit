@@ -1,0 +1,7 @@
+[package]
+name = "neokit"
+version = "9.8.7-fixture.1"
+entry = "src/lib.neo"
+
+[dependencies]
+sample={path="../neo-libs/sample",version="1.0.0"}

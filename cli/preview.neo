@@ -1,0 +1,585 @@
+; `neokit preview`, natively: compiler/cli.py's preview of a static export,
+; Python 3.12's http.server.SimpleHTTPRequestHandler behind a
+; ThreadingHTTPServer on 127.0.0.1:PORT.
+;
+; cmd_preview(directory, port) resolves the directory, requires its
+; index.html ("Run ./neokit export first"), prints
+; "Static export preview: http://127.0.0.1:PORT" and serves until SIGINT or
+; SIGTERM, then gives Ok(0) (Python ends quietly on Ctrl-C too). The
+; listener is std:socket's tcp_listen_ipv4 on 127.0.0.1, so only loopback
+; clients reach it; std:http's serve binds every interface, so it is not
+; used, and std:http_server gives the dates. All connections are served
+; from one std:reactor loop, as the threads serve them: an idle or slow
+; client does not hold up the others.
+;
+; Requests are answered as SimpleHTTPRequestHandler answers them: HTTP/1.0
+; responses with Server and Date, one per connection; a directory without
+; a trailing slash is a 301 to it (the query and fragment kept); a
+; directory serves index.html, then index.htm, then a listing; a file has
+; Content-type, Content-Length and Last-Modified, and If-Modified-Since
+; (without If-None-Match) not older than it gives 304; a missing file, or
+; a file path ending in a slash, is 404 "File not found"; methods other
+; than GET and HEAD are 501; HEAD gets the headers alone; request line and
+; header errors (400, 414, 431, 505) and HTTP/0.9 requests are answered as
+; BaseHTTPRequestHandler answers them, with its error page. Each request
+; is logged on stderr in http.server's format.
+;
+; Differences: a file's Content-type is build.py's content_type()
+; (cli/build.neo's gen_content_type), what `neokit serve` sends, not
+; SimpleHTTPRequestHandler.guess_type(). Symbolic links are followed only
+; within the served directory: a path whose real location is outside it
+; is 404, and an index page leading outside is skipped, where Python
+; serves whatever a link leads to (".." and "%2e%2e" never leave the
+; directory in either). The Server header is "neokit-preview". Log times
+; are UTC (Python's are local) and the client is always shown as
+; 127.0.0.1. A connection idle for 60 seconds is closed, and at most 128
+; are open at once (Python's threads wait forever). Only regular files are
+; served. A NUL byte or an encoded surrogate in the path is 404 (Python's
+; handler fails and closes the connection without a response). A port
+; outside 0..65535 is the error "bind(): port must be 0-65535." (Python's
+; OverflowError ends in a traceback). SIGTERM ends the preview like
+; SIGINT, with Ok(0) (Python dies of the signal).
+import "std:option"
+import "std:result"
+import "std:io"
+import "std:time"
+import "std:vec"
+import "std:cancel"
+import "std:socket"
+import "std:reactor"
+import "std:arena"
+import "std:signals"
+import "std:http_server"
+import "host.neo"
+import "release.neo"
+import "build.neo"
+
+; ---------------------------------------------------------------- latin-1 text
+
+; http.server reads the request line and headers as latin-1, one code point
+; per byte. Such text is kept as its bytes here and converted when written.
+
+; Python's str.split() whitespace, for one latin-1 code point.
+private fn cmd_pv_space(b:i64) -> bool = (b>=9 && b<=13) || (b>=28 && b<=32) || b==133 || b==160
+; text.split() of latin-1 text.
+private fn cmd_pv_words(borrow text:Arr u8 _) -> Arr Arr u8 _ _
+  = loop (out=text_words(), start= -1, i=0) while i<=len(text)
+      next (if i==len(text) || cmd_pv_space(text_byte(text,i)) then (if start>=0 then push(out,text_slice(text,start,i)) else out) else out,
+            if i==len(text) || cmd_pv_space(text_byte(text,i)) then -1 else if start<0 then i else start,
+            i+1) yield out
+; text.rstrip() of latin-1 text.
+private fn cmd_pv_rstrip(borrow text:Arr u8 _) -> Arr u8 _
+  = let cut=loop (k=len(text)) while k>0 && cmd_pv_space(text_byte(text,k-1)) next (k-1) yield k in text_slice(text,0,cut)
+; Latin-1 text as UTF-8.
+private fn cmd_pv_utf8(borrow text:Arr u8 _) -> Arr u8 _
+  = loop (out=text_empty(), i=0) while i<len(text)
+      next (let b=text_byte(text,i) in if b<128 then push(out,u8(b)) else push(push(out,u8(192+b/64)),u8(128+b%64)), i+1) yield out
+; repr() of latin-1 text, as latin-1 text.
+private fn cmd_pv_repr(borrow text:Arr u8 _) -> Arr u8 _
+  = let quote=if text_contains(text,"'") && !text_contains(text,"\"") then 34 else 39 in
+    let body=loop (out=push(text_empty(),u8(quote)), i=0) while i<len(text)
+      next (let c=text_byte(text,i) in
+            if c==quote || c==92 then push(push(out,u8(92)),u8(c))
+            else if c==9 then concat(out,"\\t") else if c==10 then concat(out,"\\n") else if c==13 then concat(out,"\\r")
+            else if c<32 || c==127 || (c>=128 && !text_printable(c)) then concat(out,"\\x",text_hex(c,2))
+            else push(out,u8(c)), i+1) yield out in
+    push(body,u8(quote))
+; message.translate(BaseHTTPRequestHandler._control_char_table) of
+; latin-1 text, as UTF-8: control characters as \xNN, "\" doubled.
+private fn cmd_pv_log_text(borrow text:Arr u8 _) -> Arr u8 _
+  = cmd_pv_utf8(loop (out=text_empty(), i=0) while i<len(text)
+      next (let c=text_byte(text,i) in
+            if c<32 || (c>=127 && c<160) then concat(out,"\\x",text_hex(c,2)) else if c==92 then concat(out,"\\\\") else push(out,u8(c)), i+1) yield out)
+; html.escape(text, quote=False).
+private fn cmd_pv_escape(borrow text:Arr u8 _) -> Arr u8 _
+  = text_replace(text_replace(text_replace(text,"&","&amp;"),"<","&lt;"),">","&gt;")
+; urllib.parse.quote(text) of UTF-8 text: "/" and the unreserved bytes
+; stay, the others are %XX.
+private fn cmd_pv_quote(borrow text:Arr u8 _) -> Arr u8 _
+  = loop (out=text_empty(), i=0) while i<len(text)
+      next (let c=text_byte(text,i) in
+            if (c>=48 && c<=57) || (c>=65 && c<=90) || (c>=97 && c<=122) || c==95 || c==46 || c==45 || c==126 || c==47 then push(out,u8(c))
+            else concat(out,"%",text_upper(text_hex(c,2))), i+1) yield out
+; The %XX escapes of text decoded (urllib.parse._unquote_impl); a "%"
+; without two hex digits after it stays.
+private fn cmd_pv_escaped_at(borrow text:Arr u8 _, i:i64) -> bool
+  = text_byte(text,i)==37 && text_hex_value(text_byte(text,i+1))>=0 && text_hex_value(text_byte(text,i+2))>=0
+private fn cmd_pv_percent(borrow text:Arr u8 _) -> Arr u8 _
+  = loop (out=text_empty(), i=0) while i<len(text)
+      next (if cmd_pv_escaped_at(text,i) then push(out,u8(text_hex_value(text_byte(text,i+1))*16+text_hex_value(text_byte(text,i+2))))
+            else push(out,u8(text_byte(text,i))),
+            if cmd_pv_escaped_at(text,i) then i+3 else i+1) yield out
+; One run of ASCII decoded and read as UTF-8 (an invalid sequence is
+; U+FFFD, what translate_path's errors='replace' retry gives).
+private fn cmd_pv_decoded(borrow run:Arr u8 _) -> Arr u8 _
+  = let bytes=cmd_pv_percent(run) in if len(host_utf8_error(bytes))==0 then bytes else host_decode_replace(bytes)
+; urllib.parse.unquote(text) of latin-1 text, as UTF-8: each run of ASCII
+; characters is decoded, the other characters stay as they are.
+private fn cmd_pv_unquote(borrow text:Arr u8 _) -> Arr u8 _
+  = loop (out=text_empty(), start=0, i=0) while i<=len(text)
+      next (if i==len(text) || text_byte(text,i)>=128 then
+              (let flushed=concat(out,cmd_pv_decoded(text_slice(text,start,i))) in
+               if i<len(text) then concat(flushed,cmd_pv_utf8(text_slice(text,i,i+1))) else flushed)
+            else out,
+            if i==len(text) || text_byte(text,i)>=128 then i+1 else start,
+            i+1) yield out
+
+; ---------------------------------------------------------------- paths
+
+; The request target up to its query or fragment.
+private fn cmd_pv_target_path(borrow target:Arr u8 _) -> Arr u8 _
+  = let ask=text_find(target,"?",0) in let hash=text_find(target,"#",0) in
+    let cut=if ask<0 then hash else if hash<0 then ask else if ask<hash then ask else hash in
+    if cut<0 then target else text_slice(target,0,cut)
+private fn cmd_pv_drop_last(borrow words:Arr Arr u8 _ _) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=0) while i<len(words)-1 next (push(out,text_word(words,i)), i+1) yield out
+
+; SimpleHTTPRequestHandler.translate_path(target) below the served
+; directory: the words of the path (the query and fragment dropped,
+; unquoted, empty and "." words dropped, ".." taking back the word before
+; it and never going above the top), and whether the path ends with "/".
+type CmdPreviewPath = { words:Arr Arr u8 _ _, slash:bool }
+fn cmd_preview_path(borrow target:Arr u8 _) -> CmdPreviewPath
+  = let path=cmd_pv_target_path(target) in
+    let parts=text_split(cmd_pv_unquote(path),"/") in
+    let words=loop (out=text_words(), i=0) while i<len(parts)
+      next (let w=text_word(parts,i) in
+            if len(w)==0 || text_equal(w,".") then out else if text_equal(w,"..") then cmd_pv_drop_last(out) else push(out,w), i+1) yield out in
+    CmdPreviewPath { words=words, slash=text_ends(cmd_pv_rstrip(path),"/") }
+; The file system path translate_path gives for target under root.
+fn cmd_preview_file(borrow root:Arr u8 _, borrow target:Arr u8 _) -> Arr u8 _
+  = let p=cmd_preview_path(target) in
+    let joined=loop (out=root, i=0) while i<len(p.words) next (host_posix_join(out,text_word(p.words,i)), i+1) yield out in
+    if p.slash then concat(joined,"/") else joined
+; The Location a directory redirects to: urlunsplit() of urlsplit(target)
+; with "/" after the path (an empty query or fragment is dropped).
+fn cmd_preview_location(borrow target:Arr u8 _) -> Arr u8 _
+  = let hash=text_find(target,"#",0) in
+    let before=if hash<0 then target else text_slice(target,0,hash) in
+    let ask=text_find(before,"?",0) in
+    let query=if ask<0 then text_empty() else text_from(before,ask+1) in
+    let fragment=if hash<0 then text_empty() else text_from(target,hash+1) in
+    concat(if ask<0 then before else text_slice(before,0,ask),"/",
+      if len(query)>0 then concat("?",query) else text_empty(),if len(fragment)>0 then concat("#",fragment) else text_empty())
+
+; ---------------------------------------------------------------- requests
+
+; One request as BaseHTTPRequestHandler.handle_one_request reads it from
+; the bytes received so far (eof: the client sends no more). ready: the
+; request is whole, or cut short by eof (until then more is needed).
+; none: there is nothing to answer (no request line, or a blank one).
+; status 0 is a GET or HEAD to serve; otherwise it is the error send_error
+; sends, with message its text ("" for the status's phrase) and explain
+; its explanation ("" for the status's description). simple: an HTTP/0.9
+; exchange, answered without a status line or headers. line is the
+; request line (latin-1) for the log, command the method ("" before it is
+; known), path the target ("//" at its start reduced to "/") and headers
+; the header lines.
+type CmdPreviewRequest = { ready:bool, none:bool, status:i64, message:Arr u8 _, explain:Arr u8 _, simple:bool,
+                           line:Arr u8 _, command:Arr u8 _, path:Arr u8 _, headers:Arr u8 _ }
+private fn cmd_pv_request() -> CmdPreviewRequest
+  = CmdPreviewRequest { ready=true, none=false, status=0, message=text_empty(), explain=text_empty(), simple=true,
+                        line=text_empty(), command=text_empty(), path=text_empty(), headers=text_empty() }
+private fn cmd_pv_failed(borrow r:CmdPreviewRequest, status:i64, borrow message:Arr u8 _, borrow explain:Arr u8 _) -> CmdPreviewRequest
+  = r with { status=status, message=message, explain=explain }
+
+; The protocol version, the last word of a request line, as parse_request
+; checks it: "HTTP/" and two numbers of at most 10 digits.
+type CmdPvVersion = { ok:bool, major:i64 }
+private fn cmd_pv_digits(borrow text:Arr u8 _) -> bool
+  = len(text)>0 && len(text)<=10 && loop (i=0, ok=true) while ok && i<len(text) next (i+1, text_byte(text,i)>=48 && text_byte(text,i)<=57) yield ok
+private fn cmd_pv_version(borrow version:Arr u8 _) -> CmdPvVersion
+  = let parts=text_split(text_from(version,5),".") in
+    if !text_starts(version,"HTTP/") || len(parts)!=2 || !cmd_pv_digits(text_word(parts,0)) || !cmd_pv_digits(text_word(parts,1))
+    then CmdPvVersion { ok=false, major=0 }
+    else CmdPvVersion { ok=true, major=rel_int(text_word(parts,0)).value }
+
+; The header lines from at, as http.client's _read_headers reads them
+; (lines of at most 65536 bytes, at most 100 with the blank line ending
+; them). state: 0 reading, 1 whole, 2 more needed, 3 a line too long, 4
+; too many lines.
+type CmdPvScan = { at:i64, count:i64, state:i64 }
+private fn cmd_pv_scan_step(borrow input:Arr u8 _, eof:bool, borrow s:CmdPvScan) -> CmdPvScan
+  = let k=text_find(input,"\n",s.at) in
+    let size=if k<0 then len(input)-s.at else k-s.at+1 in
+    if size>65536 then s with { state=3 }
+    else if k<0 && !eof then s with { state=2 }
+    else if s.count+1>100 then s with { count=s.count+1, state=4 }
+    else if k<0 then
+      (if size==0 then s with { count=s.count+1, state=1, at=len(input) }
+       else if s.count+2>100 then s with { count=s.count+2, state=4 }
+       else s with { count=s.count+2, state=1, at=len(input) })
+    else let line=text_slice(input,s.at,k+1) in
+      if text_equal(line,"\r\n") || text_equal(line,"\n") then s with { count=s.count+1, state=1, at=k+1 }
+      else s with { count=s.count+1, at=k+1 }
+private fn cmd_pv_scan(borrow input:Arr u8 _, at:i64, eof:bool) -> CmdPvScan
+  = loop (s=CmdPvScan { at=at, count=0, state=0 }) while s.state==0 next (cmd_pv_scan_step(input,eof,s)) yield s
+
+; The request in input so far.
+fn cmd_preview_request(borrow input:Arr u8 _, eof:bool) -> CmdPreviewRequest
+  = let base=cmd_pv_request() in
+    let newline=text_find(input,"\n",0) in
+    if newline>=65536 || (newline<0 && len(input)>65536) then cmd_pv_failed(base with { simple=false },414,text_empty(),text_empty())
+    else if newline<0 && !eof then base with { ready=false }
+    else if len(input)==0 then base with { none=true }
+    else let after=if newline<0 then len(input) else newline+1 in
+    let line=text_rstrip_chars(text_slice(input,0,after),"\r\n") in
+    let words=cmd_pv_words(line) in
+    let n=len(words) in
+    let r=base with { line=line } in
+    if n==0 then r with { none=true } else
+    let last=text_word(words,n-1) in
+    let version=if n>=3 then cmd_pv_version(last) else CmdPvVersion { ok=true, major=0 } in
+    if !version.ok then cmd_pv_failed(r,400,concat("Bad request version (",cmd_pv_repr(last),")"),text_empty())
+    else if version.major>=2 then cmd_pv_failed(r,505,concat("Invalid HTTP version (",text_from(last,5),")"),text_empty())
+    else let full=r with { simple=n<3 } in
+    if n<2 || n>3 then cmd_pv_failed(full,400,concat("Bad request syntax (",cmd_pv_repr(line),")"),text_empty())
+    else if n==2 && !text_equal(text_word(words,0),"GET") then cmd_pv_failed(full,400,concat("Bad HTTP/0.9 request type (",cmd_pv_repr(text_word(words,0)),")"),text_empty())
+    else let target=text_word(words,1) in
+    let named=full with { command=text_word(words,0), path=if text_starts(target,"//") then concat("/",text_lstrip_chars(target,"/")) else target } in
+    let head=cmd_pv_scan(input,after,eof) in
+    if head.state==2 then named with { ready=false }
+    else if head.state==3 then cmd_pv_failed(named,431,"Line too long","got more than 65536 bytes when reading header line")
+    else if head.state==4 then cmd_pv_failed(named,431,"Too many headers","got more than 100 headers")
+    else let headed=named with { headers=text_slice(input,after,head.at) } in
+    if !text_equal(headed.command,"GET") && !text_equal(headed.command,"HEAD") then cmd_pv_failed(headed,501,concat("Unsupported method (",cmd_pv_repr(headed.command),")"),text_empty())
+    else headed
+
+; ---------------------------------------------------------------- If-Modified-Since
+
+; The header lines as the email parser of http.client.parse_headers reads
+; them (a line ends at \r\n, \r or \n): each header's name and raw value,
+; up to the blank line or the first line that is not a header.
+type CmdPvField = { name:Arr u8 _, value:Arr u8 _ }
+type CmdPvFields = { fields:Arr CmdPvField _, open:bool, done:bool }
+type CmdPvValue = { found:bool, value:Arr u8 _ }
+private fn cmd_pv_breaks(borrow text:Arr u8 _, i:i64) -> bool
+  = text_byte(text,i)==10 || (text_byte(text,i)==13 && text_byte(text,i+1)!=10)
+private fn cmd_pv_lines(borrow text:Arr u8 _) -> Arr Arr u8 _ _
+  = loop (out=text_words(), start=0, i=0) while i<len(text)
+      next (if cmd_pv_breaks(text,i) then push(out,text_slice(text,start,i+1)) else out,
+            if cmd_pv_breaks(text,i) then i+1 else start, i+1)
+      yield if start<len(text) then push(out,text_from(text,start)) else out
+; Where a header name ([\041-\071\073-\176]*) ends at its colon, or -1.
+private fn cmd_pv_name_end(borrow line:Arr u8 _) -> i64
+  = let found=loop (i=0, found= -2) while found== -2 && i<len(line)
+      next (i+1, let b=text_byte(line,i) in if b==58 then i else if b>=33 && b<=126 then -2 else -1) yield found in
+    if found== -2 then -1 else found
+private fn cmd_pv_no_fields() -> Arr CmdPvField _ = arr(i in 0..0) CmdPvField { name=text_empty(), value=text_empty() }
+private fn cmd_pv_continued(borrow fields:Arr CmdPvField _, borrow line:Arr u8 _) -> Arr CmdPvField _
+  = let at=len(fields)-1 in
+    if at>=0 && at<len(fields) then let last=fields[at] in set(fields,at,last with { value=concat(last.value,line) }) else fields
+private fn cmd_pv_field_step(borrow s:CmdPvFields, borrow line:Arr u8 _) -> CmdPvFields
+  = let first=text_byte(line,0) in
+    if text_equal(line,"\r\n") || text_equal(line,"\n") || text_equal(line,"\r") then s with { done=true }
+    else if first==32 || first==9 then (if s.open then s with { fields=cmd_pv_continued(s.fields,line) } else s)
+    else if text_starts(line,"From ") then s with { open=false }
+    else let colon=cmd_pv_name_end(line) in
+      if colon<0 then s with { done=true }
+      else if colon==0 then s with { open=false }
+      else s with { fields=push(s.fields,CmdPvField { name=text_slice(line,0,colon), value=text_lstrip_chars(text_from(line,colon+1)," \t") }), open=true }
+private fn cmd_pv_fields(borrow block:Arr u8 _) -> Arr CmdPvField _
+  = let lines=cmd_pv_lines(block) in
+    let s=loop (s=CmdPvFields { fields=cmd_pv_no_fields(), open=false, done=false }, i=0) while !s.done && i<len(lines)
+      next (cmd_pv_field_step(s,text_word(lines,i)), i+1) yield s in
+    s.fields
+; headers.get(name): the first header of that name, in any case, its
+; value without the line endings at its end.
+private fn cmd_pv_get(borrow fields:Arr CmdPvField _, borrow name:Arr u8 _) -> CmdPvValue
+  = loop (i:i64{i>=0}=0, v=CmdPvValue { found=false, value=text_empty() }) while !v.found && i<len(fields)
+      next (i+1, if text_equal(text_lower(fields[i].name),text_lower(name)) then CmdPvValue { found=true, value=text_rstrip_chars(fields[i].value,"\r\n") } else v) yield v
+
+private fn cmd_pv_daynames() -> Arr Arr u8 _ _ = text_split("mon tue wed thu fri sat sun"," ")
+private fn cmd_pv_months() -> Arr Arr u8 _ _
+  = text_split("jan feb mar apr may jun jul aug sep oct nov dec january february march april may june july august september october november december"," ")
+private fn cmd_pv_index_of(borrow words:Arr Arr u8 _ _, borrow word:Arr u8 _) -> i64
+  = loop (i=0, found= -1) while found<0 && i<len(words) next (i+1, if text_equal(text_word(words,i),word) then i else -1) yield found
+private fn cmd_pv_skip(borrow words:Arr Arr u8 _ _, count:i64) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=count) while i<len(words) next (push(out,text_word(words,i)), i+1) yield out
+private fn cmd_pv_take(borrow words:Arr Arr u8 _ _, count:i64) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=0) while i<count && i<len(words) next (push(out,text_word(words,i)), i+1) yield out
+private fn cmd_pv_join_words(borrow a:Arr Arr u8 _ _, borrow b:Arr Arr u8 _ _) -> Arr Arr u8 _ _
+  = loop (out=cmd_pv_take(a,len(a)), i=0) while i<len(b) next (push(out,text_word(b,i)), i+1) yield out
+private fn cmd_pv_chop(borrow text:Arr u8 _) -> Arr u8 _ = if text_ends(text,",") then text_slice(text,0,len(text)-1) else text
+; email.utils._parsedate_tz's [dd, mm, yy, tm, tz] from a date, or fewer
+; than five words when it has none.
+private fn cmd_pv_date_words(borrow value:Arr u8 _) -> Arr Arr u8 _ _
+  = let first=cmd_pv_words(value) in
+    if len(first)==0 then first else
+    let w0=text_word(first,0) in let comma=text_rfind(w0,",") in
+    let data=if text_ends(w0,",") || cmd_pv_index_of(cmd_pv_daynames(),text_lower(w0))>=0 then cmd_pv_skip(first,1)
+      else if comma>=0 then cmd_pv_join_words(push(text_words(),text_from(w0,comma+1)),cmd_pv_skip(first,1)) else first in
+    let stuff=text_split(text_word(data,0),"-") in
+    let dashed=if len(data)==3 && len(stuff)==3 then cmd_pv_join_words(stuff,cmd_pv_skip(data,1)) else data in
+    if len(dashed)!=4 then cmd_pv_take(dashed,5) else
+    let s=text_word(dashed,3) in let plus=text_find(s,"+",0) in let sign=if plus<0 then text_find(s,"-",0) else plus in
+    if sign>0 then push(push(cmd_pv_take(dashed,3),text_slice(s,0,sign)),text_from(s,sign)) else push(dashed,text_empty())
+private fn cmd_pv_valid_day(year:i64, month:i64, day:i64) -> bool
+  = let leap=year%4==0 && (year%100!=0 || year%400==0) in
+    let days=if month==2 then (if leap then 29 else 28) else if month==4 || month==6 || month==9 || month==11 then 30 else 31 in
+    day>=1 && day<=days
+; Days from 1970-01-01 to a date (Howard Hinnant's days_from_civil).
+private fn cmd_pv_days(year:i64, month:i64, day:i64) -> i64
+  = let y=if month<=2 then year-1 else year in let era=(if y>=0 then y else y-399)/400 in let yoe=y-era*400 in
+    let doy=(153*(if month>2 then month-3 else month+9)+2)/5+day-1 in let doe=yoe*365+yoe/4-yoe/100+doy in
+    era*146097+doe-719468
+
+; An If-Modified-Since value as send_head compares it: ok with the UTC
+; Unix seconds when email.utils.parsedate_to_datetime() reads it as a
+; valid datetime in UTC (GMT, UT, UTC, Z or a zero offset) or without a
+; zone; otherwise (ok false) send_head ignores it.
+type CmdPreviewSince = { ok:bool, seconds:i64 }
+private fn cmd_pv_never() -> CmdPreviewSince = CmdPreviewSince { ok=false, seconds=0 }
+fn cmd_preview_since(borrow value:Arr u8 _) -> CmdPreviewSince
+  = let data=cmd_pv_date_words(value) in
+    if len(data)<5 then cmd_pv_never() else
+    let dd0=text_word(data,0) in let mm0=text_word(data,1) in let yy0=text_word(data,2) in let tm0=text_word(data,3) in let tz0=text_word(data,4) in
+    if len(dd0)==0 || len(mm0)==0 || len(yy0)==0 then cmd_pv_never() else
+    let swapped=cmd_pv_index_of(cmd_pv_months(),text_lower(mm0))<0 in
+    let index=cmd_pv_index_of(cmd_pv_months(),if swapped then text_lower(dd0) else text_lower(mm0)) in
+    if index<0 then cmd_pv_never() else
+    let month=if index+1>12 then index-11 else index+1 in
+    let dd=cmd_pv_chop(if swapped then text_lower(mm0) else dd0) in
+    let timed=text_find(yy0,":",0)>0 in
+    let yy1=if timed then tm0 else yy0 in let tm1=if timed then yy0 else tm0 in
+    if len(yy1)==0 || len(cmd_pv_chop(yy1))==0 || len(tm1)==0 then cmd_pv_never() else
+    let b=text_byte(cmd_pv_chop(yy1),0) in let digit=(b>=48 && b<=57) || b==178 || b==179 || b==185 in
+    let yy=if digit then cmd_pv_chop(yy1) else tz0 in let tz=if digit then tz0 else cmd_pv_chop(yy1) in
+    let tm=cmd_pv_chop(tm1) in
+    let colons=text_split(tm,":") in let dots=text_split(tm,".") in
+    let parts=if len(colons)==2 then push(colons,"0") else if len(colons)==3 then colons
+      else if len(colons)==1 && len(dots)==2 then push(dots,"0") else if len(colons)==1 && len(dots)==3 then dots else text_words() in
+    if len(parts)!=3 then cmd_pv_never() else
+    let y=rel_int(yy) in let d=rel_int(dd) in let h=rel_int(text_word(parts,0)) in let mi=rel_int(text_word(parts,1)) in let s=rel_int(text_word(parts,2)) in
+    if !y.ok || !d.ok || !h.ok || !mi.ok || !s.ok then cmd_pv_never() else
+    let year=if y.value<100 then (if y.value>68 then y.value+1900 else y.value+2000) else y.value in
+    let zone=text_upper(tz) in let offset=rel_int(tz) in
+    let utc=text_equal(zone,"UT") || text_equal(zone,"UTC") || text_equal(zone,"GMT") || text_equal(zone,"Z")
+      || (cmd_pv_index_of(text_split("AST ADT EST EDT CST CDT MST MDT PST PDT"," "),zone)<0 && (!offset.ok || offset.value==0)) in
+    if !utc || year<1 || year>9999 || !cmd_pv_valid_day(year,month,d.value) || h.value<0 || h.value>23
+       || mi.value<0 || mi.value>59 || s.value<0 || s.value>59 then cmd_pv_never()
+    else CmdPreviewSince { ok=true, seconds=cmd_pv_days(year,month,d.value)*86400+h.value*3600+mi.value*60+s.value }
+
+; ---------------------------------------------------------------- replies
+
+; What a request gets: the bytes to send and the lines to log.
+type CmdPreviewReply = { data:Arr u8 _, log:Arr u8 _ }
+
+; HTTPStatus's phrase and description (Python 3.12) of each status sent.
+private fn cmd_pv_phrase(code:i64) -> Arr u8 _
+  = if code==200 then "OK" else if code==301 then "Moved Permanently" else if code==304 then "Not Modified"
+    else if code==400 then "Bad Request" else if code==404 then "Not Found" else if code==414 then "Request-URI Too Long"
+    else if code==431 then "Request Header Fields Too Large" else if code==501 then "Not Implemented"
+    else if code==505 then "HTTP Version Not Supported" else "???"
+private fn cmd_pv_description(code:i64) -> Arr u8 _
+  = if code==400 then "Bad request syntax or unsupported method" else if code==404 then "Nothing matches the given URI"
+    else if code==414 then "URI is too long" else if code==431 then "The server is unwilling to process the request because its header fields are too large"
+    else if code==501 then "Server does not support this operation" else if code==505 then "Cannot fulfill request" else "???"
+private fn cmd_pv_server() -> Arr u8 _ = "neokit-preview"
+; One log line, log_message's "%s - - [%s] %s\n" (the time in UTC).
+private fn cmd_pv_log(borrow message:Arr u8 _, stamp:i64) -> Arr u8 _
+  = let date=web_http_date(stamp) in
+    concat("127.0.0.1 - - [",text_slice(date,5,7),"/",text_slice(date,8,11),"/",text_slice(date,12,16)," ",text_slice(date,17,25),"] ",cmd_pv_log_text(message),"\n")
+; log_request(code).
+private fn cmd_pv_logged(borrow r:CmdPreviewRequest, code:i64, stamp:i64) -> Arr u8 _
+  = cmd_pv_log(concat("\"",r.line,"\" ",text_int(code)," -"),stamp)
+; send_response(code, message): the status line, Server and Date (nothing
+; for HTTP/0.9).
+private fn cmd_pv_start(borrow r:CmdPreviewRequest, code:i64, borrow message:Arr u8 _, stamp:i64) -> Arr u8 _
+  = if r.simple then text_empty() else
+    concat("HTTP/1.0 ",text_int(code)," ",message,"\r\nServer: ",cmd_pv_server(),"\r\nDate: ",web_http_date(stamp),"\r\n")
+; More header lines and end_headers (nothing for HTTP/0.9).
+private fn cmd_pv_end(borrow r:CmdPreviewRequest, borrow lines:Arr u8 _) -> Arr u8 _
+  = if r.simple then text_empty() else concat(lines,"\r\n")
+private fn cmd_pv_body(borrow r:CmdPreviewRequest, borrow body:Arr u8 _) -> Arr u8 _
+  = if text_equal(r.command,"HEAD") then text_empty() else body
+; send_error(code, message, explain).
+private fn cmd_pv_error(borrow r:CmdPreviewRequest, code:i64, borrow message:Arr u8 _, borrow explain:Arr u8 _, stamp:i64) -> CmdPreviewReply
+  = let text=if len(message)==0 then cmd_pv_phrase(code) else message in
+    let why=if len(explain)==0 then cmd_pv_description(code) else explain in
+    let body=concat("<!DOCTYPE HTML>\n<html lang=\"en\">\n    <head>\n        <meta charset=\"utf-8\">\n        <title>Error response</title>\n    </head>\n",
+      "    <body>\n        <h1>Error response</h1>\n        <p>Error code: ",text_int(code),"</p>\n        <p>Message: ",cmd_pv_utf8(cmd_pv_escape(text)),
+      ".</p>\n        <p>Error code explanation: ",text_int(code)," - ",cmd_pv_utf8(cmd_pv_escape(why)),".</p>\n    </body>\n</html>\n") in
+    CmdPreviewReply {
+      data=concat(cmd_pv_start(r,code,text,stamp),
+        cmd_pv_end(r,concat("Connection: close\r\nContent-Type: text/html;charset=utf-8\r\nContent-Length: ",text_int(len(body)),"\r\n")),
+        cmd_pv_body(r,body)),
+      log=concat(cmd_pv_log(concat("code ",text_int(code),", message ",text),stamp),cmd_pv_logged(r,code,stamp)) }
+private fn cmd_pv_not_found(borrow r:CmdPreviewRequest, stamp:i64) -> CmdPreviewReply = cmd_pv_error(r,404,"File not found",text_empty(),stamp)
+private fn cmd_pv_ok(borrow r:CmdPreviewRequest, borrow lines:Arr u8 _, borrow body:Arr u8 _, stamp:i64) -> CmdPreviewReply
+  = CmdPreviewReply { data=concat(cmd_pv_start(r,200,"OK",stamp),cmd_pv_end(r,lines),cmd_pv_body(r,body)), log=cmd_pv_logged(r,200,stamp) }
+
+; Whether path, its symbolic links resolved, is root or below it.
+private effect(fs) fn cmd_pv_inside(borrow root:Arr u8 _, borrow path:Arr u8 _) -> bool
+  = match host_realpath(path) { Ok(real) => host_is_relative_to(real,root), Err(message) => false }
+; A directory's index page (index.html, then index.htm) within root, or "".
+private effect(fs) fn cmd_pv_index(borrow root:Arr u8 _, borrow dir:Arr u8 _) -> Arr u8 _
+  = let html=host_posix_join(dir,"index.html") in let htm=host_posix_join(dir,"index.htm") in
+    if host_is_file(html) && cmd_pv_inside(root,html) then html
+    else if host_is_file(htm) && cmd_pv_inside(root,htm) then htm else text_empty()
+; list_directory(dir): the names in order of name.lower(), directories
+; with "/", symbolic links shown with "@".
+private effect(fs) fn cmd_pv_listing(borrow dir:Arr u8 _, borrow r:CmdPreviewRequest, stamp:i64) -> CmdPreviewReply
+  = match host_listdir(dir) {
+      Err(message) => cmd_pv_error(r,404,"No permission to list directory",text_empty(),stamp),
+      Ok(names) =>
+        let order=text_sort_order(arr(i in 0..len(names)) text_lower_unicode(text_word(names,i))) in
+        let title=concat("Directory listing for ",cmd_pv_escape(cmd_pv_unquote(r.path))) in
+        let items=loop (out=text_empty(), k:i64{k>=0}=0) while k<len(order)
+          next (let name=text_word(names,order[k]) in let full=host_posix_join(dir,name) in
+                let link=if host_is_dir(full) then concat(name,"/") else name in
+                let shown=if host_is_symlink(full) then concat(name,"@") else link in
+                concat(out,"\n<li><a href=\"",cmd_pv_quote(link),"\">",cmd_pv_escape(shown),"</a></li>"), k+1) yield out in
+        let body=concat("<!DOCTYPE HTML>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>",title,"</title>\n</head>\n<body>\n<h1>",title,
+          "</h1>\n<hr>\n<ul>",items,"\n</ul>\n<hr>\n</body>\n</html>\n") in
+        cmd_pv_ok(r,concat("Content-type: text/html; charset=utf-8\r\nContent-Length: ",text_int(len(body)),"\r\n"),body,stamp)
+    }
+; The file at path: 404 when it is not a regular file that can be read,
+; 304 when If-Modified-Since (without If-None-Match) is not older than
+; its modification time, else 200.
+private effect(fs) fn cmd_pv_send_file(borrow path:Arr u8 _, borrow r:CmdPreviewRequest, stamp:i64) -> CmdPreviewReply
+  = if text_ends(path,"/") || !host_is_file(path) then cmd_pv_not_found(r,stamp) else
+    match host_read_bytes(path) {
+      Err(message) => cmd_pv_not_found(r,stamp),
+      Ok(data) =>
+        let modified=match host_mtime_ns(path) { Ok(ns) => ns, Err(message) => 0 } in
+        let seconds=if modified<0 then (modified-999999999)/1000000000 else modified/1000000000 in
+        let fields=cmd_pv_fields(r.headers) in
+        let ims=cmd_pv_get(fields,"If-Modified-Since") in
+        let since=if ims.found && !cmd_pv_get(fields,"If-None-Match").found then cmd_preview_since(ims.value) else cmd_pv_never() in
+        if since.ok && seconds<=since.seconds then
+          CmdPreviewReply { data=concat(cmd_pv_start(r,304,cmd_pv_phrase(304),stamp),cmd_pv_end(r,text_empty())), log=cmd_pv_logged(r,304,stamp) }
+        else cmd_pv_ok(r,concat("Content-type: ",gen_content_type(path),"\r\nContent-Length: ",text_int(len(data)),
+          "\r\nLast-Modified: ",web_http_date(seconds*1000),"\r\n"),data,stamp)
+    }
+
+; The reply to a request for the directory root (resolved: no symbolic
+; links in it) at stamp (Unix milliseconds, for Date and the log).
+effect(fs) fn cmd_preview_reply(borrow root:Arr u8 _, borrow r:CmdPreviewRequest, stamp:i64) -> CmdPreviewReply
+  = if r.none || !r.ready then CmdPreviewReply { data=text_empty(), log=text_empty() }
+    else if r.status!=0 then cmd_pv_error(r,r.status,r.message,r.explain,stamp)
+    else let path=cmd_preview_file(root,r.path) in
+    if !cmd_pv_inside(root,path) then cmd_pv_not_found(r,stamp)
+    else if host_is_dir(path) then
+      (if !text_ends(cmd_pv_target_path(r.path),"/") then
+         CmdPreviewReply { data=concat(cmd_pv_start(r,301,cmd_pv_phrase(301),stamp),
+                             cmd_pv_end(r,concat("Location: ",cmd_preview_location(r.path),"\r\nContent-Length: 0\r\n"))),
+                           log=cmd_pv_logged(r,301,stamp) }
+       else let index=cmd_pv_index(root,path) in
+         if len(index)>0 then cmd_pv_send_file(index,r,stamp) else cmd_pv_listing(path,r,stamp))
+    else cmd_pv_send_file(path,r,stamp)
+
+; ---------------------------------------------------------------- the server
+
+; A client connection: the request bytes received, then the reply and how
+; much of it is sent. deadline: when it is closed unless it makes progress.
+type CmdPvConn = { socket:Ref<Socket>, input:Arr u8 _, output:Arr u8 _, sent:i64, writing:bool, closed:bool, deadline:i64 }
+type CmdPvState = { conns:Vec<CmdPvConn>, stop:bool, error:Arr u8 _ }
+type CmdPvAccepted = { conns:Vec<CmdPvConn>, more:bool }
+type CmdPvEvents = { flags:Arr i64 _, accept:bool, signal:bool }
+
+private fn cmd_pv_limit() -> i64 = 128
+private fn cmd_pv_idle() -> i64 = 60000
+; str(OSError) for an errno: host_errno_text, with the socket errors
+; host_strerror lacks (Linux numbers, as host_strerror's).
+private fn cmd_pv_errno_text(code:i64) -> Arr u8 _
+  = if code==98 then "[Errno 98] Address already in use" else if code==99 then "[Errno 99] Cannot assign requested address"
+    else host_errno_text(code)
+; EAGAIN (std:socket's typed "try again", rt_again()) or EINTR.
+private fn cmd_pv_again(code:i64) -> bool = code==rt_again() || code==4
+
+; shutdown_request: the write side shut down, then the socket closed.
+private effect(fs,net,process) fn cmd_pv_close(borrow c:CmdPvConn) -> CmdPvConn
+  = let shut=socket_close_write(borrow_ref(c.socket)) in let released=ref_release(c.socket) in c with { closed=true }
+; Sends what the socket takes of the rest of the reply; closes the
+; connection once it is all sent.
+private effect(fs,net,process) fn cmd_pv_send(borrow c:CmdPvConn, now:i64) -> CmdPvConn
+  = if c.sent>=len(c.output) then cmd_pv_close(c) else
+    let wrote=socket_try_write(borrow_ref(c.socket),c.output,c.sent) in
+    if !wrote.ok then (if cmd_pv_again(wrote.error.code) then c else cmd_pv_close(c))
+    else let moved=c with { sent=c.sent+wrote.value, deadline=now+cmd_pv_idle() } in
+      if moved.sent>=len(moved.output) then cmd_pv_close(moved) else moved
+; Once the request is whole: logs it and starts sending the reply.
+private effect(fs,net,time,process) fn cmd_pv_answer(borrow root:Arr u8 _, borrow c:CmdPvConn, eof:bool, now:i64) -> CmdPvConn
+  = let request=cmd_preview_request(c.input,eof) in
+    if !request.ready then c else
+    let clock=time_unix_ms() in
+    let reply=cmd_preview_reply(root,request,if clock.ok then clock.value else 0) in
+    let logged=print_error(reply.log) in
+    cmd_pv_send(c with { input=text_empty(), output=reply.data, sent=0, writing=true },now)
+; Reads what has arrived; the end of the input answers what was read.
+private effect(fs,net,time,process) fn cmd_pv_receive(borrow root:Arr u8 _, borrow c:CmdPvConn, now:i64) -> CmdPvConn
+  = let got=socket_try_read(borrow_ref(c.socket),65536) in
+    if !got.ok then (if cmd_pv_again(got.error.code) then c else cmd_pv_close(c))
+    else if len(got.value)==0 then (if len(c.input)==0 then cmd_pv_close(c) else cmd_pv_answer(root,c,true,now))
+    else cmd_pv_answer(root,c with { input=concat(c.input,got.value), deadline=now+cmd_pv_idle() },false,now)
+; A connection after a wait: events are its readiness flags (0: none).
+private effect(fs,net,time,process) fn cmd_pv_event(borrow root:Arr u8 _, borrow c:CmdPvConn, events:i64, now:i64) -> CmdPvConn
+  = if c.closed then c
+    else if events==0 then (if now>=c.deadline then cmd_pv_close(c) else c)
+    else if c.writing then cmd_pv_send(c,now) else cmd_pv_receive(root,c,now)
+private effect(fs,net,time,process) fn cmd_pv_serve_at(borrow root:Arr u8 _, move conns:Vec<CmdPvConn>, i:i64, events:i64, now:i64) -> Vec<CmdPvConn>
+  = let current=vec_get(conns,i) in
+    match current { Some(c) => vec_set(conns,i,cmd_pv_event(root,c,events,now)), None => conns }
+private fn cmd_pv_open(borrow conns:Vec<CmdPvConn>) -> Vec<CmdPvConn>
+  = loop (out=vec_empty::<CmdPvConn>(), i=0) while i<vec_len(conns)
+      next (match vec_get(conns,i) { Some(c) => if c.closed then out else vec_push(out,c), None => out }, i+1) yield out
+; One connection from the listener's queue (more: there may be others).
+private effect(fs,net,process) fn cmd_pv_accept(listener:Listener, arena:Arena, move conns:Vec<CmdPvConn>, now:i64) -> CmdPvAccepted
+  = using socket=listener_try_accept(listener) in
+    let status=socket_status(socket) in
+    let held=adopt(socket,arena) in
+    if status.ok then
+      CmdPvAccepted { conns=vec_push(conns,CmdPvConn { socket=held, input=text_empty(), output=text_empty(), sent=0, writing=false, closed=false,
+                                                       deadline=now+cmd_pv_idle() }), more=true }
+    else let released=ref_release(held) in CmdPvAccepted { conns=conns, more=false }
+private effect(fs,net,process) fn cmd_pv_accept_all(listener:Listener, arena:Arena, move conns:Vec<CmdPvConn>, now:i64) -> Vec<CmdPvConn>
+  = let done=loop (s=CmdPvAccepted { conns=conns, more=true }) while s.more && vec_len(s.conns)<cmd_pv_limit()
+      next (cmd_pv_accept(listener,arena,s.conns,now)) yield s in
+    done.conns
+; The readiness flags of each connection (key 2 and up), and whether the
+; listener (key 0) or the shutdown signal (key 1) is ready.
+private fn cmd_pv_events(borrow events:Vec<Ready>, count:i64) -> CmdPvEvents
+  = check count>=0 in
+    loop (s=CmdPvEvents { flags=arr(i in 0..count) 0, accept=false, signal=false }, k=0) while k<vec_len(events)
+      next (match vec_get(events,k) {
+              Some(r) => if r.key==0 then s with { accept=true } else if r.key==1 then s with { signal=true }
+                         else (let at=r.key-2 in if at>=0 && at<len(s.flags) then s with { flags=set(s.flags,at,r.events) } else s),
+              None => s }, k+1) yield s
+private fn cmd_pv_flag(borrow flags:Arr i64 _, i:i64) -> i64 = if i>=0 && i<len(flags) then flags[i] else 0
+; One wait for readiness (at most a second) and what follows from it.
+private effect(fs,net,time,process) fn cmd_pv_round(borrow root:Arr u8 _, listener:Listener, signal:ShutdownSignal, watched:bool,
+                                                    arena:Arena, cancellation:Cancellation, move s:CmdPvState) -> CmdPvState
+  = let clock=monotonic_ms() in let now=if clock.ok then clock.value else 0 in
+    let count=vec_len(s.conns) in
+    let none=arr(i in 0..0) listener_interest(listener,0) in
+    let own=if count<cmd_pv_limit() then push(none,listener_interest(listener,0)) else none in
+    let watching=if watched then push(own,shutdown_signal_interest(signal,1)) else own in
+    let interests=loop (out=watching, i=0) while i<count
+      next (match vec_get(s.conns,i) { Some(c) => push(out,socket_interest(borrow_ref(c.socket),if c.writing then 4 else 1,i+2)), None => out }, i+1) yield out in
+    let ready=reactor_wait(interests,now+1000,cancellation) in
+    if !ready.ok then s with { stop=true, error=cmd_pv_errno_text(ready.error.code) } else
+    let ev=cmd_pv_events(ready.events,count) in
+    let polled=if ev.signal then shutdown_signal_poll(signal).ok else false in
+    let served=loop (out=s.conns, i=0) while i<count next (cmd_pv_serve_at(root,out,i,cmd_pv_flag(ev.flags,i),now), i+1) yield out in
+    let open=cmd_pv_open(served) in
+    CmdPvState { conns=if ev.accept then cmd_pv_accept_all(listener,arena,open,now) else open, stop=ev.signal, error=text_empty() }
+
+; `neokit preview --dir DIRECTORY --port PORT`: Ok(0) once SIGINT or
+; SIGTERM stops the server; an Err is the message `neokit` prints after
+; "neokit: " before it exits with 1.
+effect(fs,net,time,process) fn cmd_preview(borrow directory:Arr u8 _, port:i64) -> Result<i64,Arr u8 _>
+  = let root=host_resolve(directory)? in
+    if !host_is_file(host_join(root,"index.html")) then Err::<i64,Arr u8 _>("Run ./neokit export first") else
+    let printed=print_out(concat("Static export preview: http://127.0.0.1:",text_int(port),"\n")) in
+    if port<0 || port>65535 then Err::<i64,Arr u8 _>("bind(): port must be 0-65535.") else
+    using listener=tcp_listen_ipv4("127.0.0.1",port,128) in
+    let listening=listener_status(listener) in
+    if !listening.ok then Err::<i64,Arr u8 _>(cmd_pv_errno_text(listening.error.code)) else
+    using signal=shutdown_signal() in
+    let watched=shutdown_signal_status(signal).ok in
+    using arena=new_arena(cmd_pv_limit()+8) in
+    using cancellation=new_cancellation() in
+    let done=loop (s=CmdPvState { conns=vec_empty::<CmdPvConn>(), stop=false, error=text_empty() }) while !s.stop
+      next (cmd_pv_round(root,listener,signal,watched,arena,cancellation,s)) yield s in
+    if len(done.error)>0 then Err::<i64,Arr u8 _>(done.error) else Ok::<i64,Arr u8 _>(0)
