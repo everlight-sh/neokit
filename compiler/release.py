@@ -15,7 +15,7 @@ import tomllib
 
 from .templates import BuildError
 
-NEO_VERSION = '0.2.5'
+NEO_VERSION = '0.2.6'
 NEO_BINARIES = ('darwin-arm64', 'linux-arm64', 'linux-x86_64')
 
 FRAMEWORK_FILES = (

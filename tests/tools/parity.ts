@@ -567,6 +567,9 @@ function extras(): number {
 setup();
 const rows = flag("--no-matrix") ? [] : matrix();
 const failures = (flag("--no-errors") ? 0 : errors()) + (flag("--no-extras") ? 0 : extras());
+// The generated apps sit inside the NeoKit package, and broken-public-symlink
+// holds a symlink that makes `neo pkg lock` (neokit init) refuse the package.
+if (!flag("--keep")) rmSync(APPS, { recursive: true, force: true });
 const different = rows.filter(row => row.verdict === "different");
 console.log(`\n${rows.length} builds: ${rows.filter(r => r.verdict === "identical").length} identical, ` +
   `${rows.filter(r => r.verdict === "identical except documented exceptions").length} identical except documented exceptions, ` +

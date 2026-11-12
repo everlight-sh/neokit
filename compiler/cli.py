@@ -145,7 +145,7 @@ def main():
     p.add_argument('--standalone',action='store_true',help='include a relocatable NeoKit SDK in the application')
     p=sub.add_parser('release',help='create a checksummed NeoKit SDK archive')
     p.add_argument('--out',type=Path,required=True)
-    p.add_argument('--neo-archive',type=Path,help='Neo 0.2.5 multi-platform native release archive')
+    p.add_argument('--neo-archive',type=Path,help='Neo 0.2.6 multi-platform native release archive')
     p.add_argument('--neo-sha256',help='expected SHA-256 of the Neo archive')
     sub.add_parser('doctor')
     p=sub.add_parser('revalidate');p.add_argument('--app',type=Path,default=project);p.add_argument('--out',type=Path,default=output.with_name(output.name+'-revalidation'))

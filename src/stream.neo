@@ -31,11 +31,13 @@ effect(fs,net,env,time,process) fn web_stream_page(title:Arr u8 n,shell:WebHtml,
       web_boundary_id(parts[i].id) && parts[i].timeout_ms>=0 && parts[i].timeout_ms<=120000 &&
       str_find(shell.bytes,concat("data-web-boundary=\"",parts[i].id,"\"")).present &&
       loop(j=0,unique=true) while unique && j<i next(j+1,check j>=0 && j<m in !str_equal(parts[j].id,parts[i].id)) yield unique) yield ok in
-    if !valid then web_encode_close(web_reply(500,"Invalid deferred page plan","text/plain; charset=utf-8"),false) else
+    ; Every reply carries a Date, like buffered responses (-1 omits it if the clock fails).
+    let clock=time_unix_ms() in let stamp=if clock.ok then clock.value else -1 in
+    if !valid then web_encode_close_at(web_reply(500,"Invalid deferred page plan","text/plain; charset=utf-8"),false,stamp) else
     let entropy=random_bytes(18) in let now=monotonic_ms() in
-    if !entropy.ok || !now.ok then web_encode_close(web_reply(503,"Async renderer unavailable","text/plain; charset=utf-8"),false) else
+    if !entropy.ok || !now.ok then web_encode_close_at(web_reply(503,"Async renderer unavailable","text/plain; charset=utf-8"),false,stamp) else
     let token=base64url_encode(entropy.value) in
     let page=web_html(concat("<!doctype html><html data-web-streaming><head><meta charset=\"utf-8\"><title>",html_escape(title),"</title><script type=\"module\" async src=\"/_web/neokit-client.js\"></script></head><body><main id=\"web-page\" aria-busy=\"true\" data-web-stream=\"",token,"\">",shell.bytes,"</main>")) in
     let tail=web_html(concat("<template data-web-stream-end=\"",token,"\"></template></body></html>")) in
-    let started=http_render_start_with_tail(page,arr(i in 0..m) web_deferred_task(parts[i],token,now.value),tail,deadline) in
-    if started.ok then started.value else web_encode_close(web_reply(503,"Async capacity unavailable","text/plain; charset=utf-8"),false)
+    let started=http_render_start_with_tail_at(page,arr(i in 0..m) web_deferred_task(parts[i],token,now.value),tail,deadline,"",stamp) in
+    if started.ok then started.value else web_encode_close_at(web_reply(503,"Async capacity unavailable","text/plain; charset=utf-8"),false,stamp)

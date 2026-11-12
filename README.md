@@ -4,9 +4,9 @@ HTML-first applications with native Neo SSR, static export, typed templates and 
 
 ## Start
 
-The [alpha release guide](docs/alpha-release.md) covers installation, the standalone starter, and HTTPS deployment of Meridian. Maintainers can create the source SDK with `./neokit release --neo-archive neo-0.2.5.tar.gz --neo-sha256 "$NEO_SHA256" --out build/neokit-0.1.0-alpha.1.tar.gz`, using the multi-platform Neo 0.2.5 release archive.
+The [alpha release guide](docs/alpha-release.md) covers installation, the standalone starter, and HTTPS deployment of Meridian. Maintainers can create the source SDK with `./neokit release --neo-archive neo-0.2.6.tar.gz --neo-sha256 "$NEO_SHA256" --out build/neokit-0.1.0-alpha.1.tar.gz`, using the multi-platform Neo 0.2.6 release archive.
 
-Python 3.11+ runs the framework CLI, Bun bundles browser modules, and native Neo 0.2.5 uses LLVM to build the server. Neo 0.2.5 compiles its runtime once and caches it under `~/.cache/neo`, so only the first build on a machine pays for it. Use the bundled SDK or set `NEO_HOME` to an installed native Neo toolchain when developing from a checkout. Keep `neo-libs` beside the NeoKit checkout. Dependencies are source packages pinned by `neo.lock`.
+Python 3.11+ runs the framework CLI, Bun bundles browser modules, and native Neo 0.2.6 uses LLVM to build the server. Neo compiles its runtime once and caches it under `~/.cache/neo`, so only the first build on a machine pays for it. Use the bundled SDK or set `NEO_HOME` to an installed native Neo toolchain when developing from a checkout. Keep `neo-libs` beside the NeoKit checkout. Dependencies are source packages pinned by `neo.lock`.
 
 ```sh
 bun install --frozen-lockfile
@@ -80,7 +80,7 @@ Every response carries a `Date` header and, by default, Neo's Content-Security-P
 csp="default-src 'self'; img-src 'self' https://cdn.example"
 ```
 
-A response that sets its own `Content-Security-Policy` keeps it. Exports write the policy to `_headers`, which Netlify and Cloudflare Pages apply. Streamed async pages (`web_stream_page`) still send Neo's default policy and no `Date`, because Neo writes their headers itself.
+A response that sets its own `Content-Security-Policy` keeps it. Exports write the policy to `_headers`, which Netlify and Cloudflare Pages apply. Streamed async pages (`web_stream_page`) carry a `Date` but still send Neo's default policy: the site policy is applied to buffered responses, and a streamed page writes its own headers.
 
 A buffered `route.toml` can allow cross-origin requests with `cors=["https://app.example"]` or `cors="*"`, optional `cors_headers=["content-type","authorization"]` and `cors_credentials=true` (not with `*`). NeoKit answers the OPTIONS preflight and adds `Vary: Origin`. Typed actions need `csrf=false` and their own authentication before they can be cross-origin.
 
@@ -208,7 +208,7 @@ The checked-in Compose example runs the dashboard, persistent volumes, a read-on
 
 ## Remaining gaps
 
-Compared with Next.js and Astro, these are not implemented: Markdown/MDX content collections, i18n routing, an on-demand image server, incremental static regeneration of exported pages, edge or serverless adapters, React/Vue/Svelte component islands, HTTP/2, WebSockets and byte-range responses. Streamed async pages ignore `[security] csp` and send no `Date` header.
+Compared with Next.js and Astro, these are not implemented: Markdown/MDX content collections, i18n routing, an on-demand image server, incremental static regeneration of exported pages, edge or serverless adapters, React/Vue/Svelte component islands, HTTP/2, WebSockets and byte-range responses. Streamed async pages ignore `[security] csp`.
 
 ## Reusable foundations and performance
 

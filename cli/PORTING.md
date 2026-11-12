@@ -41,15 +41,15 @@ people and agents doing the port; it goes away with the Python.
   (`isidentifier`, `lower`, `strip`) must be matched exactly for the inputs
   NeoKit accepts; reject or document anything wider.
 
-## Neo 0.2.6-dev APIs for the CLI layer
+## Neo APIs for the CLI layer
 
-Pure modules (text, toml, pyjson, templates, routes, code generation) build
-with Neo 0.2.5. Modules that touch the system use additions on Neo's
-`feat/stdlib-for-neokit` branch, which ships as 0.2.6. Until then, build and
+The CLI needs Neo 0.2.6 (released) plus `fs_mkdir_mode`, which ships in
+0.2.7: `fs_mkdir_mode(path, mode) -> IntResult` passes the mode to mkdir(2)
+(less the umask; error 22 outside 0..0o7777). Until 0.2.7 is out, build and
 test the CLI against the branch build on the test box,
 `/root/neo-dev/neo-feat` (read-only: `NEO_HOME=/root/neo-dev/neo-feat`,
-`$NEO_HOME/neo ...`). NeoKit's own suites stay on 0.2.5. Names may still
-change before 0.2.6, though none are expected to.
+`$NEO_HOME/neo ...`, reports 0.2.7-dev). NeoKit's own suites run on 0.2.6
+(`/root/neokit-audit/neo-0.2.6`). The 0.2.6 additions the CLI uses:
 
 - std:io: `env_list() -> Arr Arr u8 _ _` ("NAME=value", environ order, can be
   passed straight to process_start), `cli_count() -> i64`,

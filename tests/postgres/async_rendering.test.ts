@@ -97,6 +97,9 @@ test("async rendering with PostgreSQL and delayed HTTP peers", async () => {
     const headEnd = data.indexOf("\r\n\r\n");
     check(data.includes("data-web-stream-end=") && !data.includes("Database <row>") && headEnd >= 0 && !data.subarray(0, headEnd).includes("Content-Length:"),
       data.subarray(-400).toString("latin1"));
+    // Streamed pages carry a Date like buffered responses (Neo 0.2.6 http_render_start_with_tail_at).
+    const streamHead = data.subarray(0, headEnd).toString("latin1");
+    check(/\r\nDate: [A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT(\r\n|$)/.test(streamHead), streamHead);
     results.stream_seconds = seen;
     console.log("PASS independent DB/network completion, shell-first framing and isolated timeout", seen);
     await quiet();
