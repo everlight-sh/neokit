@@ -4,16 +4,16 @@
 // across forked workers.
 import { test, expect } from "bun:test";
 import { join } from "node:path";
-import { EventStream, ROOT, RawSocket, isNetworkError, neokit, pythonJson, quiet, request, running, sleep, stats, type ServerEvent } from "../lib";
+import { EventStream, ROOT, RawSocket, isNetworkError, jsonDumps, neokit, quiet, request, running, sleep, stats, type ServerEvent } from "../lib";
 
 const OUT = join(ROOT, "build/realtime/fixture");
 neokit(["build", "--app", join(ROOT, "tests/realtime_fixture"), "--out", OUT]);
 const binary = join(OUT, "server");
 const ALLOWED = { Cookie: "session=allowed" };
-// http.client with a 5 s socket timeout.
+// Requests without a Connection header, with a 5 s socket timeout.
 const call = (port: number, path: string, options: { method?: string; body?: string | Uint8Array; headers?: Record<string, string> } = {}) =>
   request(port, path, { ...options, timeout: 5000, keepAlive: true });
-// Up to 30 s to accept and 15 s to stop after SIGTERM, as the Python suites allowed.
+// Up to 30 s to accept and 15 s to stop after SIGTERM.
 const SERVER = { startup: 30000, stopTimeout: 15000 };
 
 test("single worker: auth, HEAD/methods, idle cost, shared frames, coexistence, latency, replay, reset, bounds, heartbeat, slow readers, shutdown", async () => {
@@ -49,7 +49,7 @@ test("single worker: auth, HEAD/methods, idle cost, shared frames, coexistence, 
 
       const a = await open(port), b = await open(port);
       const publish = async (value: unknown) => {
-        const response = await call(port, "/publish", { method: "POST", body: Buffer.from(pythonJson(value, { ensureAscii: false })), headers: { "Content-Type": "application/json" } });
+        const response = await call(port, "/publish", { method: "POST", body: Buffer.from(jsonDumps(value, { ensureAscii: false })), headers: { "Content-Type": "application/json" } });
         expect([response.status, response.text]).toEqual([200, response.text]);
         return response.json().sequence as number;
       };
@@ -127,7 +127,7 @@ test("single worker: auth, HEAD/methods, idle cost, shared frames, coexistence, 
       }
       expect((await call(port, "/feed?after=bad", { headers: ALLOWED })).status).toBe(400);
       expect((await call(port, "/publish", { method: "POST", body: "invalid" })).status).toBe(400);
-      expect((await call(port, "/publish", { method: "POST", body: pythonJson({ data: "x".repeat(5000) }) })).status).toBe(400);
+      expect((await call(port, "/publish", { method: "POST", body: jsonDumps({ data: "x".repeat(5000) }) })).status).toBe(400);
 
       // Heartbeats arrive about every 15 s and do not read channel data.
       const heartbeat = await open(port, "/feed", {}, 18000);

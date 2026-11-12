@@ -1,14 +1,13 @@
 ; Golden driver for std:toml as NeoKit reads configs (cli/toml.neo) and
-; cli/pyjson.neo; generate.py writes the expected output with Python's
-; tomllib and json. Needs Neo 0.2.6 (std:toml).
+; cli/pyjson.neo. Needs Neo 0.2.6 (std:toml). Its expected output was
+; recorded from the Python reference (last present at commit 4757083) and now fixed.
 ;
 ; For every file named on the command line (relative to the repository root
 ; under `neo test`, else to the working directory) it prints "=== FILE" and
-; json.dumps(tomllib.loads(path.read_text()), indent=2) plus a newline, or
-; "error" for a rejected document (std:toml's messages and, for unterminated
-; strings and arrays, its error lines differ from tomllib's). A .cases file
-; holds several documents, each after a line "#--- NAME", printed as
-; "=== FILE NAME".
+; the parsed document as JSON (json.dumps layout, indent 2) plus a newline,
+; or "error" for a rejected document (error messages and lines are not
+; compared). A .cases file holds several documents, each after a line
+; "#--- NAME", printed as "=== FILE NAME".
 import "std:io"
 import "std:toml"
 import "../../../cli/toml.neo"

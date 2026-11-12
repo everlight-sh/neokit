@@ -1,12 +1,13 @@
-; NeoKit's route rules, ported from compiler/routes.py: app folders become
-; URL patterns, export paths are checked and matched against them, and
-; routes are ordered by precedence and compared by shape. Each public route_
-; function mirrors the Python function of the same name; a Python BuildError
-; is Err(message) with the same text.
+; NeoKit's route rules: app folders become URL patterns, export paths are
+; checked and matched against them, and routes are ordered by precedence
+; and compared by shape. Comments name the rules (canonical_path,
+; route_path, matches, precedence, shape, methods); the public route_
+; functions implement them, and a failure is Err(message) with the message
+; neokit prints.
 ;
-; routes.py's regular expressions are rewritten as scanners with the same
-; matching. Text is UTF-8 bytes; every class here is ASCII, and a non-ASCII
-; byte never matches one, as with Python's str patterns.
+; The regular expressions the comments cite are written as scanners with
+; the same matching. Text is UTF-8 bytes; every class here is ASCII, and a
+; non-ASCII byte never matches one.
 import "std:json"
 import "std:result"
 import "text.neo"
@@ -79,7 +80,7 @@ private fn route_shown(borrow path:Arr u8 _) -> Arr u8 _
     if text_starts(path,"/") then concat("/",parts) else if len(parts)==0 then "." else parts
 ; route_path(folder, base) for two absolute (or two relative) paths, which
 ; are compared part by part as Path.relative_to does. A folder outside base
-; is Python's ValueError, worded as Python 3.12 words it.
+; is the ValueError relative_to raises, with its wording.
 fn route_path(borrow folder:Arr u8 _, borrow base:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
   = let parts=route_path_parts(folder) in let under=route_path_parts(base) in
     if text_starts(folder,"/")!=text_starts(base,"/") || !route_prefix(parts,under)
@@ -171,10 +172,10 @@ private fn route_methods_check(borrow value:Arr Arr u8 _ _, borrow path:Arr u8 _
     then Err::<Arr Arr u8 _ _,Arr u8 _>(concat(path,": methods must be a nonempty list of distinct HTTP methods"))
     else if text_member(value,"GET") && !text_member(value,"HEAD") then Ok::<Arr Arr u8 _ _,Arr u8 _>(push(value,"HEAD"))
     else Ok::<Arr Arr u8 _ _,Arr u8 _>(value)
-; methods(config, path) with config.get('methods', fallback): build.py's
-; typed actions default to ["POST"]. path is the route.toml path the error
-; names. A non-text element is not a method (Python raises TypeError for an
-; array or table element instead).
+; methods(config, path) with config.get('methods', fallback): typed actions
+; default to ["POST"]. path is the route.toml path the error names. A
+; non-text element is not a method (the former Python CLI raised TypeError
+; for an array or table element instead).
 fn route_methods_or(borrow config:Json, borrow path:Arr u8 _, borrow fallback:Arr Arr u8 _ _) -> Result<Arr Arr u8 _ _,Arr u8 _>
   = let found=toml_get_array(config,"methods") in
     if !found.present then route_methods_check(fallback,path) else

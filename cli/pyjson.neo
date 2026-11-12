@@ -1,17 +1,17 @@
-; Python's json.dumps for std:json values, byte for byte.
+; json.dumps's output for std:json values, byte for byte.
 ;
 ; pj_dumps_indent2(v) is json.dumps(v, indent=2) and pj_dumps(v) is
-; json.dumps(v): ensure_ascii escaping, Python's separators, members and
-; elements in order. compiler/*.py calls json.dumps only these two ways (and
-; on a lone str, pj_quote); it never passes sort_keys, separators or
-; ensure_ascii=False. Neither function adds the trailing newline the Python
-; writes after a manifest.
+; json.dumps(v): ensure_ascii escaping, its default separators, members and
+; elements in order. neokit writes JSON only these two ways (and a lone
+; str, pj_quote); it never needs sort_keys, other separators or
+; ensure_ascii=False. Neither function adds the trailing newline written
+; after a manifest.
 ;
-; Numbers: integers print as Python prints int (a parsed "-0" is 0, and
-; integers beyond 64 bits keep their digits). Python floats print with
+; Numbers: integers print in decimal (a parsed "-0" is 0, and integers
+; beyond 64 bits keep their digits). Floats would print with
 ; float.__repr__, which is not implemented: a fraction or exponent lexeme is
 ; copied as written. pj_supported reports whether a value has none, so its
-; output is exactly Python's. A missing value (kind 0) prints as null.
+; output is exactly json.dumps's. A missing value (kind 0) prints as null.
 import "std:strings"
 import "std:json"
 import "text.neo"
@@ -83,7 +83,7 @@ private fn pj_items_supported(borrow value:Json) -> bool
   = let items=json_array_values(value) in
     loop (i:i64{i>=0}=0, ok=true) while ok && i<len(items) next (i+1, pj_supported(items[i])) yield ok
 ; Whether value holds no float lexemes and no missing values, so that the
-; dumps functions match Python exactly.
+; dumps functions match json.dumps exactly.
 fn pj_supported(borrow value:Json) -> bool
   = if value.kind==6 then pj_members_supported(value)
     else if value.kind==5 then pj_items_supported(value)

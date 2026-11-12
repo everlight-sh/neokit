@@ -13,9 +13,9 @@ import { createHash, randomUUID } from "node:crypto";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { ROOT, check, copyWithMetadata, pythonJson, run } from "../lib";
+import { ROOT, check, copyWithMetadata, jsonDumps, run } from "../lib";
 
-/** Python's shlex.quote. */
+/** Quotes text for a POSIX shell: safe words as they are, anything else in single quotes. */
 function shellQuote(text: string) {
   if (!text) return "''";
   return /^[\w@%+=:,./-]+$/.test(text) ? text : "'" + text.replace(/'/g, `'"'"'`) + "'";
@@ -76,7 +76,7 @@ try {
     rmSync(context, { recursive: true, force: true });
   }
   identity.passed = true;
-  writeFileSync(join(out, "verification.json"), pythonJson(identity, { indent: 2 }) + "\n");
+  writeFileSync(join(out, "verification.json"), jsonDumps(identity, { indent: 2 }) + "\n");
   console.log("PASS Linux scratch integration; no shell, libc or dynamic loader in application image");
 } finally {
   spawnSync("docker", ["image", "rm", tag], { stdio: ["inherit", "ignore", "inherit"] });

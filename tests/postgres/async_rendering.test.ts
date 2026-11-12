@@ -14,7 +14,7 @@ import { test, expect } from "bun:test";
 import { connect, type Socket } from "node:net";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { DelayedPeer, ROOT, Supervised, check, freePort, neokit, pythonJson, request as send, sleep } from "../lib";
+import { DelayedPeer, ROOT, Supervised, check, freePort, jsonDumps, neokit, request as send, sleep } from "../lib";
 
 const PG_PORT = process.env.NEOKIT_ASYNC_PG_PORT;
 const WORKERS = Number(process.env.NEOKIT_ASYNC_WORKERS ?? "1");
@@ -58,7 +58,7 @@ test("async rendering with PostgreSQL and delayed HTTP peers", async () => {
   const server = new Supervised(binary, [String(port)], {
     env: { ...process.env, NEO_THREADS: String(WORKERS), NEOKIT_ASYNC_HTTP_PORT: String(peer.port), NEOKIT_ASYNC_PG_PORT: PG_PORT! },
   });
-  // http.client with a 12 s socket timeout (a bodiless POST sends Content-Length: 0).
+  // Requests without a Connection header, with a 12 s socket timeout (a bodiless POST sends Content-Length: 0).
   const request = (path: string, method = "GET") => send(port, path, { method, timeout: 12000, keepAlive: true });
   const quiet = async () => {
     const deadline = performance.now() + 3000;
@@ -166,7 +166,7 @@ test("async rendering with PostgreSQL and delayed HTTP peers", async () => {
     expect(results.final).toEqual(initial);
     if (OUT) {
       mkdirSync(dirname(resolve(OUT)), { recursive: true });
-      writeFileSync(resolve(OUT), pythonJson(results, { indent: 2 }) + "\n");
+      writeFileSync(resolve(OUT), jsonDumps(results, { indent: 2 }) + "\n");
     }
     console.log("PASS HEAD/method dispatch, buffered deadlines and clean idle resource counts");
   } catch (error) {

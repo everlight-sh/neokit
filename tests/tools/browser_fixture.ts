@@ -11,7 +11,7 @@
 import { pbkdf2Sync } from "node:crypto";
 import { closeSync, mkdirSync, openSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { Interrupted, ROOT, Supervised, freePort, interruption, literal, neokit, pythonJson, running, sleep, writeTree } from "../lib";
+import { Interrupted, ROOT, Supervised, freePort, interruption, jsonDumps, literal, neokit, running, sleep, writeTree } from "../lib";
 
 function fixture(app: string) {
   const files: Record<string, string> = {};
@@ -28,7 +28,7 @@ function fixture(app: string) {
   write("app/actions/test/route.toml", 'handler="lab_action"\ninput_type="LabInput"\nmethods=["POST"]\n[input]\ntitle={type="text",min=1,max=100}\ncount={type="int",min=0,max=100}\nenabled="bool"\n');
   write("app/actions/test/route.neo", "import " + literal(join(ROOT, "src/lib.neo")) + '\nimport "std:debug"\ntype LabInput={title:Arr u8 _,count:i64,enabled:bool}\neffect fn lab_action(request:WebRequest,input:LabInput)->WebResponse=let slept=sleep_ms(400) in if str_equal(input.title,"reject") then web_status(web_json("{\\"error\\":\\"Rejected by validation\\"}"),422) else web_json("{\\"ok\\":true}")\n');
   const runtime = join(ROOT, "client/runtime.js");
-  write("client/index.js", "import {start} from " + pythonJson(runtime) + ';\nstart({widgets:{lab:()=>import("./widget.js")}});\n');
+  write("client/index.js", "import {start} from " + jsonDumps(runtime) + ';\nstart({widgets:{lab:()=>import("./widget.js")}});\n');
   write("client/widget.js", `export function mount(element,context){
   const count=context.state('count',context.props.initial),mounts=context.state('mounts',0),cleans=context.state('cleans',0);
   mounts.set(v=>v+1);
@@ -79,8 +79,8 @@ async function main(interrupted: Promise<never>) {
             await dev.started;
             const info = { studio: `http://127.0.0.1:${studio}`, features: `http://127.0.0.1:${features}`, dashboard: `http://127.0.0.1:${dashboard}`, lab: `http://127.0.0.1:${lab}`,
               dev: `http://127.0.0.1:${devport}`, app, username: "admin", password };
-            writeFileSync(join(directory, "control.json"), pythonJson(info, { indent: 2 }) + "\n");
-            console.log(pythonJson(info));
+            writeFileSync(join(directory, "control.json"), jsonDumps(info, { indent: 2 }) + "\n");
+            console.log(jsonDumps(info));
             while (dev.running) await Promise.race([interrupted, sleep(1000)]);
             throw new Error("Development server stopped: " + readFileSync(join(directory, "dev.log"), "utf8"));
           } finally {

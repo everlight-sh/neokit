@@ -2,9 +2,9 @@
 version 9.8.7-fixture.1
 gzip header 1f8b080000f1536502ff
 sha256 matches file yes
-420 3906 cb88962d3cf58e597bbbe7a3d8b3cc7b9625877624202cd9d42759e83b67250a neokit-9.8.7-fixture.1/MANIFEST.json
+420 3808 8e11bb29280c391816320d64a654759db4f16fe3adba8cde2431e5adfabdd48e neokit-9.8.7-fixture.1/MANIFEST.json
 420 62 220957a5269ef167a83d420c2d550f8df7621696d2e45a4f3d83776a0a8d3b19 neokit-9.8.7-fixture.1/README.md
-420 3551 df246447221b91fbc64524590aabbafaf77fe96df2c9f9080d0ab5b16d2e54b2 neokit-9.8.7-fixture.1/SHA256SUMS
+420 3462 e7ba12c33330ec5a9312ac2b94e329047f0cf39b89d350f1710cb2dadcf41ba1 neokit-9.8.7-fixture.1/SHA256SUMS
 420 16 8dae7ef23e5afaabf410e4a1ad97f398d1473e3c14d7a4255536a7087d87774a neokit-9.8.7-fixture.1/VERSION
 420 6 f10ec3ffef16a8dace9b58801e0da28819c98af4c8933410d7e7cacc952f9e9b neokit-9.8.7-fixture.1/framework/.dockerignore
 420 9 070a8ff8c31696dd57f1d0f8dfbfb1c9151ebd903c5d7e41d9dbf4133d54f84e neokit-9.8.7-fixture.1/framework/AGENTS.md
@@ -31,7 +31,6 @@ sha256 matches file yes
 420 20 980f1dc180fd43a144915b972b03ab7e0d994c68af132fed91e57e7013033990 neokit-9.8.7-fixture.1/framework/src/lib.neo
 420 13 06467702816a95afc79289ab870981f8b6e2da17bcc722b5c7322e04b97a08c9 neokit-9.8.7-fixture.1/framework/tests/LICENSE
 420 11 8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881 neokit-9.8.7-fixture.1/framework/tests/lib.ts
-420 9 cc42155088fca5730758db72b2a5bca33112a941dfaa2d43098ec422ce4ea213 neokit-9.8.7-fixture.1/framework/tools/run.py
 493 27 fe3be3011800c281bd763d104e4edc75e9bf0628087790a3060fc5abe1de28e0 neokit-9.8.7-fixture.1/framework/web
 493 31 3fe187a259f605690a72ef15e919027b11743ac2fa7f71cb22b3ca3b8dd91bbf neokit-9.8.7-fixture.1/install.sh
 420 6 be3c6d2c6c406a64d44f0b6464a887e290416dd90c524094485b1be00936d6d7 neokit-9.8.7-fixture.1/neo/VERSION
@@ -42,7 +41,7 @@ sha256 matches file yes
 420 15 0b8f88b94eacb00c34b77bfce908dddbc2aa7719ff0aeba42d01025e206d8429 neokit-9.8.7-fixture.1/neo-libs/sample/LICENSE
 420 12 bd66581b2e6f7c4d902f990d9c192a46b0066b685c0ece9ac48ff76f5c8b5905 neokit-9.8.7-fixture.1/neo-libs/sample/LICENSE-THIRD-PARTY
 420 23 ad71479100798fe6a798978a845397461ad5612f44dcecbd59ea390e35a777eb neokit-9.8.7-fixture.1/neo-libs/sample/lib.neo
-tar 3814324b984a240217cb7b2caa952fb7ee385a9a636a1b8935fdeab9386ad357 51200
+tar 277123ae2bed8a0b9289aaa5e2b65541eb279e908daa49e7fac7e321543c78a1 51200
 === assemble
 --- MANIFEST.json
 {
@@ -77,7 +76,6 @@ tar 3814324b984a240217cb7b2caa952fb7ee385a9a636a1b8935fdeab9386ad357 51200
     "framework/src/lib.neo": "980f1dc180fd43a144915b972b03ab7e0d994c68af132fed91e57e7013033990",
     "framework/tests/LICENSE": "06467702816a95afc79289ab870981f8b6e2da17bcc722b5c7322e04b97a08c9",
     "framework/tests/lib.ts": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
-    "framework/tools/run.py": "cc42155088fca5730758db72b2a5bca33112a941dfaa2d43098ec422ce4ea213",
     "framework/web": "fe3be3011800c281bd763d104e4edc75e9bf0628087790a3060fc5abe1de28e0",
     "install.sh": "3fe187a259f605690a72ef15e919027b11743ac2fa7f71cb22b3ca3b8dd91bbf",
     "neo/VERSION": "be3c6d2c6c406a64d44f0b6464a887e290416dd90c524094485b1be00936d6d7",
@@ -91,7 +89,7 @@ tar 3814324b984a240217cb7b2caa952fb7ee385a9a636a1b8935fdeab9386ad357 51200
   }
 }
 --- SHA256SUMS
-cb88962d3cf58e597bbbe7a3d8b3cc7b9625877624202cd9d42759e83b67250a  MANIFEST.json
+8e11bb29280c391816320d64a654759db4f16fe3adba8cde2431e5adfabdd48e  MANIFEST.json
 220957a5269ef167a83d420c2d550f8df7621696d2e45a4f3d83776a0a8d3b19  README.md
 8dae7ef23e5afaabf410e4a1ad97f398d1473e3c14d7a4255536a7087d87774a  VERSION
 f10ec3ffef16a8dace9b58801e0da28819c98af4c8933410d7e7cacc952f9e9b  framework/.dockerignore
@@ -119,7 +117,6 @@ aa2cdee5d3d6f0d2d2d607d14154d3af92cd753a524f26073af8f768295d0b81  framework/pack
 980f1dc180fd43a144915b972b03ab7e0d994c68af132fed91e57e7013033990  framework/src/lib.neo
 06467702816a95afc79289ab870981f8b6e2da17bcc722b5c7322e04b97a08c9  framework/tests/LICENSE
 8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881  framework/tests/lib.ts
-cc42155088fca5730758db72b2a5bca33112a941dfaa2d43098ec422ce4ea213  framework/tools/run.py
 fe3be3011800c281bd763d104e4edc75e9bf0628087790a3060fc5abe1de28e0  framework/web
 3fe187a259f605690a72ef15e919027b11743ac2fa7f71cb22b3ca3b8dd91bbf  install.sh
 be3c6d2c6c406a64d44f0b6464a887e290416dd90c524094485b1be00936d6d7  neo/VERSION

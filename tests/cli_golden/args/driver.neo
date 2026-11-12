@@ -1,8 +1,8 @@
 ; Driver for cli/args.neo, as args.neo.toml runs it: parses each case of
-; CASES (generate.py's cases.tsv: COLUMNS or "-", the working directory
-; "root", "app" or "studio", then the arguments, separated by tabs) and
-; prints the exit status, stdout and stderr argparse would give, with a
-; successful parse shown as generate.py's harness prints the namespace.
+; CASES (cases.tsv: COLUMNS or "-", the working directory "root", "app" or
+; "studio", then the arguments, separated by tabs) and prints the exit
+; status, stdout and stderr, with a successful parse shown as its namespace,
+; one name=value line per field in sorted order.
 ; The checkout (the working directory) is ROOT.
 import "std:io"
 import "std:process"

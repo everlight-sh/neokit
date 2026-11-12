@@ -6,7 +6,7 @@ import { closeSync, openSync, readFileSync, symlinkSync, writeFileSync } from "n
 import { join } from "node:path";
 import { ROOT, Supervised, freePort, isNetworkError, literal, request, sleep, withTemporary, writeTree } from "../lib";
 
-/** A failed check that wait_for may retry, like Python's AssertionError. */
+/** A failed check that waitFor may retry. */
 class Unready extends Error {}
 
 test("dev watcher: Tailwind template, imported CSS and JS edits, failed and repaired builds", async () => {
@@ -85,7 +85,7 @@ test("dev watcher: Tailwind template, imported CSS and JS edits, failed and repa
       writeFileSync(css, '@import "tailwindcss" source(none);\n@import "./detail.css";\n@source "../app";\n@source "../client";\n@source inline("underline");\n');
       await waitFor(async () => (await pageCss())[2].includes(".underline{"));
     } finally {
-      // SIGINT to neokit dev itself, as Python's send_signal(); killed after 10 s.
+      // SIGINT to neokit dev itself, not its group; killed after 10 s.
       await dev.stop({ signal: "SIGINT", group: false, grace: 10000 });
     }
   });

@@ -1,14 +1,12 @@
-; `neokit`'s command line, natively: compiler/cli.py main()'s argparse
-; parser (Python 3.12) with the same commands, options, defaults, help and
-; usage errors.
+; `neokit`'s command line, natively: an argparse parser's behaviour for
+; neokit's commands, options, defaults, help and usage errors.
 ;
 ; cmd_parse_with(argv, root, cwd, web, columns) parses the arguments after
-; the program name. root is the framework root (cli.py's ROOT), cwd the
-; working directory and web whether cwd/web.toml is a file (the defaults of
-; --app, --out, --dest and --dir follow from them, as cli.py computes them
-; from Path.cwd()), columns the COLUMNS variable ("" when unset). The result
-; is either the parsed CmdArgs (ok) or what argparse would print and the
-; exit status: help on stdout with 0, or the usage and
+; the program name. root is the framework root, cwd the working directory
+; and web whether cwd/web.toml is a file (the defaults of --app, --out,
+; --dest and --dir follow from them), columns the COLUMNS variable ("" when
+; unset). The result is either the parsed CmdArgs (ok) or what argparse
+; would print and the exit status: help on stdout with 0, or the usage and
 ; "PROG: error: MESSAGE" on stderr with 2. cmd_parse reads cwd and web.toml
 ; itself.
 ;
@@ -20,12 +18,13 @@
 ; HelpFormatter's layout, usage wrapping and textwrap line breaking at
 ; COLUMNS-2 columns.
 ;
-; Differences: Python reads the terminal's width when COLUMNS is unset or
-; not a positive integer and stdout is a terminal; this uses 80 columns
-; then. --port, like Python's int(), accepts surrounding whitespace, a sign
-; and single underscores between digits, but only ASCII digits, and values
-; beyond i64 saturate (Python keeps them exact; the commands then reject
-; them as out of range). Negative numbers are recognized with ASCII digits.
+; Differences from the former Python CLI: it read the terminal's width when
+; COLUMNS was unset or not a positive integer and stdout was a terminal;
+; this uses 80 columns then. --port accepts surrounding whitespace, a sign
+; and single underscores between digits, as it did, but only ASCII digits,
+; and values beyond i64 saturate (it kept them exact; the commands then
+; reject them as out of range). Negative numbers are recognized with ASCII
+; digits.
 import "std:option"
 import "std:result"
 import "host.neo"
@@ -45,7 +44,7 @@ type CmdAction = { strings:Arr Arr u8 _ _, dest:Arr u8 _, kind:i64, path:bool, n
 type CmdSpec = { prog:Arr u8 _, description:Arr u8 _, actions:Arr CmdAction _,
                  subnames:Arr Arr u8 _ _, subhelps:Arr Arr u8 _ _ }
 
-; The subcommands, in cli.py's order.
+; The subcommands, in the order usage and help list them.
 fn cmd_commands() -> Arr Arr u8 _ _
   = text_split("prepare build serve dev export test init release doctor revalidate password migrate preview"," ")
 
@@ -442,7 +441,7 @@ fn cmd_run(borrow spec:CmdSpec, borrow args:Arr Arr u8 _ _) -> CmdRun
 
 ; ---------------------------------------------------------------- the result
 
-; The parsed command line: cli.py's args namespace. Paths are str(Path) of
+; The parsed command line: argparse's namespace. Paths are str(Path) of
 ; the given value or of the default; port is the int; neo_archive and
 ; neo_sha256 are None when has_neo_archive and has_neo_sha256 are false.
 ; Fields a command does not have keep their defaults.
@@ -486,7 +485,7 @@ private fn cmd_stop(borrow spec:CmdSpec, borrow run:CmdRun, width:i64) -> CmdPar
   = if run.outcome==2 then CmdParsed { ok=false, exit=0, stdout=cmd_help(spec,width), stderr=text_empty(), args=cmd_no_args() }
     else CmdParsed { ok=false, exit=2, stdout=text_empty(), stderr=concat(cmd_usage(spec,width),spec.prog,": error: ",run.message,"\n"), args=cmd_no_args() }
 
-; parse_args() of cli.py's parser on argv (without the program name).
+; parse_args() of neokit's parser on argv (without the program name).
 fn cmd_parse_with(borrow argv:Arr Arr u8 _ _, borrow root:Arr u8 _, borrow cwd:Arr u8 _, web:bool, borrow columns:Arr u8 _) -> CmdParsed
   = let width=cmd_width(columns) in
     let top=cmd_spec(text_empty()) in

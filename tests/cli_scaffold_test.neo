@@ -1,6 +1,5 @@
-; Unit tests for cli/scaffold.neo's file texts. The expected text is what
-; compiler/scaffold.py writes (json.dumps quoting: ASCII with \u escapes).
-; init itself, against Python on a fixture SDK, is in
+; Unit tests for cli/scaffold.neo's file texts, with strings in json.dumps
+; quoting (ASCII with \u escapes). init itself, on a fixture SDK, is in
 ; tests/cli_golden/scaffold/.
 import "std:option"
 import "std:result"

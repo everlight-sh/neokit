@@ -60,7 +60,7 @@ test("features", async () => {
     expect([uploaded.status, uploaded.json()]).toEqual([201, { name: "test.bin", bytes: payload.length }]);
     expect((await request(port, "/api/upload", { method: "POST", body: body.subarray(0, body.length - 10), headers: multipart })).status).toBe(400);
 
-    // A chunked upload, as http.client sends it, then the same connection again:
+    // A chunked upload in 4096-byte chunks, then the same connection again:
     // framing must consume exactly one request.
     const connection = await Connection.open(port);
     try {

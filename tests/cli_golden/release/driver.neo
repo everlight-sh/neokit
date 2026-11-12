@@ -1,5 +1,4 @@
-; Driver for cli/release.neo's effectful functions, as release.neo.toml and
-; parity.sh run it.
+; Driver for cli/release.neo's effectful functions, as release.neo.toml runs it.
 ;
 ; Usage (paths relative to the working directory):
 ;   driver.neo bundle OUT ROOT ARCHIVE SHA256   rel_bundle; prints its JSON
@@ -47,7 +46,7 @@ effect fn scratch() -> Arr u8 _
 effect fn read_or(borrow path:Arr u8 _) -> Arr u8 _ = match host_read_bytes(path) { Ok(data) => data, Err(message) => concat("error: ",message) }
 effect fn shown(borrow result:Result<i64,Arr u8 _>) -> Arr u8 _ = match result { Ok(count) => concat("ok ",text_int(count)), Err(message) => concat("error: ",message) }
 effect fn archive_sha(borrow name:Arr u8 _) -> Arr u8 _ = host_sha256_hex(read_or(host_join(fixture_dir(),name)))
-; The stand-in Neo archive generate.py writes, named after rel_neo_version.
+; The stand-in Neo archive in fixture/, named after rel_neo_version.
 fn neo_archive_name() -> Arr u8 _ = concat("neo-",rel_neo_version(),".tar.gz")
 
 ; Each member of the SDK archive: mode, size, SHA-256 and name, then the
@@ -88,8 +87,8 @@ effect fn assemble_case(borrow base:Arr u8 _, borrow environment:Arr Arr u8 _ _)
           "--- README.md\n",read_or(host_join(sdk,"README.md")),
           "--- again\n",text_replace(again,base,"BASE"),"\n")
     }
-; unpack_neo on each archive of fixture/unpack/ (as generate.py names them:
-; CASE.tar.gz or CASE.tar), with its own checksum, a wrong one and none.
+; unpack_neo on each archive of fixture/unpack/ (named CASE.tar.gz or
+; CASE.tar), with its own checksum, a wrong one and none.
 effect fn unpack_cases(borrow base:Arr u8 _) -> Arr u8 _
   = let names=match host_listdir(host_join(fixture_dir(),"unpack")) { Ok(found) => found, Err(message) => text_words() } in
     loop (out=text_empty(), i=0) while i<len(names)

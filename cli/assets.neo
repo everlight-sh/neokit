@@ -1,24 +1,24 @@
-; Build-time metadata, generated public files and precompressed assets,
-; ported from compiler/assets.py. Each public meta_ function mirrors the
-; Python function of the same name (metadata, metadata_props,
-; dynamic_metadata, image_variants, generated_assets, compressible,
-; compressed, brotli_compressed); a Python BuildError is Err(message) with
-; the same text.
+; Build-time metadata, generated public files and precompressed assets.
+; Comments name the public meta_ functions without their prefix (metadata,
+; metadata_props, dynamic_metadata, image_variants, generated_assets,
+; compressible, compressed, brotli_compressed); a failure is Err(message)
+; with the message neokit prints.
 ;
-; Two parts differ by design (cli/PORTING.md):
+; Two parts differ from the former Python CLI by design (cli/README.md):
 ; - compressed() uses std:deflate's gzip_encode, so the bytes differ from
 ;   zlib's; the rule is the same (at least 512 bytes in, and kept only when
 ;   smaller than the input). brotli_compressed() is always "no variant", as
-;   in Python without the optional brotli module.
+;   it was in the former CLI without the optional brotli module.
 ; - Responsive images use libvips's command-line tools (vips and vipsheader
 ;   on PATH) instead of Pillow: the same widths, heights, formats, cache keys
 ;   and URL scheme, other encoder bytes. The cache key's last field is the
 ;   encoder version, `vips --version` instead of Pillow's version.
 ;
-; Python crashes (TypeError, AttributeError) on a few malformed configs;
-; those are errors here: [site] or [metadata] that is not a table, a [site]
-; url that is not text, image files that are not a list of text. A float in
-; og_title/og_description/og_image is refused (Python prints its repr).
+; The former CLI crashed (TypeError, AttributeError) on a few malformed
+; configs; those are errors here: [site] or [metadata] that is not a table,
+; a [site] url that is not text, image files that are not a list of text. A
+; float in og_title/og_description/og_image is refused (it printed its
+; repr).
 import "std:json"
 import "std:option"
 import "std:result"
@@ -30,7 +30,7 @@ import "text.neo"
 import "host.neo"
 import "toml.neo"
 
-; One entry of a Python dict with str keys: a generated file (URL to bytes)
+; One entry of a dict with str keys: a generated file (URL to bytes)
 ; or an asset binding (name to URL).
 type MetaPair = { key:Arr u8 _, value:Arr u8 _ }
 ; dynamic_metadata's (parts, jsonld).
@@ -69,7 +69,7 @@ private fn meta_literal(borrow text:Arr u8 _) -> Arr u8 _
             else if b>=32 && b<127 then push(o,u8(b)) else concat(o,"\\x",text_hex(b,2)), i+1) yield o in
     push(body,u8(34))
 
-; Python repr() of a TOML value, or None for a float (not implemented).
+; repr() of a TOML value, or None for a float (not implemented).
 private fn meta_repr(borrow value:Json) -> Option<Arr u8 _>
   = if toml_is_text(value) then Some::<Arr u8 _>(text_repr(toml_text(value)))
     else if toml_is_int(value) then Some::<Arr u8 _>(text_int(toml_int(value)))
@@ -90,7 +90,7 @@ private fn meta_repr_members(borrow table:Json) -> Option<Arr u8 _>
   = let s=loop (s=MetaJoin { out="{", ok=true }, i=0) while s.ok && i<toml_size(table)
       next (meta_join_step(s,meta_repr_member(table,i),i==0), i+1) yield s in
     if s.ok then Some::<Arr u8 _>(concat(s.out,"}")) else None::<Arr u8 _>()
-; Python str() of a TOML value: a str as is, otherwise its repr.
+; A TOML value as text: a str as is, otherwise its repr.
 private fn meta_str(borrow value:Json) -> Option<Arr u8 _>
   = if toml_is_text(value) then Some::<Arr u8 _>(toml_text(value)) else meta_repr(value)
 
@@ -106,11 +106,11 @@ private fn meta_setdefault(move pairs:Arr MetaPair _, borrow key:Arr u8 _, borro
 
 ; ---- metadata ----
 
-; config.get('site', {}); Python fails on a [site] that is not a table.
+; config.get('site', {}); a [site] that is not a table is an error.
 private fn meta_site(borrow config:Json) -> Result<Json,Arr u8 _>
   = let site=toml_get_table(config,"site") in
     if site.ok then Ok::<Json,Arr u8 _>(site.value) else Err::<Json,Arr u8 _>("[site] must be a table")
-; page.get('metadata', {}); Python fails on [metadata] that is not a table.
+; page.get('metadata', {}); [metadata] that is not a table is an error.
 private fn meta_page(borrow page:Json) -> Result<Json,Arr u8 _>
   = let meta=toml_get_table(page,"metadata") in
     if meta.ok then Ok::<Json,Arr u8 _>(meta.value) else Err::<Json,Arr u8 _>("[metadata] must be a table")
@@ -226,7 +226,7 @@ fn meta_compressed(borrow data:Arr u8 _) -> OptionBytes
     let packed=gzip_encode(data,9) in
     if packed.ok && len(packed.value)<len(data) then some_bytes(packed.value) else none_bytes()
 ; brotli_compressed(data, gzipped): the native build has no Brotli encoder,
-; so never a variant (Python without its optional brotli module).
+; so never a variant (see the file comment).
 fn meta_brotli_compressed(borrow data:Arr u8 _, borrow gzipped:OptionBytes) -> OptionBytes = none_bytes()
 
 ; ---- image tools ----
@@ -242,9 +242,9 @@ private effect(fs) fn meta_find_tool(borrow name:Arr u8 _, borrow search:Arr u8 
     if len(found)==0 then found else match host_abspath(found) { Ok(path) => path, Err(message) => text_empty() }
 private fn meta_missing(borrow tool:Arr u8 _) -> Arr u8 _
   = concat("Responsive images require ",tool," (libvips) on PATH in the build environment")
-; The image tools found in search (a PATH value). Python instead imports
-; Pillow and fails with 'Responsive images require Pillow in the build
-; environment'.
+; The image tools found in search (a PATH value). The former Python CLI
+; imported Pillow instead and failed with 'Responsive images require Pillow
+; in the build environment'.
 effect(fs,env,process,time) fn meta_image_tools_in(borrow search:Arr u8 _) -> Result<MetaTools,Arr u8 _>
   = let vips=meta_find_tool("vips",search) in
     if len(vips)==0 then Err::<MetaTools,Arr u8 _>(meta_missing("vips")) else
@@ -278,7 +278,7 @@ effect(fs,env,process,time) fn meta_image_header(borrow tools:MetaTools, borrow 
 ; sha256(f"{digest}:{width}:{format}:82:{version}").hexdigest()+'.'+format.
 fn meta_image_cache_name(borrow digest:Arr u8 _, width:i64, borrow format:Arr u8 _, borrow version:Arr u8 _) -> Arr u8 _
   = concat(host_sha256_hex(concat(digest,":",text_int(width),":",format,":82:",version)),".",format)
-; Python round(num/den) (half to even) for num>=0, den>0.
+; round(num/den), half to even, for num>=0, den>0.
 fn meta_round_div(num:i64, den:i64) -> i64
   = if den<=0 then 0 else let q=num/den in let r=num-q*den in
     if 2*r>den then q+1 else if 2*r<den then q else q+q%2
@@ -324,7 +324,7 @@ private effect(fs,env,process,time) fn meta_variant_step(move s:MetaVariants, bo
 ; image_variants(path, widths, formats, cache): the displayed width of the
 ; image at path (its height for EXIF orientations 5-8) and every variant
 ; (min(width, original), format) in ascending width, then formats order.
-; cache "" is Python's None.
+; cache "" means no cache.
 effect(fs,env,process,time) fn meta_image_variants(borrow tools:MetaTools, borrow path:Arr u8 _, borrow widths:Arr i64 _,
     borrow formats:Arr Arr u8 _ _, borrow cache:Arr u8 _) -> Result<MetaImage,Arr u8 _>
   = match host_read_bytes(path) {
@@ -356,7 +356,8 @@ private fn meta_sitemap(borrow origin:Arr u8 _, borrow exported:Arr Arr u8 _ _) 
 private fn meta_bad_origin(borrow origin:Arr u8 _) -> bool
   = !(text_starts(origin,"https://") || text_starts(origin,"http://")) || text_contains(origin,"\r") || text_contains(origin,"\n")
     || text_contains(origin,"<") || text_contains(origin,">") || text_contains(origin,"\"")
-; One element of images.files as Python iterates it: ok for a str.
+; One element of images.files (a list's items, a table's keys or a text's
+; characters): ok for a str.
 type MetaSource = { ok:bool, text:Arr u8 _ }
 private fn meta_sources(borrow value:Json) -> Arr MetaSource _
   = if toml_is_array(value) then

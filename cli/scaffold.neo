@@ -1,10 +1,11 @@
-; `neokit init`: compiler/scaffold.py's init, natively. A new application
-; directory with a locked path dependency on the framework, the same files
-; and bytes as the Python writes, and the same errors.
+; `neokit init`, natively: a new application directory with a locked path
+; dependency on the framework. The files, bytes and errors are the ones the
+; former Python CLI's init produced.
 ;
 ; The framework root, the environment the package lock runs with and the
-; Neo command (compiler_command(environment) in build.py: [NEO_HOME/neo])
-; are explicit arguments, so this module does not depend on build.neo.
+; Neo command (gen_compiler_command(environment) in build.neo:
+; [NEO_HOME/neo]) are explicit arguments, so this module does not depend
+; on build.neo.
 ; --standalone first assembles an SDK into vendor/neokit-sdk with
 ; rel_assemble, then locks against its framework with its Neo.
 import "std:option"
@@ -80,7 +81,7 @@ private effect(fs,env,process,time) fn scf_setup(borrow path:Arr u8 _, borrow ro
 private effect(fs,process) fn scf_write(borrow path:Arr u8 _, borrow name:Arr u8 _, borrow text:Arr u8 _) -> Arr u8 _
   = match host_write_text(host_join(path,name),text) { Ok(count) => text_empty(), Err(message) => message }
 
-; scaffold.py's init(path, root, environment, standalone): creates the
+; scf_init(path, root, environment, neo, standalone): creates the
 ; project at path (which must be missing or empty), locks it with
 ; `NEO pkg lock PATH` (neo is the command, environment its variables; the
 ; child shares stdin, stdout and stderr) and returns the resolved path.

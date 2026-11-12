@@ -5,7 +5,7 @@ import { test, expect } from "bun:test";
 import { createHmac, pbkdf2Sync } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT, check, freePort, neokit, pythonJson, request, running, urlencode, withTemporary } from "../lib";
+import { ROOT, check, freePort, jsonDumps, neokit, request, running, urlencode, withTemporary } from "../lib";
 
 const OUT = join(ROOT, "build/dashboard");
 const binary = process.env.NEOKIT_DASHBOARD_BINARY ?? (neokit(["build", "--app", join(ROOT, "examples/dashboard"), "--out", OUT]), join(OUT, "server"));
@@ -26,7 +26,7 @@ function csrfOf(page: string) {
 }
 const FORM = "application/x-www-form-urlencoded";
 
-// Headers are read last-value-wins (.last()), as Python's dict(response.getheaders()) keeps them.
+// Headers are read last-value-wins (.last()).
 test("dashboard", async () => {
   await withTemporary("neokit-dashboard-", async directory => {
     const key = "test-session-key-32-characters-long-only-for-tests";
@@ -56,7 +56,7 @@ test("dashboard", async () => {
       const post = (path: string, body: string, fields: Record<string, string>, method = "POST") => request(port, path, { method, body, headers: fields });
       expect((await post("/api/tasks", '{"title":"blocked"}', { ...headers, Origin: "https://evil.test" })).status).toBe(403);
       expect((await post("/api/tasks", '{"title":"blocked"}', { ...headers, "X-CSRF-Token": "bad" })).status).toBe(403);
-      const created = await post("/api/tasks", pythonJson({ title: "<script> café & test" }), headers);
+      const created = await post("/api/tasks", jsonDumps({ title: "<script> café & test" }), headers);
       expect([created.status, created.status === 201 ? "" : created.text]).toEqual([201, ""]);
       const task: string = created.json().id;
       const dashboard = (await request(port, "/dashboard", { headers: { Cookie: cookie } })).text;
@@ -78,7 +78,7 @@ test("dashboard", async () => {
       await Promise.all(Array.from({ length: 8 }, async () => {
         while (next < 24) {
           const i = next++;
-          const reply = await post("/api/tasks", pythonJson({ title: `Concurrent ${i}` }), headers);
+          const reply = await post("/api/tasks", jsonDumps({ title: `Concurrent ${i}` }), headers);
           expect([i, reply.status, reply.status === 201 ? "" : reply.text]).toEqual([i, 201, ""]);
           ids[i] = reply.json().id;
         }

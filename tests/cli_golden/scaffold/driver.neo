@@ -1,11 +1,11 @@
-; Driver for cli/scaffold.neo, as scaffold.neo.toml and parity.py run it.
+; Driver for cli/scaffold.neo, as scaffold.neo.toml runs it.
 ;
 ; Usage (paths relative to the working directory):
 ;   driver.neo init PATH ROOT STANDALONE   scf_init(PATH, ROOT, the process
 ;                                          environment, [$NEO_HOME/neo],
 ;                                          STANDALONE "1" or "0"); prints
 ;                                          scf_created's line
-;   driver.neo fixture                     the golden cases (see generate.py)
+;   driver.neo fixture                     the golden cases (see scaffold.neo.toml)
 ; Errors print as "error: MESSAGE" on stdout and exit 1.
 import "std:io"
 import "std:fs"
@@ -15,7 +15,7 @@ import "../../../cli/scaffold.neo"
 effect fn arg(i:i64) -> Arr u8 _ = let value=cli_arg(i) in if value.present then value.value else text_empty()
 effect fn finish(borrow output:Arr u8 _, failed:bool) -> unit
   = let printed=print_out(output) in if failed then process_exit(1) else noop()
-; compiler_command(environment): [NEO_HOME/neo].
+; gen_compiler_command(environment): [NEO_HOME/neo].
 fn neo_of(borrow environment:Arr Arr u8 _ _) -> Arr Arr u8 _ _
   = let home=host_env_get(environment,"NEO_HOME") in push(text_words(),host_join(if home.present then home.value else text_empty(),"neo"))
 

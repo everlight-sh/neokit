@@ -3,7 +3,7 @@
 ;   driver.neo serve DIR PORT   cmd_preview, as `neokit preview` runs it (an
 ;                               error is "neokit: MESSAGE" on stderr and
 ;                               exit status 1)
-;   driver.neo fixture          the golden cases (see generate.py): builds
+;   driver.neo fixture          the golden cases (see preview.neo.toml): builds
 ;                               setup.tsv in build/cli-golden-preview,
 ;                               serves its site/ from a child `serve`
 ;                               process on a free port, sends each request
@@ -79,7 +79,7 @@ effect fn exchange(port:i64, borrow request:Arr u8 _, borrow mode:Arr u8 _) -> A
     let shut=if text_equal(mode,"eof") then socket_close_write(socket).ok else true in
     read_all(socket)
 
-; ---- output, as generate.py normalizes it ----
+; ---- output, normalized as the goldens record it ----
 
 fn normalized_line(borrow line:Arr u8 _) -> Arr u8 _
   = if text_starts(line,"Date: ") then "Date: DATE" else if text_starts(line,"Server: ") then "Server: SERVER"

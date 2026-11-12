@@ -1,14 +1,13 @@
-; Typed action adapters, ported from compiler/actions.py: a route.toml with
-; an [input] field schema gets a generated Neo function that checks the
-; request's origin and fields before calling the handler. act_adapter
-; mirrors action_adapter; the generated code is byte-identical and a Python
-; BuildError is Err(message) with the same text.
+; Typed action adapters: a route.toml with an [input] field schema gets a
+; generated Neo function that checks the request's origin and fields
+; before calling the handler. act_adapter is action_adapter in the
+; comments; a failure is Err(message) with the message neokit prints.
 import "std:json"
 import "std:result"
 import "text.neo"
 import "toml.neo"
 
-; action_adapter's result: present is false for Python's None (no [input]).
+; action_adapter's result: present is false without [input].
 type ActAdapter = { present:bool, code:Arr u8 _ }
 
 ; templates.literal: a Neo string literal holding value's UTF-8 bytes.
@@ -49,7 +48,7 @@ private fn act_field(move s:ActFields, borrow name:Arr u8 _, borrow description:
 
 ; action_adapter(config, key): None (present=false) without [input],
 ; otherwise the adapter function named key. config['handler'] and
-; config['input_type'] are build.py's checked names.
+; config['input_type'] are names the build has already checked.
 fn act_adapter(borrow config:Json, borrow key:Arr u8 _) -> Result<ActAdapter,Arr u8 _>
   = let schema=toml_get(config,"input") in
     match schema {

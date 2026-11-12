@@ -1,6 +1,5 @@
-; Unit tests for cli/templates.neo, ported from tests/test_templates.py and
-; the template cases of tests/test_features.py. Expected code and messages
-; are compiler/templates.py's output for the same input. Run by `neo test`.
+; Unit tests for cli/templates.neo: the generated code and error messages
+; for each input, byte for byte. Run by `neo test`.
 import "../cli/templates.neo"
 
 fn tt_same(borrow actual:Arr u8 _, borrow expected:Arr u8 _) -> bool = len(actual)==len(expected) && bytes_match_at(actual,0,expected)
@@ -148,7 +147,7 @@ fn test_unbalanced_and_arbitrary_expressions_rejected() -> bool
 fn test_byte_literals_preserve_binary_unicode() -> bool
   = tt_same(tpl_literal("\x00\xff\"\n"),"\"\\x00\\xff\\\"\\n\"") && tt_same(tpl_literal("caf\xc3\xa9"),"\"caf\\xc3\\xa9\"")
 
-; tests/test_features.py: the page views discover() parses.
+; The page views discover() parses.
 fn tt_page(borrow source:Arr u8 _) -> Arr u8 _
   = match tpl_parse("Page_x",source,"app/page.view") {
       Ok(template) => if len(template.props)==1 && tt_same(tpl_get(template.props,"title"),"text") then tt_code(template,tpl_no_templates(),tpl_no_pairs()) else "",
@@ -159,7 +158,7 @@ fn test_feature_page_views() -> bool
     && tt_same(tt_page("@props(title:text)\nx"),
       "fn text_Page_x(p_title: Arr u8 _) -> Arr u8 _ = \"x\"\nfn view_Page_x(p_title: Arr u8 _) -> WebHtml = web_html(text_Page_x(p_title))\n")
 
-fn test_repr_matches_python() -> bool
+fn test_repr_quoting() -> bool
   = tt_same(tpl_repr("it's"),"\"it's\"") && tt_same(tpl_repr("a\"b'c"),"'a\"b\\'c'")
     && tt_same(tpl_repr("\x07\xc3\xa9\xe2\x80\xa8\xf0\x9f\x98\x80\xc2\x85\t\\"),"'\\x07\xc3\xa9\\u2028\xf0\x9f\x98\x80\\x85\\t\\\\'")
 
@@ -191,13 +190,13 @@ fn test_tokens_split_like_re_split() -> bool
   = let tokens=tpl_tokens("a{{ b }}c{% d %}{{ e") in
     len(tokens)==5 && tt_same(tokens[0],"a") && tt_same(tokens[1],"{{ b }}") && tt_same(tokens[2],"c") && tt_same(tokens[3],"{% d %}") && tt_same(tokens[4],"{{ e")
 
-; NAME.fullmatch, which build.py also applies to loader and handler names.
+; NAME.fullmatch, which the build also applies to loader and handler names.
 fn test_name_is_an_ascii_identifier() -> bool
   = tpl_name("load") && tpl_name("_a1") && tpl_name("Z") && !tpl_name("") && !tpl_name("1a") && !tpl_name("a-b")
     && !tpl_name("\xc3\xa9") && !tpl_name("a\n") && !tpl_name("a b")
 
 ; A later component with the same name replaces an earlier one, as in the
-; dict build.py passes.
+; component map the build passes.
 fn test_components_resolve_like_a_dict() -> bool
   = let components=push(tt_one("Badge","@props(label:text)\nold"),tt_parse("Badge","@props(count:int)\nnew")) in
     tt_same(tt_with("@props(n:int)\n{% include Badge count=n %}",components),

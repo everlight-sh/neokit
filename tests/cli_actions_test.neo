@@ -1,6 +1,5 @@
-; Unit tests for cli/actions.neo: typed action adapters, byte for byte as
-; compiler/actions.py generates them (expected texts printed by the Python),
-; and every BuildError text. tests/cli_golden/routes compares more configs.
+; Unit tests for cli/actions.neo: typed action adapters, byte for byte, and
+; every BuildError text. tests/cli_golden/routes compares more configs.
 import "std:json"
 import "std:result"
 import "../cli/actions.neo"

@@ -1,4 +1,5 @@
-; Unit tests for cli/text.neo: Python str semantics. Run by `neo test`.
+; Unit tests for cli/text.neo: code point order, clamped slices, Unicode
+; whitespace, repr quoting and the other string helpers. Run by `neo test`.
 import "../cli/text.neo"
 
 fn words2(a:Arr u8 _, b:Arr u8 _) -> Arr Arr u8 _ _ = push(push(text_words(),a),b)
@@ -14,7 +15,7 @@ fn test_equal_and_order() -> bool
     && text_less("Z","a") && text_less("z","\xc3\xa9") && text_less("\xc3\xa9","\xe2\x82\xac")
     && text_compare("a","b")== -1 && text_compare("b","a")==1 && text_compare("q","q")==0
 
-fn test_sort_is_python_sorted() -> bool
+fn test_sort_is_code_point_order() -> bool
   = same(show(text_sort(words4("pear","Apple","\xc3\xa9t\xc3\xa9","apple"))),"<Apple|apple|pear|\xc3\xa9t\xc3\xa9>")
     && same(show(text_sort(text_words())),"<>")
     && same(show(text_sort(words3("b","a","b"))),"<a|b|b>")
@@ -69,7 +70,7 @@ fn test_search() -> bool
     && text_contains("{{ x }}","{{") && !text_contains("{ x }","{{")
     && text_count("a,b,,c",",")==3 && text_count("aaaa","aa")==2 && text_count("ab","")==3
 
-fn test_slice_is_python_slice() -> bool
+fn test_slice_clamps() -> bool
   = same(text_slice("abcdef",0,3),"abc") && same(text_slice("abcdef",3,100),"def")
     && same(text_slice("text[]",0,-2),"text") && same(text_slice("og_title",3,8),"title")
     && same(text_slice("abc",2,1),"") && same(text_slice("abc",-10,1),"a") && same(text_from("abcdef",4),"ef")
@@ -85,7 +86,7 @@ fn test_case() -> bool
   = same(text_lower("REFRESH Mixed.JPG"),"refresh mixed.jpg") && same(text_lower("\xc3\x89"),"\xc3\x89")
     && same(text_upper("abc-Z"),"ABC-Z")
 
-fn test_strip_python_whitespace() -> bool
+fn test_strip_unicode_whitespace() -> bool
   = same(text_strip("  a b \t\n"),"a b") && same(text_strip(""),"") && same(text_strip(" \n "),"")
     && same(text_lstrip("  a "),"a ") && same(text_rstrip("  a "),"  a")
     && same(text_strip("\xc2\xa0\xe2\x80\x83x\xe3\x80\x80\x1c"),"x")
@@ -114,7 +115,7 @@ fn test_numbers() -> bool
 fn test_char_count() -> bool
   = text_char_count("")==0 && text_char_count("abc")==3 && text_char_count("\xc3\xa9t\xf0\x9f\x98\x80")==3
 
-fn test_repr_matches_python() -> bool
+fn test_repr_quoting() -> bool
   = same(text_repr("abc"),"'abc'") && same(text_repr("it's"),"\"it's\"") && same(text_repr("both ' and \""),"'both \\' and \"'")
     && same(text_repr("a\\b"),"'a\\\\b'") && same(text_repr("\t\n\r\x00\x7f"),"'\\t\\n\\r\\x00\\x7f'")
     && same(text_repr("\xc3\xa9\xe2\x82\xac"),"'\xc3\xa9\xe2\x82\xac'") && same(text_repr("\xc2\xa0\xc2\x85"),"'\\xa0\\x85'")
@@ -129,7 +130,7 @@ fn test_universal_newlines() -> bool
   = same(text_universal_newlines("a\r\nb\rc\n"),"a\nb\nc\n") && same(text_universal_newlines("plain\n"),"plain\n")
     && same(text_universal_newlines("\r\r\n"),"\n\n")
 
-; Expected values from Python 3.12 (Unicode 15.0) on the test box.
+; Expected values follow Unicode 15.0.
 fn test_unicode_classes_case_and_unescape() -> bool
   = same(text_repr("\xcd\xb8"),"'\\u0378'") && same(text_repr("\xcd\xb7"),"'\xcd\xb7'") && same(text_repr("\xf0\x9f\x98\x80"),"'\xf0\x9f\x98\x80'")
     && same(text_repr("\xc2\xad"),"'\\xad'") && same(text_repr("\xf3\xa0\x84\x80"),"'\xf3\xa0\x84\x80'") && same(text_repr("\xe2\x80\xa8"),"'\\u2028'")

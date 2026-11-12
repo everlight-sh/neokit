@@ -1,14 +1,13 @@
-; NeoKit's typed HTML template compiler (.view files), ported from
-; compiler/templates.py. Each public tpl_ function mirrors the Python function
-; of the same name so the two can be compared separately; a Python BuildError
-; is Err(message) with the same text.
+; NeoKit's typed HTML template compiler (.view files). Section names such as
+; validate_html and compile_template are public functions without their
+; tpl_ prefix; a failure is Err(message) with the message neokit prints.
 ;
-; Text is UTF-8 bytes. Template sources are what Python's read_text() returns,
-; so callers translate CRLF and lone CR to LF before tpl_parse. Python dicts are
+; Text is UTF-8 bytes. Template sources are read with universal newlines,
+; so callers translate CRLF and lone CR to LF before tpl_parse. Dicts are
 ; arrays of TplPair in insertion order; component dicts are arrays of templates
-; looked up by template name (build.py keys them by the same name).
+; looked up by template name (the build keys them by the same name).
 ;
-; Python's regular expressions, str methods and html.parser are rewritten as
+; The cited regular expressions, str methods and html.parser are rewritten as
 ; scanners with the same matching (including the backtracking cases). Their
 ; Unicode classes and case mappings, repr() and html.unescape are cli/text.neo's
 ; (text_is_word_char, text_is_decimal, text_lower_unicode, text_fold_code,
@@ -20,7 +19,7 @@ import "text.neo"
 
 ; ---------------------------------------------------------------- types
 
-; One entry of a Python dict with str keys and values.
+; One entry of a dict with str keys and values.
 type TplPair = { key:Arr u8 _, value:Arr u8 _ }
 ; An @type record: its name and fields (name to kind) in order.
 type TplType = { name:Arr u8 _, fields:Arr TplPair _ }
@@ -47,7 +46,8 @@ private fn tpl_starts(borrow t:Arr u8 _, borrow prefix:Arr u8 _) -> bool = bytes
 private fn tpl_ends(borrow t:Arr u8 _, borrow suffix:Arr u8 _) -> bool
   = len(suffix)<=len(t) && bytes_match_at(t,len(t)-len(suffix),suffix)
 
-; Python's t[a:b] for nonnegative a: bounds clamp and an empty range is "".
+; The bytes of t from a to b, for nonnegative a: bounds clamp and an empty
+; range is "".
 private fn tpl_slice(borrow t:Arr u8 _, a:i64, b:i64) -> Arr u8 _
   = let n=len(t) in
     let s=if a<0 then 0 else if a>n then n else a in
@@ -109,7 +109,7 @@ private fn tpl_space(code:i64) -> bool
   = (code>=9 && code<=13) || (code>=28 && code<=32) || code==133 || code==160 || code==5760
     || (code>=8192 && code<=8202) || code==8232 || code==8233 || code==8239 || code==8287 || code==12288
 
-; str.strip() and the \s* and [\w.]* runs of the reference regexes.
+; str.strip() and the \s* and [\w.]* runs of the template regexes.
 private fn tpl_skip_space(borrow t:Arr u8 _, i:i64) -> i64
   = loop (j=i) while j>=0 && j<len(t) && tpl_space(tpl_code(t,j)) next (j+tpl_width(t,j)) yield j
 private fn tpl_skip_word(borrow t:Arr u8 _, i:i64, dots:bool) -> i64
@@ -135,7 +135,7 @@ private fn tpl_split_space(borrow t:Arr u8 _) -> Arr Arr u8 _ _
 
 ; ---------------------------------------------------------------- repr
 
-; Python's repr() of a str.
+; repr() of a str.
 fn tpl_repr(borrow text:Arr u8 _) -> Arr u8 _ = text_repr(text)
 ; repr() of a list of str: the keys of a dict, as list(d) prints.
 private fn tpl_keys_repr(borrow pairs:Arr TplPair _) -> Arr u8 _
@@ -213,7 +213,7 @@ fn tpl_native(borrow kind:Arr u8 _, borrow types:Arr TplType _) -> Result<Arr u8
 
 ; ---------------------------------------------------------------- fields and parse
 
-; NAME.fullmatch: an ASCII identifier. build.py uses NAME for loader,
+; NAME.fullmatch: an ASCII identifier. The build uses NAME for loader,
 ; handler and component names too.
 fn tpl_name(borrow t:Arr u8 _) -> bool
   = len(t)>0 && tpl_ident_start(tpl_b(t,0)) &&
@@ -292,7 +292,7 @@ type TplWalk = { kind:Arr u8 _, bad:i64 }
 private fn tpl_walk(borrow types:Arr TplType _, move w:TplWalk, borrow part:Arr u8 _, at:i64) -> TplWalk
   = let fields=tpl_type_fields(types,tpl_type_index(types,w.kind)) in let f=tpl_index(fields,part) in
     if f<0 then w with { bad=at } else w with { kind=tpl_pair_at(fields,f).value }
-; The kind of a dotted name, or None (Python's None) when it does not resolve.
+; The kind of a dotted name, or None when it does not resolve.
 fn tpl_resolve_kind(borrow name:Arr u8 _, borrow kinds:Arr TplPair _, borrow types:Arr TplType _) -> Option<Arr u8 _>
   = let parts=tpl_split(name,46) in let first=tpl_index(kinds,tpl_word_at(parts,0)) in
     if first<0 then None::<Arr u8 _>() else
@@ -366,8 +366,8 @@ private fn tpl_locals_step(borrow body:Arr u8 _, borrow types:Arr TplType _, mov
     TplLocals { kinds=if len(m.index)>0 then tpl_put(typed,m.index,"int") else typed, p=m.end }
 
 ; ----- html.parser.HTMLParser(convert_charrefs=False).feed(body), as the
-; Python 3.12 on the reference box implements it; close() is never called, so
-; an unterminated construct ends parsing without being reported.
+; 3.12 standard library implements it; close() is never called, so an
+; unterminated construct ends parsing without being reported.
 
 private fn tpl_ws5(b:i64) -> bool = b==9 || b==10 || b==12 || b==13 || b==32       ; [\t\n\r\f ]
 private fn tpl_tag_stop(b:i64) -> bool = tpl_ws5(b) || b==47 || b==62               ; [\t\n\r\f />]
@@ -666,7 +666,8 @@ fn tpl_validate_html(borrow template:TplTemplate) -> Result<bool,Arr u8 _>
 
 type TplCtx = { name:Arr u8 _, path:Arr u8 _, props:Arr TplPair _, types:Arr TplType _, components:Arr TplTemplate _, assets:Arr TplPair _ }
 ; Compilation state. expr, end and has_end carry a sequence's result back to
-; its caller; kinds and locals are the Python kinds and locals_ dicts.
+; its caller; kinds maps names to their kinds and locals maps loop
+; variables to their Neo names.
 type TplC = { tokens:Arr Arr u8 _ _, pos:i64, helpers:Arr Arr u8 _ _, deps:Arr Arr u8 _ _, kinds:Arr TplPair _,
               locals:Arr TplPair _, failed:bool, err:Arr u8 _, expr:Arr u8 _, end:Arr u8 _, has_end:bool }
 ; One sequence(): the parts so far, and the end directive once found.
@@ -1058,8 +1059,8 @@ private fn tpl_subst_step(borrow t:Arr u8 _, borrow names:Arr TplPair _, move s:
     if e<0 then s with { i=s.i+1 } else
     TplSubst { out=concat(tpl_sub_segment(s.out,tpl_slice(t,s.last,s.i),names),tpl_slice(t,s.i,e)), last=e, i=e }
 ; Replace identifiers in generated Neo code, never inside string literals.
-; Mapping keys are non-empty (an empty key, which Python would match at every
-; boundary, is ignored).
+; Mapping keys are non-empty (an empty key, which a regular expression would
+; match at every boundary, is ignored).
 fn tpl_substitute(borrow expression:Arr u8 _, borrow mapping:Arr TplPair _) -> Arr u8 _
   = if len(mapping)==0 then expression else
     let names=loop (o=tpl_no_pairs(), i=0) while i<len(mapping) next (tpl_insert_by_length(o,tpl_pair_at(mapping,i)), i+1) yield o in

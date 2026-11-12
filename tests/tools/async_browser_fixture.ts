@@ -10,7 +10,7 @@
 import { closeSync, mkdirSync, openSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { DelayedPeer, Interrupted, ROOT, Supervised, freePort, interruption, pythonJson, sleep } from "../lib";
+import { DelayedPeer, Interrupted, ROOT, Supervised, freePort, interruption, jsonDumps, sleep } from "../lib";
 
 const usage = "usage: bun tests/tools/async_browser_fixture.ts [-h] [--binary BINARY] --pg-port PG_PORT";
 let values: { binary?: string; "pg-port"?: string; help?: boolean };
@@ -39,8 +39,8 @@ const server = new Supervised(binary, [String(port)], {
 try {
   await server.started;
   const info = { port, http_peer: peer.port, server_pid: server.pid };
-  writeFileSync(join(directory, "ports.json"), pythonJson(info));
-  console.log(pythonJson(info));
+  writeFileSync(join(directory, "ports.json"), jsonDumps(info));
+  console.log(jsonDumps(info));
   while (server.running) await Promise.race([interrupted, sleep(200)]);
 } catch (error) {
   if (!(error instanceof Interrupted)) throw error;

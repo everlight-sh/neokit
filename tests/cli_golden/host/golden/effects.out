@@ -1,8 +1,8 @@
-ok walk, glob and listdir match Python
-ok resolve follows symbolic links like Python
+ok walk, glob and listdir match the recorded tree
+ok resolve follows symbolic links
 ok read_text and OSError texts
 ok writes, copies and removal
-ok directory modes match Python
+ok directory modes match the recorded modes
 ok mkdtemp names and modes
 ok processes run like subprocess
 ok home and cache directories

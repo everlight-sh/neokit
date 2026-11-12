@@ -41,7 +41,7 @@ fn test_numbers() -> bool
     && !toml_is_int(at(t,"d")) && toml_is_float(at(t,"d")) && toml_int(at(t,"d"))==0 && toml_is_float(at(t,"e"))
     && !toml_is_int(at(t,"g")) && !toml_is_float(at(t,"g")) && toml_is_bool(at(t,"g")) && !toml_is_float(at(t,"h"))
 
-fn test_truthy_is_python_bool() -> bool
+fn test_truthy() -> bool
   = let t=loaded("s = \"\"\nt = \"x\"\na = []\nb = [0]\nz = 0\no = 1\nf = false\ny = true\nd = 1.5\nn = -0.0\ne = 0e5\n[empty]\n[full]\nk = 1\n") in
     !toml_truthy(at(t,"s")) && toml_truthy(at(t,"t")) && !toml_truthy(at(t,"a")) && toml_truthy(at(t,"b"))
     && !toml_truthy(at(t,"z")) && toml_truthy(at(t,"o")) && !toml_truthy(at(t,"f")) && toml_truthy(at(t,"y"))
@@ -108,7 +108,7 @@ fn test_has_and_get() -> bool
     && (match toml_get(config(),"nope") { Some(v) => false, None => true })
     && (match toml_get(at(config(),"paths"),"0") { Some(v) => false, None => true })
 
-; Dates and times arrive as strings, unlike Python's datetime values.
+; Dates and times arrive as strings, not as date or time values.
 fn test_dates_are_strings() -> bool
   = let t=loaded("day = 1979-05-27\nclock = 07:32:00\n") in
     same(toml_get_text(t,"day","").value,"1979-05-27") && toml_get_text(t,"clock","").ok

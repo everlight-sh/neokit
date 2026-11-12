@@ -2,8 +2,9 @@
 # docker build --build-context neo="$NEO_HOME" --build-context neo-libs=../neo-libs -t neokit .
 FROM oven/bun:1.3.13 AS bun-tools
 FROM ubuntu:24.04 AS toolchain
-# Pillow resizes [images]; brotli adds .br variants of embedded assets.
-RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-pil python3-brotli clang lld binutils ca-certificates && rm -rf /var/lib/apt/lists/*
+# libvips-tools (vips, vipsheader) makes the [images] variants; clang, lld and
+# binutils build the CLI and the server and check the server is static.
+RUN apt-get update && apt-get install -y --no-install-recommends libvips-tools clang lld binutils ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=bun-tools /usr/local/bin/bun /usr/local/bin/bun
 FROM toolchain AS build
 COPY --from=neo /neo /toolchain/neo/neo
@@ -18,7 +19,10 @@ COPY --from=neo-libs /document-store /neo-libs/document-store
 COPY --from=neo-libs /postgres /neo-libs/postgres
 COPY --from=neo-libs /oauth2 /neo-libs/oauth2
 COPY --from=neo-libs /jwt /neo-libs/jwt
-ENV NEO_HOME=/toolchain/neo NEO_THREADS=1
+# ./neokit builds the native CLI on first use and caches it, like Neo's runtime
+# and NeoKit's library cache, under XDG_CACHE_HOME; the release stage copies none
+# of it.
+ENV NEO_HOME=/toolchain/neo NEO_THREADS=1 XDG_CACHE_HOME=/var/cache/neokit-build
 WORKDIR /web
 # Install packages before copying sources so code edits reuse this layer.
 COPY package.json bun.lock ./

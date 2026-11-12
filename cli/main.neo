@@ -1,14 +1,13 @@
-; `neokit`, natively: compiler/cli.py's main() and its helpers (server,
-; stop, fingerprint, change_kind, write_status, develop) on top of the
-; ported modules: cmd_parse (args.neo), gen_* (build.neo), rel_*
-; (release.neo), scf_* (scaffold.neo) and cmd_preview (preview.neo).
+; `neokit`, natively: main() and its helpers (server, stop, fingerprint,
+; change_kind, write_status, develop) on top of the other modules:
+; cmd_parse (args.neo), gen_* (build.neo), rel_* (release.neo), scf_*
+; (scaffold.neo) and cmd_preview (preview.neo).
 ;
 ; The `neokit` launcher builds this file and runs it with NEOKIT_ROOT set to
-; the framework root (cli.py's ROOT). Output, messages and exit statuses
-; are cli.py's: a failure (BuildError, CalledProcessError or OSError there,
-; an Err here) prints "neokit: MESSAGE" on stderr and exits 1; usage errors
-; print argparse's usage and exit 2; help exits 0; SIGINT (Python's
-; KeyboardInterrupt) ends quietly with 0 where cli.py catches it.
+; the framework root. Output, messages and exit statuses are those of the
+; former Python CLI: a failure (an Err here) prints "neokit: MESSAGE" on
+; stderr and exits 1; usage errors print argparse's usage and exit 2; help
+; exits 0; SIGINT ends quietly with 0 where a step is interruptible.
 ;
 ; Commands (cmd_command):
 ;   init        scf_init with the compiler's environment, then "Created ..."
@@ -19,8 +18,8 @@
 ;   doctor      the first line of `neo version`, `bun --version`, `clang --version`
 ;   prepare     gen_prepare
 ;   test        `neo test . --unit-only`, every tests/cli_golden/*/*.neo.toml,
-;               then cli.py's suites (bun test ./client, the query-builder
-;               native test, tests/core, --extended, --postgres)
+;               then the Bun and native suites (bun test ./client, the
+;               query-builder native test, tests/core, --extended, --postgres)
 ;   preview     cmd_preview
 ;   build       gen_build (server), then the summary
 ;   export      gen_build (static), then the staged copy, swap and manifest
@@ -31,46 +30,47 @@
 ; starts with both signals blocked (Neo's rt_spawn_exec, unlike rt_fork,
 ; does not restore the mask), so children that must stay interruptible are
 ; started before the monitor is opened, or with none open.
-; - serve: cli.py execs the server. Neo has no exec, so the server is a
-;   child in neokit's process group (a signal to the group reaches both);
-;   SIGINT or SIGTERM sent to neokit is passed on as SIGTERM (std:process
-;   sends only SIGTERM and SIGKILL) unless the server ends within 250 ms
-;   (a signal sent to the whole group reaches it directly, and a second one
-;   could cut its shutdown short), and neokit exits with the server's
-;   status, 128+N when signal N ended it, as the exec'd server would.
+; - serve: Neo has no exec, so the server is a child in neokit's process
+;   group (a signal to the group reaches both); SIGINT or SIGTERM sent to
+;   neokit is passed on as SIGTERM (std:process sends only SIGTERM and
+;   SIGKILL) unless the server ends within 250 ms (a signal sent to the
+;   whole group reaches it directly, and a second one could cut its
+;   shutdown short), and neokit exits with the server's status, 128+N when
+;   signal N ended it, as an exec'd server would.
 ; - dev: each server lifetime is one stretch: the server starts, then the
 ;   monitor opens and stays open while watching and rebuilding (build tools
 ;   then start with the two signals blocked, so an interrupt that arrives
 ;   during a rebuild takes effect when that build step ends). A reload stops
-;   the server (SIGTERM, 2 s, SIGKILL: cli.py's stop), takes a pending
-;   signal and closes the monitor before the next server starts. SIGINT or
-;   SIGTERM stops the server the same way and exits 0 or 143.
+;   the server (SIGTERM, 2 s, SIGKILL: cmd_halt), takes a pending signal
+;   and closes the monitor before the next server starts. SIGINT or SIGTERM
+;   stops the server the same way and exits 0 or 143.
 ; - test, revalidate and migrate run their programs with
-;   host_run_interruptible: after SIGINT the program gets 250 ms (Popen.wait
-;   after KeyboardInterrupt), then SIGKILL, and neokit exits 0.
+;   host_run_interruptible: after SIGINT the program gets 250 ms, then
+;   SIGKILL, and neokit exits 0.
 ; - password holds a monitor while it reads, so the terminal's echo is
 ;   restored however reading ends.
 ; - Builds, init, release, prepare and doctor open no monitor: a signal
 ;   ends neokit with the signal's default action.
 ;
-; Differences from cli.py:
-; - SIGTERM: Python dies of it (a shell reports 143), leaving a dev server
-;   or test program it started running; here that child is stopped first,
+; Differences from the former Python CLI:
+; - SIGTERM: it died of it (a shell reports 143), leaving a dev server or
+;   test program it started running; here that child is stopped first,
 ;   then neokit exits 143. SIGINT during a build or another step without a
-;   monitor ends neokit by the signal (130) where Python exits 0.
-; - dev: a rebuild failure is reported and watching goes on even when Python
-;   would see an OSError (which ends Python's dev with status 1), since
-;   build.neo returns both as Err. NEOKIT_DEV_STATUS is given to the server
-;   only (Python sets it in its own environment, which its build tools
-;   inherit too). A status revision is Unix milliseconds * 10^6 plus the
-;   monotonic clock's nanoseconds below a millisecond (std:io has no
-;   nanosecond wall clock). The server is stopped by signalling it alone,
-;   not its process group (it has none of its own).
-; - test: Python's unittest step is replaced by `neo test . --unit-only` and
-;   the golden tests, run with the compiler's environment from the root.
-; - serve: as neokit is not the server, a signal that kills the server
-;   (SIGKILL, say) ends neokit with 128+N rather than by that signal.
-; - doctor: no Python line.
+;   monitor ends neokit by the signal (130) where it exited 0.
+; - dev: a rebuild failure is reported and watching goes on even for a
+;   failed system call (which ended its dev with status 1), since build.neo
+;   returns both as Err. NEOKIT_DEV_STATUS is given to the server only (it
+;   set it in its own environment, which its build tools inherited too). A
+;   status revision is Unix milliseconds * 10^6 plus the monotonic clock's
+;   nanoseconds below a millisecond (std:io has no nanosecond wall clock).
+;   The server is stopped by signalling it alone, not its process group (it
+;   has none of its own).
+; - test: its unittest step is replaced by `neo test . --unit-only` and the
+;   golden tests, run with the compiler's environment from the root.
+; - serve: the server runs as a child where it exec'd the server, so a
+;   signal that kills the server (SIGKILL, say) ends neokit with 128+N
+;   rather than by that signal.
+; - doctor: there is no interpreter version line.
 ; - password: see cmd_password.
 import "std:option"
 import "std:result"
@@ -95,14 +95,14 @@ private fn cmd_done(code:i64) -> Result<i64,Arr u8 _> = Ok::<i64,Arr u8 _>(code)
 private fn cmd_error(borrow message:Arr u8 _) -> Result<i64,Arr u8 _> = Err::<i64,Arr u8 _>(message)
 ; print(text).
 private effect(fs) fn cmd_say(borrow text:Arr u8 _) -> IntResult = print_out(concat(text,"\n"))
-; neokit's exit status after an interrupt: SIGINT is the KeyboardInterrupt
-; cli.py ends quietly with 0; SIGTERM the status a shell reports for a
-; process it ended.
+; neokit's exit status after an interrupt: SIGINT ends quietly with 0;
+; SIGTERM gives the status a shell reports for a process it ended.
 fn cmd_interrupted(signal:i64) -> i64 = if signal==2 then 0 else 128+signal
 
 ; subprocess.run(argv, env=environment, cwd=cwd, check=True), sharing
 ; neokit's streams: Ok(-1) once it succeeded, Ok(status) when an interrupt
-; ended it (neokit then exits with status), else Err with Python's message.
+; ended it (neokit then exits with status), else Err with
+; host_process_error's message.
 private effect(fs,env,process,time) fn cmd_step(borrow argv:Arr Arr u8 _ _, borrow environment:Arr Arr u8 _ _, borrow cwd:Arr u8 _) -> Result<i64,Arr u8 _>
   = let ran=host_run_interruptible(argv,environment,cwd) in
     if ran.signal!=0 then cmd_done(cmd_interrupted(ran.signal))
@@ -187,7 +187,7 @@ private effect(fs,env,process,time) fn cmd_doctor(borrow root:Arr u8 _) -> Resul
 
 ; ---------------------------------------------------------------- test
 
-; The places cli.py looks for initdb and pg_ctl (as tests/tools/postgres.ts
+; The places neokit looks for initdb and pg_ctl (as tests/tools/postgres.ts
 ; does): NEOKIT_PG_BIN, else PATH and the versioned PostgreSQL directories.
 private effect(fs,env) fn cmd_postgres_found() -> bool
   = let configured=env_get("NEOKIT_PG_BIN") in
@@ -339,14 +339,15 @@ private effect(fs) fn cmd_line_pair() -> CmdPair
 ; then tools/password.neo's binary (built into ROOT/build/tools/password)
 ; with the password on its stdin; prints its stripped output.
 ;
-; Differences from getpass: when stdin is a terminal it is the terminal
-; read (Python opens /dev/tty, even with stdin redirected), the prompt goes
-; to stderr (Python writes it to /dev/tty), and the line editing keys are
-; the usual ones (^? and ^H, ^U, ^W, ^D) rather than the terminal's
-; configured ones. Without a terminal, stdin is read with Python's warning
-; line (not the GetPassWarning that names Python's source). Input that ends
-; before a line is "neokit: EOF when reading a line" with status 1 (Python's
-; EOFError ends in a traceback).
+; Differences from the former Python CLI's getpass: when stdin is a
+; terminal it is the terminal read (getpass opened /dev/tty, even with
+; stdin redirected), the prompt goes to stderr (getpass wrote it to
+; /dev/tty), and the line editing keys are the usual ones (^? and ^H, ^U,
+; ^W, ^D) rather than the terminal's configured ones. Without a terminal,
+; stdin is read after getpass's warning line (not the GetPassWarning line
+; that named getpass's source). Input that ends before a line is
+; "neokit: EOF when reading a line" with status 1 (it ended in a
+; traceback).
 private effect(fs,env,process,time) fn cmd_password(borrow root:Arr u8 _) -> Result<i64,Arr u8 _>
   = let saved=cmd_tty_settings() in
     let pair=if len(saved)>0 then cmd_tty_pair(saved) else cmd_line_pair() in
@@ -365,7 +366,7 @@ private effect(fs,env,process,time) fn cmd_password(borrow root:Arr u8 _) -> Res
 
 private fn cmd_has_path(borrow paths:Arr Arr u8 _ _, borrow path:Arr u8 _) -> bool
   = loop (i=0, found=false) while !found && i<len(paths) next (i+1, host_path_equal(text_word(paths,i),path)) yield found
-; cli.py's test for an export destination that is, contains or lies in the
+; The test for an export destination that is, contains or lies in the
 ; build output, is the framework root or one of its parents, is the
 ; application or lies in it.
 fn cmd_export_overlaps(borrow root:Arr u8 _, borrow app:Arr u8 _, borrow out:Arr u8 _, borrow dest:Arr u8 _) -> bool
@@ -382,8 +383,8 @@ private effect(fs,env,process) fn cmd_export_stage(borrow staged:Arr u8 _, borro
     let ready=cleared? in
     host_rename(staged,dest)
 ; The export after the static build. The staging directory beside dest gets
-; the snapshots directory's mode, which copytree's copystat gives it in
-; Python (less the umask here).
+; the snapshots directory's mode, as copytree's copystat would (less the
+; umask).
 private effect(fs,env,process) fn cmd_export(borrow root:Arr u8 _, borrow app:Arr u8 _, borrow built:GenBuilt, borrow a:CmdArgs) -> Result<i64,Arr u8 _>
   = let omitted=cmd_json_words(json_get(built.manifest,"omitted_server_routes").value) in
     if a.strict && len(omitted)>0 then cmd_error(concat("Server-only routes cannot be exported: ",text_join(omitted,", "))) else
@@ -439,7 +440,7 @@ private effect(fs,env,process,time) fn cmd_serve(borrow out:Arr u8 _, port:i64) 
 
 ; ---------------------------------------------------------------- dev
 
-; cli.py's stop(process, grace): SIGTERM, up to grace ms, then SIGKILL (to
+; stop(process, grace): SIGTERM, up to grace ms, then SIGKILL (to
 ; the server alone; it shares neokit's process group).
 private effect(process,time) fn cmd_halt(server:Process, grace:i64) -> ProcessStatus
   = let status=process_status(server) in
@@ -457,15 +458,15 @@ private effect(fs) fn cmd_stamp(move out:Arr Arr u8 _ _, borrow path:Arr u8 _) -
 private fn cmd_unique(borrow sorted:Arr Arr u8 _ _) -> Arr Arr u8 _ _
   = loop (out=text_words(), i=0) while i<len(sorted)
       next (if i>0 && text_equal(text_word(sorted,i),text_word(sorted,i-1)) then out else push(out,text_word(sorted,i)), i+1) yield out
-; cli.py's fingerprint(app): the modification time of every file under
-; the application, ROOT/src, ROOT/compiler and ROOT/client (not entering
+; fingerprint(app): the modification time of every file under the
+; application, ROOT/src, ROOT/cli and ROOT/client (not entering
 ; node_modules, .git, .neo-build, .neokit, __pycache__ or the application's
 ; vendor/neokit-sdk), and of ROOT/package.json and ROOT/bun.lock. Sorted
 ; "PATH\0MTIME_NS" entries; files that vanish while it runs are left out.
 effect(fs) fn cmd_fingerprint(borrow root:Arr u8 _, borrow app:Arr u8 _) -> Arr Arr u8 _ _
   = let skip=HostWalkSkip { names=text_split("node_modules .git .neo-build .neokit __pycache__"," "), hidden=false,
                             paths=text_one(host_join(app,"vendor/neokit-sdk")) } in
-    let bases=push(push(push(text_one(app),host_join(root,"src")),host_join(root,"compiler")),host_join(root,"client")) in
+    let bases=push(push(push(text_one(app),host_join(root,"src")),host_join(root,"cli")),host_join(root,"client")) in
     let walked=loop (out=text_words(), b=0) while b<len(bases)
       next (let walks=host_walk_skipping(text_word(bases,b),skip) in
             loop (o=out, w:i64{w>=0}=0) while w<len(walks)
@@ -481,7 +482,7 @@ private fn cmd_same_words(borrow a:Arr Arr u8 _ _, borrow b:Arr Arr u8 _ _) -> b
 private fn cmd_entry_path(borrow entry:Arr u8 _) -> Arr u8 _ = text_partition(entry,"\0").before
 type CmdDiff = { i:i64, j:i64, paths:Arr Arr u8 _ _ }
 ; The paths whose stamps differ between two fingerprints (added, removed or
-; touched): cli.py's `changed` set, as a list.
+; touched): the `changed` set, as a list.
 fn cmd_changed(borrow current:Arr Arr u8 _ _, borrow previous:Arr Arr u8 _ _) -> Arr Arr u8 _ _
   = let d=loop (d=CmdDiff { i=0, j=0, paths=text_words() }) while d.i<len(current) || d.j<len(previous)
       next (let a=text_word(current,d.i) in let b=text_word(previous,d.j) in
@@ -489,7 +490,7 @@ fn cmd_changed(borrow current:Arr Arr u8 _ _, borrow previous:Arr Arr u8 _ _) ->
             else if d.i>=len(current) || text_less(b,a) then CmdDiff { i=d.i, j=d.j+1, paths=push(d.paths,cmd_entry_path(b)) }
             else CmdDiff { i=d.i+1, j=d.j+1, paths=d.paths }) yield d in
     d.paths
-; cli.py's change_kind(app, changed): "css" when only app/styles changed,
+; change_kind(app, changed): "css" when only app/styles changed,
 ; "client" when only app/styles, app/client and ROOT/client did, else (and
 ; for ROOT/client/dev.js) "reload".
 fn cmd_change_kind(borrow root:Arr u8 _, borrow app:Arr u8 _, borrow changed:Arr Arr u8 _ _) -> Arr u8 _
@@ -515,7 +516,7 @@ fn cmd_status_json(revision:i64, borrow error:Json, borrow kind:Arr u8 _, borrow
     let values=push(push(arr(i in 0..0) json_value_null(),json_value_int(revision)),error) in
     if len(kind)==0 then json_value_object(keys,values).value
     else json_value_object(push(push(keys,"kind"),"entry"),push(push(values,json_value_string(kind).value),entry)).value
-; cli.py's write_status: dev-status.json.next, then renamed over
+; write_status: dev-status.json.next, then renamed over
 ; dev-status.json.
 private effect(fs,process) fn cmd_write_status(borrow out:Arr u8 _, borrow status:Json) -> Result<i64,Arr u8 _>
   = let staged=host_join(out,"dev-status.json.next") in
@@ -599,7 +600,7 @@ private effect(fs,env,process,time) fn cmd_dev_epoch(borrow dev:CmdDev, move s:C
     ; closing the monitor does not deliver it).
     let signal=host_signal_taken(monitor) in
     if signal!=0 && !ended.done then ended with { done=true, code=cmd_interrupted(signal) } else ended
-; cli.py's develop(app, out, port, profile).
+; develop(app, out, port, profile).
 private effect(fs,env,process,time) fn cmd_dev(borrow root:Arr u8 _, borrow app:Arr u8 _, borrow out:Arr u8 _, port:i64, borrow profile:Arr u8 _) -> Result<i64,Arr u8 _>
   = let environment=host_env_setdefault(host_env_set(env_list(),"NEOKIT_DEV_STATUS",host_join(out,"dev-status.json")),"NEO_THREADS","1") in
     let dev=CmdDev { root=root, app=app, out=out, port=port, profile=profile, environment=environment } in

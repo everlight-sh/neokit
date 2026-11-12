@@ -1,5 +1,5 @@
-; Native side of the build parity harness (tests/tools/parity.ts), which
-; compares it with compiler/build.py.
+; Runs cli/build.neo's entry points directly, without the command layer, for
+; debugging a build; no golden manifest runs it.
 ;
 ; Usage:
 ;   driver.neo ROOT APP OUT TARGET PROFILE   gen_build

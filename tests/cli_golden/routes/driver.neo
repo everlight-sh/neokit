@@ -1,5 +1,5 @@
-; Golden driver for cli/routes.neo and cli/actions.neo; generate.py writes
-; the expected output with compiler/routes.py and compiler/actions.py.
+; Golden driver for cli/routes.neo and cli/actions.neo. Its expected output was
+; recorded from the Python reference (last present at commit 4757083) and now fixed.
 ;
 ; Usage: driver.neo MODE FILE... (paths relative to the repository root
 ; under `neo test`, else to the working directory). Line modes read one

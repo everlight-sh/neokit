@@ -1,11 +1,10 @@
 // Independent oracle and HTML reader for tests/catalog_fixture; excludes
-// framework boot scripts. The reader ports Python's html.parser.HTMLParser
-// (convert_charrefs=True, fed once and never closed) and records the same
-// facts as the original Python oracle: the benchmark element's attributes, the
-// catalog rows, the token/stamp/checksum values, counter widgets, scripts,
-// stylesheets and inline scripts.
+// framework boot scripts. The reader follows html.parser.HTMLParser
+// (convert_charrefs=True, fed once and never closed) and records the
+// benchmark element's attributes, the catalog rows, the token/stamp/checksum
+// values, counter widgets, scripts, stylesheets and inline scripts.
 import { expect } from "bun:test";
-import { pythonInt, request, sleep, urlencode } from "../lib";
+import { request, sleep, strictInt, urlencode } from "../lib";
 
 export const WORDS = ["Widget", "Gadget", "Gizmo", "Doohickey", "Sprocket", "Flange", "Bracket", "Grommet"];
 export const ADJECTIVES = ["Deluxe", "Basic", "Pro", "Mini", "Ultra", "Classic", "Eco", "Max"];
@@ -20,9 +19,11 @@ export function rows(n: number, seed: number): string[][] {
   return Array.from({ length: n }, (_, i) => [String(i), WORDS[(i + seed) % 8] + " " + ADJECTIVES[(i * 7 + seed) % 8], String((i * 37 + seed * 13) % 1000) + ".99", String((i * 13 + seed) % 50), i % 5 === 0 ? SPECIAL : "-"]);
 }
 
-// html.unescape(). Numeric references follow Python exactly. Named references
-// are resolved from the table below; one that the full HTML5 table might
-// resolve differently is an error rather than a guess.
+// html.unescape(). Numeric references are decoded in full: the replacement
+// table, U+FFFD for surrogates and values past U+10FFFF, nothing for other
+// invalid code points. Named references are resolved from the table below;
+// one that the full HTML5 table might resolve differently is an error rather
+// than a guess.
 const INVALID_CHARREFS: Record<number, string> = {
   0x00: "�", 0x0d: "\r", 0x80: "€", 0x81: "\x81", 0x82: "‚", 0x83: "ƒ", 0x84: "„", 0x85: "…", 0x86: "†", 0x87: "‡",
   0x88: "ˆ", 0x89: "‰", 0x8a: "Š", 0x8b: "‹", 0x8c: "Œ", 0x8d: "\x8d", 0x8e: "Ž", 0x8f: "\x8f", 0x90: "\x90", 0x91: "‘",
@@ -46,7 +47,7 @@ function replaceCharref(reference: string): string {
   }
   if (Object.hasOwn(NAMED, reference)) return NAMED[reference];
   // Every HTML5 name is a letter then letters/digits, with an optional final ';'.
-  // Python tries the whole reference, then prefixes of two or more characters.
+  // Full resolution tries the whole reference, then prefixes of two or more characters.
   const run = /^[A-Za-z][A-Za-z0-9]*/.exec(reference)?.[0] ?? "";
   if (run.length < 2 && !/^[A-Za-z];$/.test(reference)) return "&" + reference;
   throw new Error(`character reference &${reference} is outside the oracle's entity table`);
@@ -55,7 +56,7 @@ export function unescape(text: string) {
   return text.includes("&") ? text.replace(CHARREF, (_, reference) => replaceCharref(reference)) : text;
 }
 
-// html.parser's patterns (Python 3.12 with the HTML5 tag-name/attribute rules).
+// html.parser's patterns, with the HTML5 tag-name/attribute rules.
 const TAGFIND = /([a-zA-Z][^\t\n\r\f />]*)(?:[\t\n\r\f ]|\/(?!>))*/y;
 const ATTRFIND = /((?<=['"\t\n\r\f /])[^\t\n\r\f />][^\t\n\r\f /=>]*)([\t\n\r\f ]*=[\t\n\r\f ]*('[^']*'|"[^"]*"|(?!['"])[^>\t\n\r\f ]*))?(?:[\t\n\r\f ]|\/(?!>))*/y;
 const LOCATETAGEND = /[a-zA-Z][^\t\n\r\f />]*[\t\n\r\f /]*(?:(?<=['"\t\n\r\f /])[^\t\n\r\f />][^\t\n\r\f /=>]*(?:[\t\n\r\f ]*=[\t\n\r\f ]*(?:'[^']*'|"[^"]*"|(?!['"])[^>\t\n\r\f ]*))?[\t\n\r\f /]*)*>?/y;
@@ -65,10 +66,10 @@ const COMMENTCLOSE = /--!?>/g;
 const COMMENTABRUPTCLOSE = /-?>/y;
 const CDATA_CONTENT = ["script", "style", "xmp", "iframe", "noembed", "noframes"];
 const RCDATA_CONTENT = ["textarea", "title"];
-// Python's str.isspace(): JavaScript's \s without U+FEFF, plus U+001C-U+001F and U+0085.
-const PYTHON_SPACE = "(?:(?!\\ufeff)[\\s\\x1c-\\x1f\\x85])";
-const SPACE = new RegExp(`^${PYTHON_SPACE}+|${PYTHON_SPACE}+$`, "g");
-const pythonStrip = (text: string) => text.replace(SPACE, "");
+// Unicode whitespace: JavaScript's \s without U+FEFF, plus U+001C-U+001F and U+0085.
+const SPACE_CLASS = "(?:(?!\\ufeff)[\\s\\x1c-\\x1f\\x85])";
+const SPACE = new RegExp(`^${SPACE_CLASS}+|${SPACE_CLASS}+$`, "g");
+const stripSpace = (text: string) => text.replace(SPACE, "");
 
 function at(pattern: RegExp, text: string, index: number) { pattern.lastIndex = index; return pattern.exec(text); }
 
@@ -113,7 +114,7 @@ export function parseHtml(text: string, handler: Handler) {
       attributes.push([found[1].toLowerCase(), value]);
       k = found.index + found[0].length;
     }
-    const end = pythonStrip(text.slice(k, endpos));
+    const end = stripSpace(text.slice(k, endpos));
     if (end !== ">" && end !== "/>") { handler.data(text.slice(i, endpos)); return endpos; }
     if (end.endsWith("/>")) { handler.start(tag, attributes); handler.end(tag); }
     else {
@@ -240,10 +241,10 @@ export function validate(body: Buffer, n: number, seed: number, token: string, i
   for (let i = 0; i < Math.min(page.rows.length, expected.length) && !firstDifference; i++)
     if (!same(page.rows[i], expected[i])) firstDifference = [i, page.rows[i], expected[i]];
   expect([page.rows.length, firstDifference]).toEqual([expected.length, null]);
-  const checksum = expected.reduce((total, row) => total + pythonInt(row[2].slice(0, -3)) + pythonInt(row[3]), 0);
-  expect(pythonInt(page.values.checksum)).toBe(checksum);
+  const checksum = expected.reduce((total, row) => total + strictInt(row[2].slice(0, -3)) + strictInt(row[3]), 0);
+  expect(strictInt(page.values.checksum)).toBe(checksum);
   expect(page.counters).toBe(Number(interactive));
-  const stamp = pythonInt(page.values["render-stamp"]);
+  const stamp = strictInt(page.values["render-stamp"]);
   if (isStatic) expect(stamp).toBe(0);
   else expect(Math.abs(stamp - Date.now())).toBeLessThan(60000);
   return page;
@@ -271,6 +272,6 @@ export async function verifyServer(port: number) {
   const first = new Catalog((await get(port, "/?token=freshness")).body);
   await sleep(30);
   const second = new Catalog((await get(port, "/?token=freshness")).body);
-  expect(pythonInt(second.values["render-stamp"])).toBeGreaterThan(pythonInt(first.values["render-stamp"]));
+  expect(strictInt(second.values["render-stamp"])).toBeGreaterThan(strictInt(first.values["render-stamp"]));
   return checked;
 }

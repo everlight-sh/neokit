@@ -4,8 +4,10 @@ This is the separate experimental web framework project, named NeoKit. Keep appl
 
 - `./neokit build`, `./neokit serve`, `./neokit export`, `./neokit test` drive the example.
 - `NEO_HOME` selects the external `neoc` checkout; auto-detect `../neo`.
-- Native runtime code stays Neo and C-free. Bun/Python/LLVM are build tools;
+- Native runtime code stays Neo and C-free. Bun and LLVM are build tools;
   JavaScript executes in the browser. No JS engine runs inside the server.
+- The `neokit` CLI is native Neo in `cli/` (see `cli/README.md`), built on
+  first use by the `neokit` sh launcher. Use only `std:` imports there.
 - Use Bun for JavaScript tooling and tests. Integration tests (`tests/core`,
   `tests/extended`, `tests/postgres`) drive only the `neokit` CLI; shared
   helpers belong in `tests/lib.ts`.

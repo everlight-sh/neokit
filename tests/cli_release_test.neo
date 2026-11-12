@@ -1,7 +1,6 @@
 ; Unit tests for cli/release.neo's pure parts. The expected digests are
-; Python 3.12's: hashlib.sha256 of tarfile.TarInfo.tobuf(USTAR_FORMAT) for
-; the same fields, of the bytes tarfile.open(mode='w', format=USTAR_FORMAT)
-; writes, and json.dumps(..., indent=2). The effectful parts (assemble,
+; SHA-256 sums of USTAR headers and archives as tarfile writes them, and of
+; JSON in json.dumps layout (indent 2). The effectful parts (assemble,
 ; bundle, unpack_neo) are in tests/cli_golden/release/.
 import "std:option"
 import "std:result"
@@ -32,7 +31,7 @@ fn test_constants() -> bool
   = same(rel_neo_version(),"0.2.6") && same(text_join(rel_neo_binaries(),","),"darwin-arm64,linux-arm64,linux-x86_64")
     && same(text_join(rel_framework_files()," "),"neokit web neo.toml neo.lock package.json bun.lock Dockerfile .dockerignore README.md AGENTS.md LICENSE SECURITY.md CHANGELOG.md")
     && same(text_join(rel_source_dirs()," "),"cli client src examples docs deploy tools tests")
-    && text_member(rel_source_suffixes(),".ts") && text_member(rel_source_suffixes(),".py") && len(rel_source_suffixes())==17
+    && same(text_join(rel_source_suffixes()," "),".ax .neo .ts .js .view .toml .css .svg .json .lock .md .sh .yaml .png .jpg .webp")
 
 fn test_headers_match_tarfile() -> bool
   = same(header_sha("neokit-1.0.0/README.md",5,420,1700000000),"e9d8bfc38fdc116dbe43f06cafd267c4e69d7f4b53331d32943f3ec7a86fa25d")
@@ -66,9 +65,9 @@ fn test_reader_round_trip() -> bool
     && same(text_slice(tar,at(found,0).offset,at(found,0).offset+at(found,0).size),"hello")
     && same(at(found,1).name,long_name()) && at(found,1).size==600 && at(found,1).mode==493 && at(found,1).offset==1536
 
-; tarfile raises ReadError("empty file") for no header at offset 0 and
-; "bad checksum" for a damaged first header. A truncated member is
-; refused up front (tarfile reports it only when the data is read).
+; The reader reports "empty file" for no header at offset 0 and "bad
+; checksum" for a damaged first header, and refuses a truncated member up
+; front, before its data is read.
 fn test_reader_errors() -> bool
   = let tar=two_members() in
     same(entries_error(text_empty()),"empty file") && same(entries_error(text_repeat("\x00",1024)),"empty file")
@@ -95,14 +94,15 @@ fn test_member_names_like_unpack_neo() -> bool
 
 fn test_source_names_like_copy_sources() -> bool
   = rel_source_wanted(".env.example") && !rel_source_wanted(".env") && !rel_source_wanted(".hidden.neo")
-    && rel_source_wanted("a.ts") && rel_source_wanted("a.py") && rel_source_wanted("page.view") && !rel_source_wanted("a.txt")
+    && rel_source_wanted("a.ts") && !rel_source_wanted("a.py") && rel_source_wanted("page.view") && !rel_source_wanted("a.txt")
     && rel_source_wanted("LICENSE") && rel_source_wanted("LICENSE.md") && !rel_source_wanted("LICENSE-MIT")
     && rel_source_wanted("Caddyfile") && rel_source_wanted("Caddyfile.local") && !rel_source_wanted("Makefile") && !rel_source_wanted("noext")
 
-; Python's int(): the cases behind SOURCE_DATE_EPOCH. Beyond i64 the
-; value saturates (Python's is exact; both are out of range for an epoch).
-; Python also accepts non-ASCII decimal digits; this does not.
-fn test_int_like_python() -> bool
+; Integer parsing: the cases behind SOURCE_DATE_EPOCH. Surrounding
+; whitespace, a sign and digit-group underscores are accepted; beyond i64
+; the value saturates (out of range for an epoch anyway). Only ASCII digits
+; count.
+fn test_int_parsing() -> bool
   = same(parsed(" 12 "),"12") && same(parsed("+5"),"5") && same(parsed("-0"),"0") && same(parsed("1_000"),"1000")
     && same(parsed("  -7\n"),"-7") && same(parsed("007"),"7") && same(parsed("\t3\x0b"),"3")
     && same(parsed("9223372036854775807"),"9223372036854775807") && same(parsed("9223372036854775808"),"9223372036854775807")

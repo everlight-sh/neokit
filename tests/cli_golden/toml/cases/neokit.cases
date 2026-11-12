@@ -108,7 +108,7 @@ entry="app/page.neo"
 
 [dependencies]
 neokit={path="../neokit",version="0.1.0-alpha.1"}
-#--- config with wrong types that build.py rejects later
+#--- config with wrong types that the build rejects later
 loader = 1
 mode = ["ssr"]
 client = "yes"

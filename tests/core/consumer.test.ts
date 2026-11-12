@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ROOT, literal, neokit, request, running, withTemporary, writeTree } from "../lib";
 
-/** Python's html.escape(text, quote=True). */
+/** Escapes &, <, >, " and ' (as &#x27;) for HTML text and attributes. */
 const escapeHtml = (text: string) =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
 
@@ -19,8 +19,8 @@ test("isolated consumer", async () => {
       "app/page.toml": 'loader="other_load"\nclient=false\nmode="ssr"\n',
       "app/page.view": '@props(title:text,count:int,visible:bool)\n<h1 title="{{ title }}">{{ title }}</h1>{% if visible %}<output>{{ count }}</output>{% endif %}',
     });
-    // The Python test builds target="all" into one directory; the CLI builds the
-    // server (build) and the static snapshots (export) separately.
+    // The CLI builds the server (build) and the static snapshots (export)
+    // separately.
     const out = join(workspace, "output");
     neokit(["build", "--app", app, "--out", out]);
     const exported = join(workspace, "output-static");

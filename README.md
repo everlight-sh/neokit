@@ -1,12 +1,12 @@
 # NeoKit — public alpha 0.1.0-alpha.1
 
-HTML-first applications with native Neo SSR, static export, typed templates and optional browser modules. `neoc` compiles the deployed server; it never starts Python, Bun, Node, a database subprocess or a JS engine. Build tools run on the developer machine. This is an independent framework, with the supported profiles and remaining gaps below.
+HTML-first applications with native Neo SSR, static export, typed templates and optional browser modules. `neoc` compiles the deployed server; it never starts Bun, Node, a database subprocess or a JS engine. Build tools run on the developer machine. This is an independent framework, with the supported profiles and remaining gaps below.
 
 ## Start
 
 The [alpha release guide](docs/alpha-release.md) covers installation, the standalone starter, and HTTPS deployment of Meridian. Maintainers can create the source SDK with `./neokit release --neo-archive neo-0.2.6.tar.gz --neo-sha256 "$NEO_SHA256" --out build/neokit-0.1.0-alpha.1.tar.gz`, using the multi-platform Neo 0.2.6 release archive.
 
-Python 3.11+ runs the framework CLI, Bun bundles browser modules, and native Neo 0.2.6 uses LLVM to build the server. Neo compiles its runtime once and caches it under `~/.cache/neo`, so only the first build on a machine pays for it. Use the bundled SDK or set `NEO_HOME` to an installed native Neo toolchain when developing from a checkout. Keep `neo-libs` beside the NeoKit checkout. Dependencies are source packages pinned by `neo.lock`.
+The `neokit` command is a small POSIX sh launcher for NeoKit's native CLI, which is written in Neo (`cli/`). Its first run builds the CLI with Neo and caches the executable under `${XDG_CACHE_HOME:-~/.cache}/neokit/cli`, keyed by the CLI sources and the toolchain, so later runs start it directly. NeoKit needs native Neo 0.2.7 or newer, Bun and Clang/LLVM: Bun bundles browser modules, and Neo uses LLVM to build the CLI and the server. Image variants also need libvips (`vips` and `vipsheader`). Neo compiles its runtime once and caches it under `~/.cache/neo`, so only the first build on a machine pays for it. Use the bundled SDK or set `NEO_HOME` to an installed native Neo toolchain when developing from a checkout. Keep `neo-libs` beside the NeoKit checkout. Dependencies are source packages pinned by `neo.lock`.
 
 ```sh
 bun install --frozen-lockfile
@@ -22,7 +22,7 @@ bun install --frozen-lockfile
 
 ## Showcase applications
 
-Run `python3 examples/run.py` to build and start three local native previews:
+Run `bun examples/run.ts` to build and start three local native previews:
 [Forma SSR site](examples/ssr-site/README.md), [Fieldnotes blog](examples/blog/README.md),
 and [Meridian SaaS analytics](examples/saas/README.md). They include complete pages,
 authored illustrations, native SVG charts, search, pagination over 10,000 synthetic
@@ -159,9 +159,9 @@ A stale hit returns existing HTML and enqueues native background revalidation. R
 
 Pages and APIs can opt into `async=true`: native database and network waits suspend the loader while its worker serves other requests. A `stream=true` endpoint can send a shell and independent deferred HTML sections, with cancellation, deadlines and bounded cooperative backpressure. `async=true` also allows the stream handler to wait before sending its shell. See [async rendering and streaming](docs/async-rendering.md), [the PostgreSQL/network example](examples/features/app/async/route.neo), and [the raw chunk example](examples/features/app/stream/route.neo). This is an HTML/widget model, without React/RSC compatibility.
 
-`[site]` and `[metadata]` support description, robots, OpenGraph fields and canonical URLs. Per-request metadata comes from loader props: `[metadata.props] description="summary"`, `og_title`, `og_description`, `robots`, `og_image` and `canonical` (url props, joined to `[site] url`) and `jsonld` (a text prop holding JSON, written as an escaped `application/ld+json` block). Dynamic metadata needs a `head:html` layout prop rendered inside `<head>` as `{{ head }}`; static metadata goes there too when the layout declares it, or before the first `</head>` otherwise. A configured public site URL generates robots.txt and a sitemap from explicit public export paths, unless `public/` provides its own. `[images] files=["photo.jpg"], widths=[320,640,1280], formats=["webp"]` generates content-hashed responsive variants at build time using Pillow, cached by content in the build directory so unchanged images are not resized again. Bind a generated URL with `@asset(image:photo.jpg:640:webp)`. Widths above the original are clamped. There is no on-demand image server.
+`[site]` and `[metadata]` support description, robots, OpenGraph fields and canonical URLs. Per-request metadata comes from loader props: `[metadata.props] description="summary"`, `og_title`, `og_description`, `robots`, `og_image` and `canonical` (url props, joined to `[site] url`) and `jsonld` (a text prop holding JSON, written as an escaped `application/ld+json` block). Dynamic metadata needs a `head:html` layout prop rendered inside `<head>` as `{{ head }}`; static metadata goes there too when the layout declares it, or before the first `</head>` otherwise. A configured public site URL generates robots.txt and a sitemap from explicit public export paths, unless `public/` provides its own. `[images] files=["photo.jpg"], widths=[320,640,1280], formats=["webp"]` generates content-hashed responsive variants at build time using libvips (`vips` and `vipsheader`), cached by content in the build directory so unchanged images are not resized again. Bind a generated URL with `@asset(image:photo.jpg:640:webp)`. Widths above the original are clamped. There is no on-demand image server.
 
-Embedded files send an ETag and answer `If-None-Match` (weak comparison, lists and `*`) with 304 responses that keep their cache headers. Text assets negotiate gzip, and Brotli when the build has the Python `brotli` module, honoring `q=0`. Hashed `/_web/` assets are immutable for a year; public files, the stable `neokit-client.js` entry and static pages use `public, no-cache` so browsers revalidate them cheaply. `/healthz` provides readiness; `[server] access_log=true` emits JSON request timing/status to stderr and adds request IDs to buffered replies. Stream logs cannot infer a buffered status.
+Embedded files send an ETag and answer `If-None-Match` (weak comparison, lists and `*`) with 304 responses that keep their cache headers. Text assets are precompressed with gzip only (there are no Brotli variants) and served compressed when the request accepts gzip, honoring `q=0`. Hashed `/_web/` assets are immutable for a year; public files, the stable `neokit-client.js` entry and static pages use `public, no-cache` so browsers revalidate them cheaply. `/healthz` provides readiness; `[server] access_log=true` emits JSON request timing/status to stderr and adds request IDs to buffered replies. Stream logs cannot infer a buffered status.
 
 ## Browser behavior and development
 

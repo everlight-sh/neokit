@@ -1,5 +1,4 @@
-; Unit tests for cli/pyjson.neo: Python's json.dumps byte for byte. Every
-; expected string was printed by Python 3.12's json on the test box.
+; Unit tests for cli/pyjson.neo: json.dumps layout, byte for byte.
 import "std:json"
 import "../cli/pyjson.neo"
 

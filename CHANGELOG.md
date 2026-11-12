@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- NeoKit no longer needs Python. The CLI is native Neo (`cli/`): the `neokit` sh launcher builds it with Neo on first use and caches it under `${XDG_CACHE_HOME:-~/.cache}/neokit/cli`. It needs Neo 0.2.7. Commands, options, output and exit statuses are unchanged; `cli/README.md` lists the few differences from the former Python CLI. Image variants need libvips (`vips` and `vipsheader`) instead of Pillow. Precompressed assets are gzip only (no Brotli). `examples/run.ts` and `tests/tools/alpha_*.ts` replace the Python scripts.
 - Neo 0.2.6: SDK releases expect the 0.2.6 archive. Streamed async pages now send a `Date` header.
 - Neo 0.2.5: the runtime is compiled once per machine, and SDK releases expect the 0.2.5 archive. The server now times out slow clients, answers bad requests with 400/413/431, restarts crashed workers and reads trusted `X-Forwarded-For`.
 - Responses carry a `Date` header. `[security] csp` in `web.toml` sets the site's Content-Security-Policy, and exports write it to `_headers`. The README lists the `NEO_HTTP_*` connection limit and timeouts.

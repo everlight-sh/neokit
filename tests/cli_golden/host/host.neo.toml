@@ -1,5 +1,5 @@
-# The effectful cases of tests/cli_host_test.neo; generate.py writes their
-# expected values into that file from Python.
+# The effectful cases of tests/cli_host_test.neo, whose expected values were
+# recorded from the Python reference (last present at commit 4757083) and now fixed.
 # Run with the Neo 0.2.6 branch build: neo test tests/cli_golden/host/host.neo.toml
 
 [[test]]

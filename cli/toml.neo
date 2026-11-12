@@ -1,18 +1,18 @@
-; NeoKit's layer over std:toml: reading configuration files the way
-; compiler/*.py does with tomllib.loads(path.read_text()), and typed lookups
-; that mirror build.py's config.get(key, default) followed by an isinstance
-; or type() check.
+; NeoKit's layer over std:toml: reading configuration files, and typed
+; lookups that take a key's value, or a default when it is missing, and
+; check its type.
 ;
 ; Parsing is std:toml's toml_parse(text) -> JsonResult (TOML 1.0): tables,
 ; inline tables and [[x]] elements are std:json objects with their keys in
 ; document order, arrays are arrays, strings and booleans map directly,
 ; integers are decimal JSON integers. Floats are JSON numbers with a fraction
 ; or exponent (toml_is_float), and dates and times are strings holding the
-; TOML text, so unlike Python's datetime values they pass for strings.
+; TOML text, so they pass for strings (the former Python CLI's datetime
+; values did not).
 ;
-; For a file's bytes use toml_load: it first applies Path.read_text()'s
-; universal newlines (a lone CR becomes LF, which std:toml alone rejects) and
-; words an error as "PATH: invalid TOML at line N: MESSAGE". Python does not
+; For a file's bytes use toml_load: it first applies universal newlines (a
+; lone CR becomes LF, which std:toml alone rejects) and words an error as
+; "PATH: invalid TOML at line N: MESSAGE". The former Python CLI did not
 ; catch TOMLDecodeError there, so that wording is NeoKit's own. Iterate a
 ; table in document order with toml_size and toml_key_at/toml_value_at, an
 ; array with toml_items.
@@ -52,7 +52,7 @@ fn toml_bool(borrow value:Json) -> bool = value.kind==2 && json_bool(value).valu
 private fn toml_zero(borrow raw:Arr u8 _) -> bool
   = loop (i:i64{i>=0}=0, zero=true, done=false) while !done && zero && i<len(raw)
       next (i+1, !(raw[i]>=u8(49) && raw[i]<=u8(57)), raw[i]==u8(101) || raw[i]==u8(69)) yield zero
-; Python bool(value): false, 0, 0.0, "", [] and {} are false.
+; Truthiness: false, 0, 0.0, "", [] and {} are false.
 fn toml_truthy(borrow value:Json) -> bool
   = if value.kind==2 then json_bool(value).value
     else if value.kind==3 then !toml_zero(value.raw)

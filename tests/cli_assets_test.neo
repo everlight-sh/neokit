@@ -1,15 +1,13 @@
-; Unit tests for cli/assets.neo, ported from tests/test_features.py (the
-; metadata, image, sitemap and robots cases) with the exact BuildError texts
-; and outputs compiler/assets.py gives.
+; Unit tests for cli/assets.neo: the metadata, image, sitemap and robots
+; cases, with the exact BuildError texts and outputs.
 ;
 ; `neo test --unit-only` runs each test_ function inside `check`, where
 ; effects cannot run, so the cases that need files or processes are the
 ; fs_test_ functions: tests/cli_golden/assets/effects.neo runs them as the
 ; "assets effectful unit cases" entry of tests/cli_golden/assets/assets.neo.toml.
 ; The image cases need libvips's vips and vipsheader on PATH and pass
-; without checking anything when they are missing, as the Python skips them
-; without Pillow. Scratch files go under build/ in the project and are
-; removed afterwards.
+; without checking anything when they are missing. Scratch files go under
+; build/ in the project and are removed afterwards.
 import "std:json"
 import "std:result"
 import "std:io"
@@ -79,7 +77,7 @@ fn test_compression_rules() -> bool
     && same(gzip_decode(packed.value,1048576).value,a512) && !meta_compressed(noise).present
     && !meta_brotli_compressed(a512,packed).present && !meta_compressed("").present
 
-fn test_image_helpers_match_python() -> bool
+fn test_image_helpers() -> bool
   = same(meta_image_cache_name("abc",640,"webp","vips-8.15.1"),"9f2f19a73b048bca953958d73a74d138caf8d844939ffc431b687fae913c8c4b.webp")
     && meta_round_div(2000,100)==20 && meta_round_div(25,2)==12 && meta_round_div(27,2)==14 && meta_round_div(26,4)==6 && meta_round_div(1,3)==0
     && same(host_stem("/a/photo.png"),"photo") && same(host_stem("/a/b.c.png"),"b.c") && same(host_stem("/a/.png"),".png")

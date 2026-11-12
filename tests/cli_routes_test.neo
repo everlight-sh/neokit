@@ -1,8 +1,6 @@
-; Unit tests for cli/routes.neo, ported from tests/test_features.py
-; (test_route_shape_matching_and_precedence and
-; test_canonical_paths_groups_and_dotted_segments) with the exact
-; BuildError texts; tests/cli_golden/routes compares every function with
-; compiler/routes.py on the repository's apps.
+; Unit tests for cli/routes.neo: shape matching, precedence and canonical
+; paths, with the exact BuildError texts; tests/cli_golden/routes checks
+; every function against recorded output on the repository's apps.
 import "std:json"
 import "std:result"
 import "../cli/routes.neo"

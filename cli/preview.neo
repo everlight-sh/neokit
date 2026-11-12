@@ -1,16 +1,16 @@
-; `neokit preview`, natively: compiler/cli.py's preview of a static export,
-; Python 3.12's http.server.SimpleHTTPRequestHandler behind a
-; ThreadingHTTPServer on 127.0.0.1:PORT.
+; `neokit preview`, natively: a static export served on 127.0.0.1:PORT the
+; way http.server.SimpleHTTPRequestHandler behind a ThreadingHTTPServer
+; serves it.
 ;
 ; cmd_preview(directory, port) resolves the directory, requires its
 ; index.html ("Run ./neokit export first"), prints
 ; "Static export preview: http://127.0.0.1:PORT" and serves until SIGINT or
-; SIGTERM, then gives Ok(0) (Python ends quietly on Ctrl-C too). The
-; listener is std:socket's tcp_listen_ipv4 on 127.0.0.1, so only loopback
-; clients reach it; std:http's serve binds every interface, so it is not
-; used, and std:http_server gives the dates. All connections are served
-; from one std:reactor loop, as the threads serve them: an idle or slow
-; client does not hold up the others.
+; SIGTERM, then ends quietly with Ok(0). The listener is std:socket's
+; tcp_listen_ipv4 on 127.0.0.1, so only loopback clients reach it;
+; std:http's serve binds every interface, so it is not used, and
+; std:http_server gives the dates. All connections are served from one
+; std:reactor loop, as the threads serve them: an idle or slow client does
+; not hold up the others.
 ;
 ; Requests are answered as SimpleHTTPRequestHandler answers them: HTTP/1.0
 ; responses with Server and Date, one per connection; a directory without
@@ -24,21 +24,21 @@
 ; BaseHTTPRequestHandler answers them, with its error page. Each request
 ; is logged on stderr in http.server's format.
 ;
-; Differences: a file's Content-type is build.py's content_type()
-; (cli/build.neo's gen_content_type), what `neokit serve` sends, not
-; SimpleHTTPRequestHandler.guess_type(). Symbolic links are followed only
-; within the served directory: a path whose real location is outside it
-; is 404, and an index page leading outside is skipped, where Python
-; serves whatever a link leads to (".." and "%2e%2e" never leave the
-; directory in either). The Server header is "neokit-preview". Log times
-; are UTC (Python's are local) and the client is always shown as
-; 127.0.0.1. A connection idle for 60 seconds is closed, and at most 128
-; are open at once (Python's threads wait forever). Only regular files are
-; served. A NUL byte or an encoded surrogate in the path is 404 (Python's
-; handler fails and closes the connection without a response). A port
-; outside 0..65535 is the error "bind(): port must be 0-65535." (Python's
-; OverflowError ends in a traceback). SIGTERM ends the preview like
-; SIGINT, with Ok(0) (Python dies of the signal).
+; Differences from the former Python CLI, which used http.server itself: a
+; file's Content-type is cli/build.neo's gen_content_type, what
+; `neokit serve` sends, not SimpleHTTPRequestHandler.guess_type(). Symbolic
+; links are followed only within the served directory: a path whose real
+; location is outside it is 404, and an index page leading outside is
+; skipped, where the former CLI served whatever a link led to (".." and
+; "%2e%2e" never leave the directory in either). The Server header is
+; "neokit-preview". Log times are UTC (they were local) and the client is
+; always shown as 127.0.0.1. A connection idle for 60 seconds is closed,
+; and at most 128 are open at once (its threads waited forever). Only
+; regular files are served. A NUL byte or an encoded surrogate in the path
+; is 404 (its handler failed and closed the connection without a
+; response). A port outside 0..65535 is the error "bind(): port must be
+; 0-65535." (its OverflowError ended in a traceback). SIGTERM ends the
+; preview like SIGINT, with Ok(0) (the former CLI died of the signal).
 import "std:option"
 import "std:result"
 import "std:io"
@@ -59,7 +59,7 @@ import "build.neo"
 ; http.server reads the request line and headers as latin-1, one code point
 ; per byte. Such text is kept as its bytes here and converted when written.
 
-; Python's str.split() whitespace, for one latin-1 code point.
+; Whitespace as text.split() sees it, for one latin-1 code point.
 private fn cmd_pv_space(b:i64) -> bool = (b>=9 && b<=13) || (b>=28 && b<=32) || b==133 || b==160
 ; text.split() of latin-1 text.
 private fn cmd_pv_words(borrow text:Arr u8 _) -> Arr Arr u8 _ _
@@ -357,7 +357,7 @@ fn cmd_preview_since(borrow value:Arr u8 _) -> CmdPreviewSince
 ; What a request gets: the bytes to send and the lines to log.
 type CmdPreviewReply = { data:Arr u8 _, log:Arr u8 _ }
 
-; HTTPStatus's phrase and description (Python 3.12) of each status sent.
+; HTTPStatus's phrase and description of each status sent.
 private fn cmd_pv_phrase(code:i64) -> Arr u8 _
   = if code==200 then "OK" else if code==301 then "Moved Permanently" else if code==304 then "Not Modified"
     else if code==400 then "Bad Request" else if code==404 then "Not Found" else if code==414 then "Request-URI Too Long"

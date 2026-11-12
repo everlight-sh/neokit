@@ -1,12 +1,13 @@
-; Golden driver for cli/templates.neo; make_goldens.py records the inputs
-; from real builds and writes the expected output with compiler/templates.py.
+; Golden driver for cli/templates.neo. The inputs, taken from real builds,
+; and the expected output were
+; recorded from the Python reference (last present at commit 4757083) and now fixed.
 ;
 ; For every inputs/*.json file named on the command line (relative to the
 ; repository root under `neo test`, else to the working directory) it runs
 ; tpl_parse on each recorded parse, tpl_compile_all (and tpl_compile_template
 ; for the dependencies) on the recorded templates, components and assets, and
 ; tpl_substitute on each recorded layout substitution, printing the results
-; in the format make_goldens.py documents.
+; in the format of golden/*.out.
 import "std:io"
 import "std:json"
 import "../../../cli/templates.neo"

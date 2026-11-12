@@ -1,5 +1,4 @@
-; NeoKit's relocatable source SDK: compiler/release.py's assemble and
-; bundle, natively.
+; NeoKit's relocatable source SDK: `neokit release`'s assemble and bundle.
 ;
 ; rel_assemble copies the verified framework, its exact neo-libs graph and a
 ; multi-platform Neo toolchain into a new directory:
@@ -11,31 +10,33 @@
 ;   README.md       docs/alpha-release.md
 ;   VERSION         the NeoKit version and a newline, for install.sh
 ;   MANIFEST.json   {"format", "version", "neo_version", "files"}: the SHA-256
-;                   of every other file, as release.py writes it
+;                   of every other file, in json.dumps(indent=2) layout
 ;   SHA256SUMS      `sha256sum -c` lines for every file but itself
 ;
-; rel_bundle archives that tree as release.py does: a USTAR tar that is byte
-; for byte what Python's tarfile writes (entries in sorted path order, named
-; neokit-VERSION/PATH, mode 0755 or 0644 from the owner's execute bit,
-; mtime SOURCE_DATE_EPOCH, uid/gid 0, empty uname/gname, zero blocks and
-; record padding), compressed with std:deflate's gzip_encode. The gzip header
-; carries the same MTIME and XFL bytes as Python's GzipFile; the deflate
-; stream itself differs from zlib's, so archives compare after decompression.
+; rel_bundle archives that tree: a USTAR tar in tarfile's layout (entries in
+; sorted path order, named neokit-VERSION/PATH, mode 0755 or 0644 from the
+; owner's execute bit, mtime SOURCE_DATE_EPOCH, uid/gid 0, empty
+; uname/gname, zero blocks and record padding), compressed with
+; std:deflate's gzip_encode. The gzip header carries GzipFile's MTIME and
+; XFL bytes.
 ;
-; Differences from release.py:
-; - The framework copy takes cli/ (the native CLI) where release.py takes
-;   compiler/, and tests/ includes Bun's .ts files. VERSION and SHA256SUMS
-;   are new. Everything else, including MANIFEST.json's form, is the same.
+; Differences from the former Python CLI's release:
+; - The framework copy takes cli/ (the native CLI) where it took its own
+;   sources, tests/ includes Bun's .ts files, and .py files are no longer
+;   source files. VERSION and SHA256SUMS
+;   are new. Everything else, including MANIFEST.json's form and the tar
+;   bytes before compression, is the same; the deflate stream differs from
+;   zlib's, so archives compare after decompression.
 ; - The Neo archive may be a gzip-compressed or a plain tar (tarfile.open
-;   also tries bzip2 and xz). Its entries pass release.py's checks; regular
+;   also tried bzip2 and xz). Its entries pass the same checks; regular
 ;   files and directories are extracted, and every other type is refused as
 ;   there. GNU long names and pax "path"/"size" records are read; a header
-;   with a bad checksum is an error anywhere (tarfile only refuses one at
-;   the start and silently stops at a later one).
+;   with a bad checksum is an error anywhere (tarfile only refused one at
+;   the start and silently stopped at a later one).
 ; - Directory modes come from host_mkdir (see cli/host.neo).
-; - Python lets ValueError and KeyError escape as tracebacks (a malformed
-;   neo.lock, an invalid SOURCE_DATE_EPOCH, a name longer than USTAR holds);
-;   here they are Err with Python's message text.
+; - A malformed neo.lock, an invalid SOURCE_DATE_EPOCH or a name longer
+;   than USTAR holds is Err with the ValueError or KeyError text the former
+;   Python CLI let escape as a traceback.
 import "std:option"
 import "std:result"
 import "std:json"
@@ -53,17 +54,15 @@ import "pyjson.neo"
 fn rel_neo_version() -> Arr u8 _ = "0.2.6"
 fn rel_neo_binaries() -> Arr Arr u8 _ _ = push(push(push(text_words(),"darwin-arm64"),"linux-arm64"),"linux-x86_64")
 
-; release.py's FRAMEWORK_FILES: copied as they are.
+; The framework's top-level files, copied as they are.
 fn rel_framework_files() -> Arr Arr u8 _ _
   = text_split("neokit web neo.toml neo.lock package.json bun.lock Dockerfile .dockerignore README.md AGENTS.md LICENSE SECURITY.md CHANGELOG.md"," ")
-; The directories copied through rel_copy_sources. release.py copies
-; compiler/; the SDK now carries the native CLI's sources instead.
+; The directories copied through rel_copy_sources; cli/ holds the native
+; CLI's sources, which the launcher builds on first use.
 fn rel_source_dirs() -> Arr Arr u8 _ _ = text_split("cli client src examples docs deploy tools tests"," ")
-; release.py's SOURCE_SUFFIXES plus .ts (tests/ is Bun TypeScript). .py
-; stays while compiler/ exists, so tests/*.py and the golden generators are
-; copied as release.py copies them; drop it when the Python is deleted.
+; The suffixes of the source files copied from them (.ts for Bun's tests).
 fn rel_source_suffixes() -> Arr Arr u8 _ _
-  = text_split(".ax .neo .py .ts .js .view .toml .css .svg .json .lock .md .sh .yaml .png .jpg .webp"," ")
+  = text_split(".ax .neo .ts .js .view .toml .css .svg .json .lock .md .sh .yaml .png .jpg .webp"," ")
 ; Directory names never descended into (besides hidden ones).
 fn rel_ignored() -> Arr Arr u8 _ _ = text_split("build data node_modules vendor __pycache__ out"," ")
 
@@ -206,7 +205,7 @@ fn rel_tar_payload(borrow archive:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
       (let decoded=gzip_decode(archive,1073741824) in
        if decoded.ok then rel_ok(decoded.value) else rel_err(concat("Neo archive is not a valid gzip file: ",decoded.error.message)))
     else rel_ok(archive)
-; release.py's check on one member name: relative, without "..", inside
+; The check on one member name: relative, without "..", inside
 ; neo-VERSION/. Returns the path below neo-VERSION ("" for the top), or ok
 ; false.
 type RelMember = { ok:bool, below:Arr u8 _ }
@@ -227,7 +226,7 @@ private effect(fs,process) fn rel_extract(borrow tar:Arr u8 _, borrow entry:RelT
       (let made=host_mkdir(host_parent(target),true,true)? in
        let written=host_write_mode(target,text_slice(tar,entry.offset,entry.offset+entry.size),bit_and(entry.mode,493))? in rel_done(0))
     else rel_fail(concat("Unexpected compiler archive entry type: ",entry.name))
-; release.py's unpack_neo: checks the archive's SHA-256 against checksum
+; unpack_neo: checks the archive's SHA-256 against checksum
 ; ("" for None), then extracts every member below neo-VERSION/ into
 ; destination.
 effect(fs,process) fn rel_unpack_neo(borrow archive:Arr u8 _, borrow checksum:Arr u8 _, borrow destination:Arr u8 _) -> Result<i64,Arr u8 _>
@@ -243,7 +242,7 @@ effect(fs,process) fn rel_unpack_neo(borrow archive:Arr u8 _, borrow checksum:Ar
         if len(failed)>0 then rel_fail(failed) else rel_done(len(entries))
     }
 
-; Whether release.py's copy_sources copies a file of this name.
+; Whether copy_sources copies a file of this name.
 fn rel_source_wanted(borrow name:Arr u8 _) -> bool
   = text_equal(name,".env.example")
     || !(text_starts(name,".") || (!text_member(rel_source_suffixes(),host_suffix(name)) && !text_equal(name,"LICENSE") && !text_starts(name,"Caddyfile")))
@@ -261,7 +260,7 @@ private effect(fs,process) fn rel_copy_file(borrow source:Arr u8 _, borrow desti
 private effect(fs,process) fn rel_copy_walked(borrow source:Arr u8 _, borrow destination:Arr u8 _, borrow walked:HostWalk) -> Arr u8 _
   = loop (err=text_empty(), i:i64{i>=0}=0) while len(err)==0 && i<len(walked.names)
       next (if rel_source_wanted(walked.names[i]) then rel_copy_file(source,destination,host_join(walked.path,walked.names[i])) else err, i+1) yield err
-; release.py's copy_sources(source, destination): every wanted file below
+; copy_sources(source, destination): every wanted file below
 ; source (hidden and rel_ignored() directories skipped), in os.walk order.
 effect(fs,process) fn rel_copy_sources(borrow source:Arr u8 _, borrow destination:Arr u8 _) -> Result<i64,Arr u8 _>
   = let walked=host_walk(source,rel_ignored(),true) in
@@ -333,7 +332,7 @@ private effect(fs) fn rel_tree_files(borrow stage:Arr u8 _) -> Result<Arr RelFil
       next (rel_hash_step(s,stage,text_word(paths,i)), i+1) yield s in
     if len(scan.err)>0 then Err::<Arr RelFile _,Arr u8 _>(scan.err) else Ok::<Arr RelFile _,Arr u8 _>(scan.files)
 
-; The MANIFEST.json release.py writes: json.dumps(manifest, indent=2)+'\n'.
+; MANIFEST.json's text: json.dumps(manifest, indent=2)+'\n'.
 fn rel_manifest_text(borrow version:Arr u8 _, borrow neo_version:Arr u8 _, borrow files:Arr RelFile _) -> Arr u8 _
   = let keys=loop (out=text_words(), i:i64{i>=0}=0) while i<len(files) next (push(out,files[i].path), i+1) yield out in
     let values=arr(i in 0..len(files)) check i>=0 && i<len(files) in json_value_string(files[i].digest).value in
@@ -408,14 +407,14 @@ private effect(fs,env,process,time) fn rel_assemble_in(borrow temporary:Arr u8 _
     let summed=host_write_text(host_join(stage,"SHA256SUMS"),sums)? in
     let parent=host_mkdir(host_parent(destination),true,true)? in
     ; The stage is renamed into place when it can be; otherwise copied, as
-    ; release.py always does.
+    ; the former Python CLI always did.
     let placed=match host_rename(stage,destination) { Ok(moved) => rel_done(0), Err(message) => host_copy_tree(stage,destination,text_words(),false) } in
     match placed {
       Err(message) => Err::<RelSdk,Arr u8 _>(message),
       Ok(done) => Ok::<RelSdk,Arr u8 _>(RelSdk { path=destination, version=version, neo_version=neo_version, manifest=manifest })
     }
 
-; release.py's assemble(destination, root, environment, neo_archive,
+; assemble(destination, root, environment, neo_archive,
 ; neo_sha256): the SDK at destination (which must not exist), built in a
 ; temporary directory that is removed afterwards. root is the framework
 ; checkout; environment the variables `neo pkg verify` runs with (NEO_HOME
@@ -482,7 +481,7 @@ private effect(fs,env,process,time) fn rel_bundle_in(borrow temporary:Arr u8 _, 
     let moved=host_rename(staged,output)? in
     Ok::<RelBundle,Arr u8 _>(RelBundle { archive=output, version=sdk.version, sha256=host_sha256_hex(packed) })
 
-; release.py's bundle(output, root, neo_archive, neo_sha256), reading
+; bundle(output, root, neo_archive, neo_sha256), reading
 ; SOURCE_DATE_EPOCH from environment: assembles the SDK and writes
 ; output (a .tar.gz) through a temporary directory beside it.
 effect(fs,env,process,time) fn rel_bundle(borrow output:Arr u8 _, borrow root:Arr u8 _, borrow environment:Arr Arr u8 _ _,

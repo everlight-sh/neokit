@@ -14,13 +14,13 @@ From the NeoKit root:
 
 ```sh
 bun install --frozen-lockfile
-python3 examples/run.py
+bun examples/run.ts
 # Ctrl-C stops the three native servers.
 ```
 
-Use `python3 examples/run.py --no-build` after building, or select another trio
-of ports with `--base-port 8211`. Python supervises local previews; each server
-is a standalone compiled Neo executable. The existing `studio`, authenticated
+Use `bun examples/run.ts --no-build` after building, or select another trio
+of ports with `--base-port 8211`. The script supervises the local previews;
+each server is a standalone compiled Neo executable. The existing `studio`, authenticated
 task `dashboard`, and `features` examples remain available.
 
 Each showcase enables `[server] timing=true`. The badge reads this response's

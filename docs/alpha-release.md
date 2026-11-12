@@ -4,7 +4,7 @@ NeoKit builds native Neo servers and static sites. This alpha includes a source 
 
 ## Install and create an app
 
-Use Python 3.11 or newer, Bun 1.3.13, and Clang/LLVM with a platform linker. Linux builds use LLD. The SDK contains the native Neo 0.2.6 compiler binaries for macOS ARM64 and Linux ARM64/x86-64, runtime sources, exact local libraries, and browser assets. Python runs the NeoKit framework CLI. The Neo compiler and deployed app execute natively. Verify the published SHA-256 of the archive before unpacking it.
+Use Bun 1.3.13 and Clang/LLVM with a platform linker. Linux builds use LLD. The SDK contains the native Neo 0.2.6 compiler binaries for macOS ARM64 and Linux ARM64/x86-64, runtime sources, exact local libraries, and browser assets. The `neokit` command is a small sh launcher: its first run builds NeoKit's native CLI from the SDK's sources with the bundled Neo compiler, which takes a minute or so, and caches it under `${XDG_CACHE_HOME:-~/.cache}/neokit/cli`. The Neo compiler, the CLI and the deployed app execute natively. Verify the published SHA-256 of the archive before unpacking it.
 
 ```sh
 tar -xzf neokit-0.1.0-alpha.1.tar.gz
@@ -17,7 +17,7 @@ cd "$HOME/first-neokit-app"
 ./neokit serve --no-build --port 8094
 ```
 
-The starter's `vendor/neokit-sdk` directory is part of the project. Keep it with the application sources when moving the project. The project launcher selects that SDK and writes builds under `.neokit/build`. The plain CSS starter builds with the installed tools and no package downloads. Optional Tailwind builds use `bun install --frozen-lockfile` in the SDK framework directory. Image variants additionally require Pillow.
+The starter's `vendor/neokit-sdk` directory is part of the project. Keep it with the application sources when moving the project. The project launcher selects that SDK and writes builds under `.neokit/build`. The plain CSS starter builds with the installed tools and no package downloads. Optional Tailwind builds use `bun install --frozen-lockfile` in the SDK framework directory. Image variants additionally require libvips (`vips` and `vipsheader`).
 
 Use `./neokit dev` for development. Use `./neokit export` to generate a static snapshot in the sibling directory named after your project with an `-export` suffix. See the framework README in `vendor/neokit-sdk/framework/README.md` for routes, templates, actions, and streaming examples.
 

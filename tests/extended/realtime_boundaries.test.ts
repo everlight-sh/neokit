@@ -15,7 +15,7 @@ neokit(["build", "--app", join(ROOT, "tests/realtime_limits_fixture"), "--out", 
 const publish = (port: number, body: string | Uint8Array) => request(port, "/publish", { method: "POST", body, timeout: 5000, keepAlive: true });
 
 async function boundaries(binary: string, newlines: number) {
-  // Up to 30 s to accept and 15 s to stop after SIGTERM, as the Python suites allowed.
+  // Up to 30 s to accept and 15 s to stop after SIGTERM.
   await running(binary, { startup: 30000, stopTimeout: 15000 }, async ({ port }) => {
     const anchor = await EventStream.open(port);
     let initial: ServerEvent | undefined;

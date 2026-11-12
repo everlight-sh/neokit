@@ -1,4 +1,4 @@
-; Unit tests for cli/args.neo. The full comparison with Python's argparse
+; Unit tests for cli/args.neo. The full comparison with recorded output
 ; (help at several widths, every usage error) is tests/cli_golden/args/;
 ; these pin the parsed values and the pieces of the formatter.
 import "std:option"

@@ -178,7 +178,7 @@
     }
   }
 }
-=== tests/cli_golden/toml/cases/neokit.cases config with wrong types that build.py rejects later
+=== tests/cli_golden/toml/cases/neokit.cases config with wrong types that the build rejects later
 {
   "loader": 1,
   "mode": [

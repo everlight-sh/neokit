@@ -107,8 +107,8 @@ touch "$FW/cli/host.neo"; out=$(launch e)
 printf '; new\n' > "$FW/cli/zz_new.neo"; out=$(launch e)
 [ "$(builds)" = "$((before+1))" ] && ok "adding a cli/*.neo file rebuilds" || bad "new file"
 rm "$FW/cli/zz_new.neo"
-before=$(builds); printf 'notes\n' >> "$FW/cli/PORTING.md"; out=$(launch e)
-[ "$(builds)" = "$before" ] && ok "other files in cli/ are not part of the key" || bad "PORTING.md rebuilt"
+before=$(builds); printf 'notes\n' >> "$FW/cli/README.md"; out=$(launch e)
+[ "$(builds)" = "$before" ] && ok "other files in cli/ are not part of the key" || bad "README.md rebuilt"
 
 # ---- the key follows the toolchain
 before=$(builds)

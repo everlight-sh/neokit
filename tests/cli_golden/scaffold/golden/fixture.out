@@ -88,9 +88,9 @@ Created BASE/apps/standalone. Run ./neokit dev from the project directory.
     | body{font-family:system-ui;max-width:60rem;margin:4rem auto;padding:1rem;color:#172033}h1{letter-spacing:-.03em}
   vendor/ 493
   vendor/neokit-sdk/ 493
-  vendor/neokit-sdk/MANIFEST.json 420 3906 cb88962d3cf58e597bbbe7a3d8b3cc7b9625877624202cd9d42759e83b67250a
+  vendor/neokit-sdk/MANIFEST.json 420 3808 8e11bb29280c391816320d64a654759db4f16fe3adba8cde2431e5adfabdd48e
   vendor/neokit-sdk/README.md 420 62 220957a5269ef167a83d420c2d550f8df7621696d2e45a4f3d83776a0a8d3b19
-  vendor/neokit-sdk/SHA256SUMS 420 3551 df246447221b91fbc64524590aabbafaf77fe96df2c9f9080d0ab5b16d2e54b2
+  vendor/neokit-sdk/SHA256SUMS 420 3462 e7ba12c33330ec5a9312ac2b94e329047f0cf39b89d350f1710cb2dadcf41ba1
   vendor/neokit-sdk/VERSION 420 16 8dae7ef23e5afaabf410e4a1ad97f398d1473e3c14d7a4255536a7087d87774a
   vendor/neokit-sdk/framework/ 493
   vendor/neokit-sdk/framework/.dockerignore 420 6 f10ec3ffef16a8dace9b58801e0da28819c98af4c8933410d7e7cacc952f9e9b
@@ -129,8 +129,6 @@ Created BASE/apps/standalone. Run ./neokit dev from the project directory.
   vendor/neokit-sdk/framework/tests/ 493
   vendor/neokit-sdk/framework/tests/LICENSE 420 13 06467702816a95afc79289ab870981f8b6e2da17bcc722b5c7322e04b97a08c9
   vendor/neokit-sdk/framework/tests/lib.ts 420 11 8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881
-  vendor/neokit-sdk/framework/tools/ 493
-  vendor/neokit-sdk/framework/tools/run.py 420 9 cc42155088fca5730758db72b2a5bca33112a941dfaa2d43098ec422ce4ea213
   vendor/neokit-sdk/framework/web 493 27 fe3be3011800c281bd763d104e4edc75e9bf0628087790a3060fc5abe1de28e0
   vendor/neokit-sdk/install.sh 493 31 3fe187a259f605690a72ef15e919027b11743ac2fa7f71cb22b3ca3b8dd91bbf
   vendor/neokit-sdk/neo/ 493

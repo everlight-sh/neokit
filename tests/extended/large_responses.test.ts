@@ -10,14 +10,14 @@
 // reset while the old ring tears down.
 import { test, expect } from "bun:test";
 import { join } from "node:path";
-import { NetSocket, ROOT, RawSocket, neokit, pythonInt, running, sleep, type Receiver } from "../lib";
+import { NetSocket, ROOT, RawSocket, neokit, running, sleep, strictInt, type Receiver } from "../lib";
 import { validate, verifyServer } from "./catalog_oracle";
 
 const OUT = join(ROOT, "build/catalog");
 neokit(["build", "--app", join(ROOT, "tests/catalog_fixture"), "--out", OUT]);
 const binary = join(OUT, "server");
 const BACKENDS: [string, Record<string, string>][] = [["io_uring", {}], ["epoll", { NEO_HTTP_URING: "0" }]];
-// Up to 30 s to accept and 15 s to stop after SIGTERM, as the Python suites allowed.
+// Up to 30 s to accept and 15 s to stop after SIGTERM.
 const SERVER = { startup: 30000, stopTimeout: 15000 };
 
 /** One response framed by Content-Length (the only framing these pages use); returns [body, leftover]. */
@@ -32,7 +32,7 @@ async function readResponse(socket: Receiver, buffer: Buffer): Promise<[Buffer, 
   let rest = buffer.subarray(split + 4);
   const line = head.toString("latin1").split("\r\n").find(field => field.toLowerCase().startsWith("content-length"));
   if (line === undefined) throw new Error("StopIteration: no Content-Length in " + JSON.stringify(head.toString("latin1")));
-  const length = pythonInt(line.split(":")[1]);
+  const length = strictInt(line.split(":")[1]);
   while (rest.length < length) {
     const chunk = await socket.recv();
     if (!chunk.length) throw new Error("EOFError: closed in body");

@@ -1,7 +1,7 @@
 // Shared helpers for NeoKit's integration tests: the CLI, supervised processes
-// and native servers on free ports, an HTTP/1.1 client modelled on Python's
-// http.client that keeps every header line, raw sockets, a Server-Sent Events
-// reader, a delayed upstream peer and Python-compatible encoders.
+// and native servers on free ports, an HTTP/1.1 client that reads each reply
+// by its framing and keeps every header line, raw sockets, a Server-Sent Events
+// reader, a delayed upstream peer and text encoders with exact layouts.
 import { expect } from "bun:test";
 import { dlopen, ptr, read } from "bun:ffi";
 import { spawn, spawnSync, type ChildProcess, type StdioOptions } from "node:child_process";
@@ -49,7 +49,7 @@ export function writeTree(directory: string, files: Record<string, string>) {
   }
 }
 
-/** Python's shutil.copy2 for a regular file: contents, mode and timestamps. */
+/** Copies a regular file with its contents, mode and timestamps. */
 export function copyWithMetadata(source: string, target: string) {
   copyFileSync(source, target);
   const info = statSync(source);
@@ -127,7 +127,7 @@ async function within(promise: Promise<unknown>, timeout: number): Promise<boole
 
 type Stream = "pipe" | "ignore" | "inherit" | number;
 
-/** A child in its own session and process group (Python's start_new_session=True).
+/** A child in its own session and process group.
  *  Piped stdout and stderr (by default only stderr) are kept, in arrival order. */
 export class Supervised {
   readonly child: ChildProcess;
@@ -135,7 +135,7 @@ export class Supervised {
   private failure: Error | undefined;
   private readonly exited: Promise<void>;
   private readonly closed: Promise<void>;
-  /** Settles once the process has started, or fails like Python's Popen (missing executable). */
+  /** Settles once the process has started, or fails if it cannot start (missing executable). */
   readonly started: Promise<void>;
 
   /** `env` is the whole environment (the parent's by default). */
@@ -163,7 +163,7 @@ export class Supervised {
     return this.failure ? `${this.failure.message}\n${this.captured}` : this.captured;
   }
 
-  /** The first output line without its newline, like Python's readline() ('' if the process ends first). */
+  /** The first output line without its newline ('' if the process ends first). */
   async firstLine(timeout = 60000): Promise<string> {
     const deadline = performance.now() + timeout;
     for (;;) {
@@ -197,8 +197,8 @@ export type Running = { port: number; process: Supervised; startupMs: number };
 
 /** Run a native server (`binary port ...args`, NEO_THREADS=`workers`, 1 by default) in its own process
  *  group on a free port; wait up to `startup` ms (3 s) until it accepts, run `body`, then SIGTERM the
- *  group. A server still running `stopTimeout` ms (10 s) later is killed and fails the test, like
- *  Python's process.wait(timeout). Its stdout and stderr are printed if anything fails. */
+ *  group. A server still running `stopTimeout` ms (10 s) later is killed and fails the test.
+ *  Its stdout and stderr are printed if anything fails. */
 export async function running<T>(binary: string, options: { workers?: number; env?: Record<string, string>; port?: number; args?: string[]; startup?: number; stopTimeout?: number },
                                   body: (server: Running) => Promise<T>): Promise<T> {
   const port = options.port ?? await freePort();
@@ -231,7 +231,7 @@ export async function running<T>(binary: string, options: { workers?: number; en
   }
 }
 
-/** SIGINT and SIGTERM as an exception (Python's KeyboardInterrupt) for long-running tools. */
+/** SIGINT and SIGTERM as a rejected promise (an Interrupted error) for long-running tools. */
 export class Interrupted extends Error { constructor() { super("interrupted"); } }
 export function interruption(): Promise<never> {
   let fail: (error: Interrupted) => void = () => {};
@@ -244,13 +244,13 @@ export function interruption(): Promise<never> {
 // ---------------------------------------------------------------------------
 // Sockets
 
-/** An error Python would raise as OSError (refused, reset, timed out): callers may retry these. */
+/** A network error with an E* code (refused, reset, timed out): callers may retry these. */
 export function networkError(code: string, message: string) {
   return Object.assign(new Error(message), { code });
 }
 export const isNetworkError = (error: unknown) => typeof (error as any)?.code === "string" && /^E[A-Z]+$/.test((error as any).code);
 
-/** Anything with Python-socket-like recv(): a chunk, or an empty buffer once the peer closed. */
+/** Anything with a blocking-socket recv(): a chunk, or an empty buffer once the peer closed. */
 export interface Receiver { recv(): Promise<Buffer>; send(data: Uint8Array): Promise<void>; close(): void }
 
 /** A non-blocking socket with blocking-socket semantics: recv() waits up to `timeout` ms for data. */
@@ -297,7 +297,7 @@ export class NetSocket implements Receiver {
 }
 
 // Raw blocking sockets through libc, for what node:net cannot do: a receive
-// buffer set before connect (Python's setsockopt(SO_RCVBUF)), and peers that
+// buffer set before connect (setsockopt(SO_RCVBUF)), and peers that
 // never read, so the kernel buffers really fill.
 const LINUX = process.platform === "linux";
 const C = LINUX
@@ -323,7 +323,7 @@ export class RawSocket implements Receiver {
   private readonly scratch = Buffer.alloc(65536);
   private constructor(readonly fd: number) {}
 
-  /** Python's socket(); setsockopt(SO_RCVBUF) if asked; connect(); settimeout(timeout). Blocks the event loop briefly. */
+  /** socket(); setsockopt(SO_RCVBUF) if asked; connect(); then `timeout` ms per send and recv. Blocks the event loop briefly. */
   static connect(port: number, options: { receiveBuffer?: number; timeout?: number } = {}): RawSocket {
     const c = sys();
     const fd = c.socket(2, 1, 0);
@@ -405,7 +405,7 @@ export class Reply {
               readonly ttfb = 0, readonly total = 0) {}
   /** The first value of a header, or undefined. */
   header(name: string) { return this.all(name)[0]; }
-  /** The last value of a header, as Python's dict(response.getheaders()) keeps it. */
+  /** The last value of a header, for last-value-wins lookups. */
   last(name: string) { return this.all(name).at(-1); }
   /** Every value of a header, in order. */
   all(name: string) { const key = name.toLowerCase(); return this.fields.filter(([field]) => field.toLowerCase() === key).map(([, value]) => value); }
@@ -426,14 +426,14 @@ function parseHead(head: Buffer) {
   return { status: Number(match[1]), statusLine, fields };
 }
 
-/** One chunk-size line: Python's int(line.split(';')[0], 16). */
+/** One chunk-size line: the hexadecimal size before any ';' extension, surrounding whitespace ignored. */
 function chunkSize(line: Buffer) {
   const text = line.toString("latin1").split(";")[0].trim();
   if (!/^[0-9a-fA-F]+$/.test(text)) throw new Error("bad chunk size " + JSON.stringify(text));
   return parseInt(text, 16);
 }
 
-/** The response at the start of `data`, framed as http.client reads it: no body for HEAD, 1xx, 204 and
+/** The response at the start of `data`, framed by HTTP/1.1 rules: no body for HEAD, 1xx, 204 and
  *  304; chunked; Content-Length; otherwise everything until the close. Undefined while more bytes are
  *  needed; once the peer has `closed`, a truncated response throws instead. */
 function frame(data: Buffer, method: string, closed: boolean) {
@@ -492,7 +492,7 @@ export function parseResponses(raw: Buffer, methods: string[]): Reply[] {
   return replies;
 }
 
-/** One client connection, read like Python's http.client: write requests, then read each reply by its framing. */
+/** One client connection: write requests, then read each reply by its framing. */
 export class Connection {
   /** Bytes received but not yet consumed. */
   buffer = Buffer.alloc(0);
@@ -570,7 +570,7 @@ export type RequestOptions = {
   body?: string | Uint8Array;
   /** Connect and per-read timeout in ms (10 s), like a socket timeout. */
   timeout?: number;
-  /** Send no Connection header and hang up after reading the one reply, as Python's http.client does.
+  /** Send no Connection header and hang up after reading the one reply.
    *  Otherwise the request says Connection: close, and the server must then close with nothing after the reply. */
   keepAlive?: boolean;
   /** A reply that may have a body (not to HEAD, not 204 or 304) must declare a Content-Length equal to the
@@ -578,10 +578,10 @@ export type RequestOptions = {
   requireLength?: boolean;
 };
 
-/** One request on its own connection, sent as Python's http.client sends it: Host and
- *  Accept-Encoding: identity unless given, then Content-Length for a body (0 for a bodiless POST, PUT
- *  or PATCH) and the caller's headers. The reply is read by its framing; see RequestOptions for
- *  Connection: close and Content-Length strictness. Use reply.last() for Python's dict(getheaders()). */
+/** One request on its own connection: Host and Accept-Encoding: identity unless given, then
+ *  Content-Length for a body (0 for a bodiless POST, PUT or PATCH) and the caller's headers. The
+ *  reply is read by its framing; see RequestOptions for Connection: close and Content-Length
+ *  strictness. Use reply.last() for last-value-wins headers. */
 export async function request(port: number, path = "/", options: RequestOptions = {}): Promise<Reply> {
   const method = options.method ?? "GET";
   const headers = options.headers ?? {};
@@ -793,19 +793,19 @@ export class DelayedPeer {
 }
 
 // ---------------------------------------------------------------------------
-// Python-compatible encoders
+// Encoders with exact layouts
 
-/** Python's json.dumps: ", " and ": " separators, or `indent` spaces per level; ASCII-only unless
+/** JSON in json.dumps layout: ", " and ": " separators, or `indent` spaces per level; ASCII-only unless
  *  `ensureAscii` is false. */
-export function pythonJson(value: unknown, options: { indent?: number; ensureAscii?: boolean } = {}, level = 0): string {
+export function jsonDumps(value: unknown, options: { indent?: number; ensureAscii?: boolean } = {}, level = 0): string {
   if (value === null || value === undefined) return "null";
   if (typeof value === "string") {
     const text = JSON.stringify(value);
     return options.ensureAscii === false ? text : text.replace(/[\u007f-￿]/g, c => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
   }
   if (typeof value !== "object") return JSON.stringify(value);
-  const entries = Array.isArray(value) ? value.map(item => pythonJson(item, options, level + 1))
-    : Object.entries(value as object).map(([key, item]) => pythonJson(key, options) + ": " + pythonJson(item, options, level + 1));
+  const entries = Array.isArray(value) ? value.map(item => jsonDumps(item, options, level + 1))
+    : Object.entries(value as object).map(([key, item]) => jsonDumps(key, options) + ": " + jsonDumps(item, options, level + 1));
   const [open, close] = Array.isArray(value) ? ["[", "]"] : ["{", "}"];
   if (!entries.length) return open + close;
   if (options.indent === undefined) return open + entries.join(", ") + close;
@@ -813,14 +813,14 @@ export function pythonJson(value: unknown, options: { indent?: number; ensureAsc
   return open + inner + entries.join("," + inner) + outer + close;
 }
 
-/** Python's int() for decimal text: surrounding whitespace, a sign and digit-group underscores; anything else throws. */
-export function pythonInt(text: string | Buffer): number {
+/** A decimal integer: surrounding whitespace, a sign and digit-group underscores; anything else throws. */
+export function strictInt(text: string | Buffer): number {
   const value = (typeof text === "string" ? text : text.toString("latin1")).replace(/^(?:(?!﻿)[\s\x1c-\x1f\x85])+|(?:(?!﻿)[\s\x1c-\x1f\x85])+$/g, "");
   if (!/^[+-]?\d+(?:_\d+)*$/.test(value)) throw new Error(`invalid literal for int(): ${JSON.stringify(value)}`);
   return Number(value.replace(/_/g, ""));
 }
 
-/** Python's urlencode() (quote_plus): spaces become '+', and only letters, digits and _.-~ stay literal. */
+/** Form encoding: spaces become '+', and only letters, digits and _.-~ stay literal. */
 export function urlencode(fields: Record<string, string | number>) {
   const quote = (text: string) => Array.from(Buffer.from(text, "utf8"), byte => {
     const char = String.fromCharCode(byte);
@@ -830,7 +830,7 @@ export function urlencode(fields: Record<string, string | number>) {
   return Object.entries(fields).map(([key, value]) => quote(key) + "=" + quote(String(value))).join("&");
 }
 
-/** Non-overlapping occurrences, like Python's str.count() and bytes.count(). */
+/** The number of non-overlapping occurrences of `needle`. */
 export function countOf(haystack: Buffer | string, needle: string) {
   const data = typeof haystack === "string" ? Buffer.from(haystack) : haystack;
   let count = 0;

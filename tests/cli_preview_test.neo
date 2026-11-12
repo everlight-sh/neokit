@@ -1,7 +1,6 @@
-; Unit tests for cli/preview.neo's request handling; the expected values
-; are Python 3.12's (SimpleHTTPRequestHandler.translate_path, urlsplit,
-; parse_request, email.utils.parsedate_to_datetime). The server itself,
-; against compiler/cli.py's preview, is tests/cli_golden/preview/.
+; Unit tests for cli/preview.neo's request handling: path translation,
+; redirects, request framing and errors, and If-Modified-Since dates. The
+; server itself, against recorded responses, is tests/cli_golden/preview/.
 import "std:option"
 import "std:result"
 import "../cli/preview.neo"

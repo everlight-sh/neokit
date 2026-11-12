@@ -1,5 +1,5 @@
-; Golden driver for cli/assets.neo; generate.py writes the expected output
-; with compiler/assets.py.
+; Golden driver for cli/assets.neo. Its expected output was
+; recorded from the Python reference (last present at commit 4757083) and now fixed.
 ;
 ; Usage: driver.neo MODE FILE... (paths relative to the repository root
 ; under `neo test`, else to the working directory).
