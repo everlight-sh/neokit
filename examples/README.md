@@ -41,7 +41,7 @@ of local measurements) are in the separate `neokit-bench` repository. Check the
 showcases with:
 
 ```sh
-env PYTHONPATH=. python3 tests/showcase_smoke.py
+bun test --timeout 600000 ./tests/extended/showcase.test.ts
 ```
 
 Reusable foundations live below the apps: Neo's `str_concat_parts` and

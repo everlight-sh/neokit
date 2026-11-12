@@ -15,15 +15,6 @@ import time
 from .build import ROOT, DEFAULT_APP, build, prepare, compiler_env, compiler_command, native_build, build_migration, refresh_assets
 from .templates import BuildError
 
-# Longer suites and the applications each one serves from build/.
-# tests.async_rendering also needs a PostgreSQL server; run it directly.
-EXTENDED_SUITES = {
-    'dev_css_smoke': (),
-    'large_responses': (('tests/catalog_fixture', 'build/catalog'),),
-    'realtime': (('tests/realtime_fixture', 'build/realtime/fixture'),),
-    'showcase_smoke': tuple(('examples/'+name, 'build/showcase/'+name) for name in ('ssr-site', 'blog', 'saas')),
-}
-
 
 def server(binary, port, threads=None):
     env = dict(os.environ)
@@ -148,7 +139,8 @@ def main():
         if name == 'export':
             p.add_argument('--dest',type=Path,default=export_output)
             p.add_argument('--strict',action='store_true',help='Reject an export that omits server-only routes')
-    p=sub.add_parser('test');p.add_argument('--extended',action='store_true',help='also run the long, browser-free integration suites')
+    p=sub.add_parser('test');p.add_argument('--extended',action='store_true',help='also run the long, browser-free integration suites (tests/extended)')
+    p.add_argument('--postgres',action='store_true',help='also run the PostgreSQL suites (tests/postgres) in a private cluster; needs initdb and pg_ctl')
     p=sub.add_parser('init');p.add_argument('path',type=Path)
     p.add_argument('--standalone',action='store_true',help='include a relocatable NeoKit SDK in the application')
     p=sub.add_parser('release',help='create a checksummed NeoKit SDK archive')
@@ -203,23 +195,26 @@ def main():
             prepare()
             return
         if args.command == 'test':
+            if args.postgres:
+                # tests/tools/postgres.ts looks for the server programs the same way.
+                configured=os.environ.get('NEOKIT_PG_BIN')
+                places=[configured] if configured else [*os.environ.get('PATH','').split(os.pathsep),
+                    *(str(path) for base in ('/usr/lib/postgresql','/usr/local/lib/postgresql') for path in sorted(Path(base).glob('*/bin')))]
+                if not any(place and (Path(place)/'initdb').is_file() and (Path(place)/'pg_ctl').is_file() for place in places):
+                    raise BuildError('test --postgres needs the PostgreSQL server programs initdb and pg_ctl '
+                                     '(install PostgreSQL; its system service can stay disabled) or NEOKIT_PG_BIN set to their directory')
             subprocess.run([sys.executable,'-m','unittest','discover','-s','tests','-p','test_*.py'],cwd=ROOT,check=True)
             subprocess.run(['bun','test','./client'],cwd=ROOT,check=True)
             query_test=ROOT/'build/tools/query-builder'
             native_build(ROOT/'tests/query_builder.neo',query_test)
             subprocess.run([str(query_test)],cwd=ROOT,check=True)
-            subprocess.run([sys.executable,'-m','tests.http_smoke'],cwd=ROOT,check=True)
-            subprocess.run([sys.executable,'-m','tests.consumer_smoke'],cwd=ROOT,check=True)
-            subprocess.run([sys.executable,'-m','tests.scaffold_smoke'],cwd=ROOT,check=True)
-            subprocess.run([sys.executable,'-m','tests.audit_features_smoke'],cwd=ROOT,check=True)
-            for app in ('features','dashboard'):
-                build(ROOT/'examples'/app,ROOT/'build'/app,target='server')
-                subprocess.run([sys.executable,'-m','tests.'+app+'_smoke'],cwd=ROOT,check=True)
+            # Integration suites drive the neokit CLI; each test file builds what it serves.
+            integration=['bun','test','--timeout','600000']
+            subprocess.run([*integration,'./tests/core'],cwd=ROOT,check=True)
             if args.extended:
-                for suite,apps in EXTENDED_SUITES.items():
-                    for source,destination in apps:
-                        build(ROOT/source,ROOT/destination,target='server')
-                    subprocess.run([sys.executable,'-m','tests.'+suite],cwd=ROOT,check=True)
+                subprocess.run([*integration,'./tests/extended'],cwd=ROOT,check=True)
+            if args.postgres:
+                subprocess.run(['bun','tests/tools/postgres.ts','--',*integration,'./tests/postgres'],cwd=ROOT,check=True)
             return
         if args.command == 'preview':
             directory = args.dir.resolve()

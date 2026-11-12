@@ -92,7 +92,8 @@ async render task. See [the migrated raw stream](../examples/features/app/stream
 - Existing request logging measures async admission rather than final streamed
   delivery; it is not a per-section or completed-response tracing facility.
 
-HTTP tests exercise real SCRAM PostgreSQL, delayed peers, timeouts, disconnects,
-HEAD/method dispatch and zero idle task counters. Browser checks cover streamed
+HTTP tests (`./neokit test --postgres`) exercise real SCRAM PostgreSQL, delayed
+peers, timeouts, disconnects, HEAD/method dispatch and zero idle task counters.
+Browser checks (`bun tests/tools/async_browser_fixture.ts`) cover streamed
 insertion, escaped UTF-8, isolated errors and widget mounting. Performance and
 verification results are in the `neokit-bench` repository.

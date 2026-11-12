@@ -6,7 +6,9 @@ This is the separate experimental web framework project, named NeoKit. Keep appl
 - `NEO_HOME` selects the external `neoc` checkout; auto-detect `../neo`.
 - Native runtime code stays Neo and C-free. Bun/Python/LLVM are build tools;
   JavaScript executes in the browser. No JS engine runs inside the server.
-- Use Bun for JavaScript tooling and tests.
+- Use Bun for JavaScript tooling and tests. Integration tests (`tests/core`,
+  `tests/extended`, `tests/postgres`) drive only the `neokit` CLI; shared
+  helpers belong in `tests/lib.ts`.
 - Keep template interpolation escaped; never accept raw user HTML or executable
   template expressions. Browser behavior belongs in external module files.
 - Test SSR and exported pages in an actual browser as well as HTTP tests.

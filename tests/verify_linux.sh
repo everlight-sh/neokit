@@ -1,4 +1,4 @@
 #!/bin/sh
 set -eu
 ./neokit test
-python3 tests/freestanding.py --binary build/studio/server
+bun tests/tools/freestanding.ts --binary build/studio/server
