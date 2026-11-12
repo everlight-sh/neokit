@@ -253,6 +253,33 @@ effect fn fs_test_writes_copies_and_removal() -> bool
     built && result_is_ok(w) && created && result_is_ok(l) && exec && result_is_ok(kept) && result_is_ok(rewritten) && keeps
       && result_is_ok(copied) && tree && again && file && renamed && kinds && link && victim && cleaned
 
+; Directory modes as Python makes them: Path.mkdir and os.makedirs give
+; 0777 & ~umask to the directory and every parent they create; copytree
+; gives each copy its source directory's bits (Python's copystat chmod is
+; not filtered by the umask; std:fs has no chmod, so here it is).
+effect fn mode_of(borrow path:Arr u8 _) -> Arr u8 _ = octal(match host_mode(path) { Ok(m) => m, Err(e) => -1 })
+effect fn fs_test_directory_modes_match_python() -> bool
+  = let root=scratch("modes") in let mask=umask() in
+    let made=host_mkdirs(host_join(root,"a/b/c")) in
+    let one=host_mkdir(host_join(root,"single"),false,false) in
+    let wide=octal(bit_and(511,4095-mask)) in
+    let mkdirs=report("makedirs leaf mode",mode_of(host_join(root,"a/b/c")),wide)
+      && report("makedirs parent mode",mode_of(host_join(root,"a/b")),wide)
+      && report("makedirs top mode",mode_of(root),wide)
+      && report("mkdir mode",mode_of(host_join(root,"single")),wide) in
+    let source=host_join(root,"src") in
+    let s1=fs_mkdir_mode(source,488) in let s2=fs_mkdir_mode(host_join(source,"inner"),448) in
+    let s3=fs_mkdir_mode(host_join(source,"open"),493) in
+    let s4=host_write_bytes(host_join(source,"inner/f"),"f") in
+    let copied=host_copy_tree(source,host_join(root,"dst/deep/copy"),text_words(),false) in
+    let copies=result_is_ok(copied)
+      && report("copytree created parent mode",mode_of(host_join(root,"dst/deep")),wide)
+      && report("copytree top mode",mode_of(host_join(root,"dst/deep/copy")),octal(bit_and(488,4095-mask)))
+      && report("copytree private mode",mode_of(host_join(root,"dst/deep/copy/inner")),octal(bit_and(448,4095-mask)))
+      && report("copytree open mode",mode_of(host_join(root,"dst/deep/copy/open")),octal(bit_and(493,4095-mask))) in
+    let cleaned=result_is_ok(host_remove_tree(root)) in
+    result_is_ok(made) && result_is_ok(one) && mkdirs && s1.ok && s2.ok && s3.ok && result_is_ok(s4) && copies && cleaned
+
 effect fn fs_test_mkdtemp_names_and_modes() -> bool
   = let root=scratch("temp") in let made=host_mkdirs(root) in
     let first=host_mkdtemp(".prepare-",root) in let second=host_mkdtemp(".prepare-",root) in

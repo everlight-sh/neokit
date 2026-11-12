@@ -13,6 +13,7 @@ effect fn main() -> unit
     let resolved=fs_test_resolve_follows_symlinks_like_python() in
     let read=fs_test_read_text_and_errors() in
     let written=fs_test_writes_copies_and_removal() in
+    let modes=fs_test_directory_modes_match_python() in
     let temp=fs_test_mkdtemp_names_and_modes() in
     let run=fs_test_processes_run_like_subprocess() in
     let home=fs_test_home_and_cache_directories() in
@@ -21,6 +22,7 @@ effect fn main() -> unit
       outcome("resolve follows symbolic links like Python",resolved),
       outcome("read_text and OSError texts",read),
       outcome("writes, copies and removal",written),
+      outcome("directory modes match Python",modes),
       outcome("mkdtemp names and modes",temp),
       outcome("processes run like subprocess",run),
       outcome("home and cache directories",home))) in noop()

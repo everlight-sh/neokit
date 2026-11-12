@@ -13,13 +13,16 @@
 ; layer prints Err(message) the same way.
 ;
 ; Known differences from Python, by design or for want of a std: API:
-; - Permissions. std:fs creates directories with mode 0700 (fs_mkdir has no
-;   mode) and has no chmod. host_mkdir therefore makes 0700 directories where
-;   Python makes 0777 & ~umask (usually 0755). New files are created through
+; - Permissions. Directories are made with fs_mkdir_mode, so they get
+;   Python's modes: 0777 & ~umask from host_mkdir (Path.mkdir and
+;   os.makedirs), the source directory's bits from host_copy_tree (copytree's
+;   copystat) and 0700 from host_mkdtemp. New files are created through
 ;   fs_atomic_replace_mode with 0666 (host_write_bytes) or the requested mode
 ;   (host_write_mode, host_copy_file), so they get Python's permissions,
-;   except that the mode is filtered by the umask where Python's chmod and
-;   copy2 are not. The modification time is not copied (copy2 copies it).
+;   except that std:fs has no chmod: a requested mode (and a copied
+;   directory's) is filtered by the umask where Python's chmod, copy2 and
+;   copystat are not, and an existing directory that copytree reuses keeps
+;   its mode. The modification time is not copied (copy2 copies it).
 ; - Creating a file goes through a temporary file, an fsync and a rename
 ;   (fs_atomic_replace_mode); rewriting an existing file truncates it in
 ;   place, as Python does. A dangling symbolic link is replaced rather than
@@ -287,6 +290,14 @@ fn host_utf8_error(borrow data:Arr u8 _) -> Arr u8 _
     if at.ok then text_empty()
     else if at.end-at.start==1 then concat("'utf-8' codec can't decode byte 0x",text_hex(text_byte(data,at.start),2)," in position ",text_int(at.start),": ",at.reason)
     else concat("'utf-8' codec can't decode bytes in position ",text_int(at.start),"-",text_int(at.end-1),": ",at.reason)
+; bytes.decode('utf-8', errors='replace'): each invalid range (the one a
+; UnicodeDecodeError would report) becomes one U+FFFD.
+type HostDecoded = { text:Arr u8 _, at:i64 }
+fn host_decode_replace(borrow data:Arr u8 _) -> Arr u8 _
+  = let s=loop (s=HostDecoded { text=text_empty(), at=0 }) while s.at<len(data)
+      next (let u=host_utf8_at(data,s.at) in
+            HostDecoded { text=if u.ok then concat(s.text,text_slice(data,u.start,u.end)) else concat(s.text,"\xef\xbf\xbd"), at=u.end }) yield s in
+    s.text
 
 ; hashlib's hexdigest() of raw digest bytes.
 fn host_hex(borrow digest:Arr u8 _) -> Arr u8 _
@@ -499,16 +510,24 @@ effect(fs) fn host_rmdir(borrow path:Arr u8 _) -> Result<i64,Arr u8 _>
 
 ; ---------------------------------------------------------------- directories
 
-; Path(path).mkdir(parents=parents, exist_ok=exist_ok). std:fs makes the
-; directory with mode 0700 (Python: 0777 & ~umask).
-effect(fs) fn host_mkdir(borrow path:Arr u8 _, parents:bool, exist_ok:bool) -> Result<i64,Arr u8 _>
-  = let p=host_fs(path) in let made=fs_mkdir(p) in
+; os.makedirs(path, mode) when parents, else os.mkdir(path, mode): the
+; directory gets mode & ~umask, missing parents 0777 & ~umask.
+private effect(fs) fn host_mkdir_with(borrow p:Arr u8 _, mode:i64, parents:bool, exist_ok:bool) -> Result<i64,Arr u8 _>
+  = let made=fs_mkdir_mode(p,mode) in
     if made.ok then host_done(0) else
     let code=made.error.code in
     if code==2 && parents && !text_equal(host_parent(p),p) then
-      (let up=host_mkdir(host_parent(p),true,true)? in host_mkdir(p,false,exist_ok))
+      (let up=host_mkdir_with(host_parent(p),511,true,true)? in host_mkdir_with(p,mode,false,exist_ok))
     else if code!=2 && exist_ok && host_is_dir(p) then host_done(0)
     else host_fail(host_os_error(code,p))
+; Path(path).mkdir(parents=parents, exist_ok=exist_ok): mode 0777 & ~umask,
+; as in Python.
+effect(fs) fn host_mkdir(borrow path:Arr u8 _, parents:bool, exist_ok:bool) -> Result<i64,Arr u8 _>
+  = host_mkdir_with(host_fs(path),511,parents,exist_ok)
+; Path(path).mkdir(mode=mode, parents=parents, exist_ok=exist_ok): the
+; directory gets mode & ~umask, the parents it makes 0777 & ~umask.
+effect(fs) fn host_mkdir_mode(borrow path:Arr u8 _, mode:i64, parents:bool, exist_ok:bool) -> Result<i64,Arr u8 _>
+  = host_mkdir_with(host_fs(path),mode,parents,exist_ok)
 ; Path(path).mkdir(parents=True, exist_ok=True).
 effect(fs) fn host_mkdirs(borrow path:Arr u8 _) -> Result<i64,Arr u8 _> = host_mkdir(path,true,true)
 
@@ -623,13 +642,15 @@ private effect(fs,process) fn host_copy_entry(borrow source:Arr u8 _, borrow tar
     else (match host_copy_file(source,target) { Ok(done) => text_empty(), Err(message) => host_copy_error(source,target,message) })
 ; shutil.copytree(source, target, ignore=shutil.ignore_patterns(*skip),
 ; dirs_exist_ok=exist_ok): symbolic links are followed (their content is
-; copied), files keep their permission bits (see host_copy_file), and
-; directories are made with host_mkdir. It stops at the first failure.
+; copied), files keep their permission bits (see host_copy_file), and each
+; directory is made with its source directory's permission bits (copystat),
+; missing parents of target with 0777. It stops at the first failure.
 effect(fs,process) fn host_copy_tree(borrow source:Arr u8 _, borrow target:Arr u8 _, borrow skip:Arr Arr u8 _ _, exist_ok:bool) -> Result<i64,Arr u8 _>
   = let from=host_fs(source) in let to=host_fs(target) in
     let listed=fs_list(from) in
     if !listed.ok then host_fail(host_os_error(listed.error.code,from)) else
-    let made=host_mkdir(to,true,exist_ok)? in
+    let stat=fs_stat(from,true) in
+    let made=host_mkdir_with(to,if stat.ok then bit_and(stat.mode,4095) else 511,true,exist_ok)? in
     let failed=loop (err=text_empty(), j:i64{j>=0}=0) while len(err)==0 && j<len(listed.entries)
       next (let name=listed.entries[j].name in
             if host_skipped(skip,name) then err else host_copy_entry(host_join(from,name),host_join(to,name),listed.entries[j].kind,skip,exist_ok), j+1) yield err in
@@ -653,7 +674,7 @@ private effect(fs,process) fn host_temp_step(move s:HostTemp, borrow parent:Arr 
   = let entropy=random_bytes(8) in
     if !entropy.ok then s with { done=true, err=host_errno_text(entropy.error.code) } else
     let name=host_posix_join(parent,concat(prefix,arr(i in 0..8) host_temp_letter(text_byte(entropy.value,i)))) in
-    let made=fs_mkdir(name) in
+    let made=fs_mkdir_mode(name,448) in
     if made.ok then s with { done=true, path=name }
     else if made.error.code==17 then s with { attempt=s.attempt+1 }
     else s with { done=true, err=host_os_error(made.error.code,name) }

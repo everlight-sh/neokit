@@ -1,0 +1,27 @@
+; Native side of the build parity harness (tests/tools/parity.ts), which
+; compares it with compiler/build.py.
+;
+; Usage:
+;   driver.neo ROOT APP OUT TARGET PROFILE   gen_build
+;   driver.neo --migrate ROOT APP OUT        gen_build_migration
+;   driver.neo --refresh ROOT APP OUT        gen_refresh_assets
+;   driver.neo --prepare ROOT                gen_prepare
+; An error prints "neokit: MESSAGE" on stderr, as neokit does, and exits 1.
+import "std:io"
+import "std:process"
+import "../../../cli/build.neo"
+
+effect fn arg(index:i64) -> Arr u8 _ = cli_arg(index).value
+effect fn finish(borrow result:Result<Arr u8 _,Arr u8 _>) -> unit
+  = match result {
+      Ok(path) => let written=print_out(concat(path,"\n")) in noop(),
+      Err(message) => let written=print_error(concat("neokit: ",message,"\n")) in process_exit(1)
+    }
+effect fn built(borrow result:Result<GenBuilt,Arr u8 _>) -> Result<Arr u8 _,Arr u8 _>
+  = match result { Ok(value) => Ok::<Arr u8 _,Arr u8 _>(value.out), Err(message) => Err::<Arr u8 _,Arr u8 _>(message) }
+effect fn main() -> unit
+  = let mode=arg(1) in
+    if text_equal(mode,"--migrate") then finish(gen_build_migration(arg(2),arg(3),arg(4)))
+    else if text_equal(mode,"--refresh") then finish(gen_refresh_assets(arg(2),arg(3),arg(4)))
+    else if text_equal(mode,"--prepare") then finish(gen_prepare(arg(2)))
+    else finish(built(gen_build(arg(1),arg(2),arg(3),arg(4),arg(5))))
