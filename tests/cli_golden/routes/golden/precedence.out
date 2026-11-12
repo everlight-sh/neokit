@@ -1,0 +1,191 @@
+/about	0,0
+/journal/[slug]	0,0,1
+/	0,0
+/actions/tasks	0,0,0
+/api/tasks/[id]	0,0,0,1
+/api/tasks	0,0,0
+/dashboard	0,0
+/login	0,0
+/logout	0,0
+/oauth/callback	0,0,0
+/oauth	0,0
+/actions/typed	0,0,0
+/api/[id]	0,0,1
+/async	0,0
+/async-api	0,0
+/async-page	0,0
+/async-stats	0,0
+/cached	0,0
+/docs/[[...slug]]	0,0,3
+/invalidate	0,0
+/org/[org]/items/[id]	0,0,1,0,1
+/stream	0,0
+/activity	0,0
+/api/events	0,0,0
+/api/export-customers	0,0,0
+/api/metrics	0,0,0
+/customers	0,0
+/studio	0,0
+/api/status	0,0,0
+/greet	0,0
+/notes/[slug]	0,0,1
+/stress	0,0
+/interactive	0,0
+/large	0,0
+/feed/[slug]	0,0,1
+/feed	0,0
+/feed/snapshot	0,0,0
+/publish	0,0
+/publish-other	0,0
+/stats	0,0
+/wait	0,0
+/api/own-policy	0,0,0
+/pricing	0,0
+/blog/[slug]	0,0,1
+/account	0,0
+/search	0,0
+/private-info	0,0
+/feed.xml	0,0
+/api/data	0,0,0
+/lab/one	0,0,0
+/lab/two	0,0,0
+/actions/test	0,0,0
+/a/b	0,0,0
+/x	0,0
+/...	0,0
+/....	0,0
+/[id]	0,1
+/[...slug]	0,2
+/[[...slug]]	0,3
+/[x]/[...y]	0,1,2
+/[_]	0,1
+/[_1]	0,1
+/a.b	0,0
+/.well-known	0,0
+/-	0,0
+/_	0,0
+/[a]/[b]	0,1,1
+/a/[[...b]]	0,0,3
+/[...a]	0,2
+/api/v1.2/[id]	0,0,0,1
+/journal/a-smaller-web	0,0,0
+/journal/slower-mornings	0,0,0
+/journal/quiet-interfaces	0,0,0
+/docs	0,0
+/docs/a/b	0,0,0,0
+/org/acme/items/42	0,0,0,0,0
+/notes/native	0,0,0
+/notes/static	0,0,0
+/notes/islands	0,0,0
+/old	0,0
+/docs-external	0,0
+/docs/new	0,0,0
+/docs/[id]	0,0,1
+/docs/[...slug]	0,0,2
+/[x]	0,1
+/[...x]	0,2
+/[[...x]]	0,3
+/a/[b]/c	0,0,1,0
+/a/b/[c]	0,0,0,1
+	0
+x	0
+/[x	0,1
+/[...x]/y	0,2,0
+/z	0,0
+/Z	0,0
+--- sorted
+
+x
+/
+/-
+/...
+/....
+/.well-known
+/Z
+/_
+/a.b
+/about
+/account
+/activity
+/async
+/async-api
+/async-page
+/async-stats
+/cached
+/customers
+/dashboard
+/docs
+/docs-external
+/feed
+/feed.xml
+/greet
+/interactive
+/invalidate
+/large
+/login
+/logout
+/oauth
+/old
+/pricing
+/private-info
+/publish
+/publish-other
+/search
+/stats
+/stream
+/stress
+/studio
+/wait
+/x
+/z
+/a/b
+/actions/tasks
+/actions/test
+/actions/typed
+/api/data
+/api/events
+/api/export-customers
+/api/metrics
+/api/own-policy
+/api/status
+/api/tasks
+/docs/new
+/feed/snapshot
+/journal/a-smaller-web
+/journal/quiet-interfaces
+/journal/slower-mornings
+/lab/one
+/lab/two
+/notes/islands
+/notes/native
+/notes/static
+/oauth/callback
+/docs/a/b
+/org/acme/items/42
+/a/b/[c]
+/api/tasks/[id]
+/api/v1.2/[id]
+/api/[id]
+/blog/[slug]
+/docs/[id]
+/feed/[slug]
+/journal/[slug]
+/notes/[slug]
+/a/[b]/c
+/org/[org]/items/[id]
+/docs/[...slug]
+/a/[[...b]]
+/docs/[[...slug]]
+/[_1]
+/[_]
+/[id]
+/[x
+/[x]
+/[a]/[b]
+/[x]/[...y]
+/[...a]
+/[...slug]
+/[...x]
+/[...x]/y
+/[[...slug]]
+/[[...x]]

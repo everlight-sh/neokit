@@ -1,0 +1,117 @@
+about	/about
+journal/[slug]	/journal/[slug]
+	/
+actions/tasks	/actions/tasks
+api/tasks/[id]	/api/tasks/[id]
+api/tasks	/api/tasks
+dashboard	/dashboard
+login	/login
+logout	/logout
+oauth/callback	/oauth/callback
+oauth	/oauth
+actions/typed	/actions/typed
+api/[id]	/api/[id]
+async	/async
+async-api	/async-api
+async-page	/async-page
+async-stats	/async-stats
+cached	/cached
+docs/[[...slug]]	/docs/[[...slug]]
+invalidate	/invalidate
+org/[org]/items/[id]	/org/[org]/items/[id]
+stream	/stream
+activity	/activity
+api/events	/api/events
+api/export-customers	/api/export-customers
+api/metrics	/api/metrics
+customers	/customers
+studio	/studio
+api/status	/api/status
+greet	/greet
+notes/[slug]	/notes/[slug]
+stress	/stress
+interactive	/interactive
+large	/large
+feed/[slug]	/feed/[slug]
+feed	/feed
+feed/snapshot	/feed/snapshot
+publish	/publish
+publish-other	/publish-other
+stats	/stats
+wait	/wait
+api/own-policy	/api/own-policy
+(marketing)/pricing	/pricing
+blog/[slug]	/blog/[slug]
+account	/account
+search	/search
+private-info	/private-info
+feed.xml	/feed.xml
+api/data	/api/data
+lab/one	/lab/one
+lab/two	/lab/two
+actions/test	/actions/test
+.	/
+a/./b	/a/b
+a//b	/a/b
+a/b/	/a/b
+(g)	/
+(g)/(h)/x	/x
+(bad group	error: Unsupported route segment: (bad group
+(a b)	error: Unsupported route segment: (a b)
+()	error: Unsupported route segment: ()
+(x-y_1)	/
+(café)	error: Unsupported route segment: (café)
+..	error: Unsupported route segment: ..
+a/..	error: Unsupported route segment: ..
+...	/...
+....	/....
+a b	error: Unsupported route segment: a b
+café	error: Unsupported route segment: café
+[id]	/[id]
+[id]/[id]	error: Route parameter names must be unique
+[id]/x/[id]	error: Route parameter names must be unique
+[...slug]	/[...slug]
+[...slug]/more	error: Catch-all parameters must be the final route segment
+[...slug]/a b	error: Catch-all parameters must be the final route segment
+a b/[...slug]/x	error: Unsupported route segment: a b
+[[...slug]]	/[[...slug]]
+[[...slug]]/x	error: Catch-all parameters must be the final route segment
+[x]/[...y]	/[x]/[...y]
+[x]/[[...x]]	error: Route parameter names must be unique
+[1x]	error: Unsupported route segment: [1x]
+[]	error: Unsupported route segment: []
+[x	error: Unsupported route segment: [x
+x]	error: Unsupported route segment: x]
+[...]	error: Unsupported route segment: [...]
+[[...]]	error: Unsupported route segment: [[...]]
+[[x]]	error: Unsupported route segment: [[x]]
+[..x]	error: Unsupported route segment: [..x]
+[....x]	error: Unsupported route segment: [....x]
+[x-y]	error: Unsupported route segment: [x-y]
+[_]	/[_]
+[_1]	/[_1]
+[...a]]	error: Unsupported route segment: [...a]]
+a.b	/a.b
+.well-known	/.well-known
+-	/-
+_	/_
+(g)/[a]/(h)/[b]	/[a]/[b]
+[a]/(g)/[a]	error: Route parameter names must be unique
+a/[[...b]]/(g)	/a/[[...b]]
+[...a]/(g)	/[...a]
+(g)/[...a]/(h)/b	error: Catch-all parameters must be the final route segment
+api/v1.2/[id]	/api/v1.2/[id]
+/app/x	/app	/x
+/app	/app	/
+/app/	/app	/
+/app//x/./y/	/app/	/x/y
+/other/x	/app	error: '/other/x' is not in the subpath of '/app'
+/app/x	/app/x/y	error: '/app/x' is not in the subpath of '/app/x/y'
+rel/x	rel	/x
+rel	rel	/
+/app/x	app	error: '/app/x' is not in the subpath of 'app'
+app/x	/app	error: 'app/x' is not in the subpath of '/app'
+/app/(g)/[id]	/app	/[id]
+/app/..	/app	error: Unsupported route segment: ..
+/appx/y	/app	error: '/appx/y' is not in the subpath of '/app'
+/	/	/

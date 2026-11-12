@@ -1,0 +1,60 @@
+; Unit tests for cli/actions.neo: typed action adapters, byte for byte as
+; compiler/actions.py generates them (expected texts printed by the Python),
+; and every BuildError text. tests/cli_golden/routes compares more configs.
+import "std:json"
+import "std:result"
+import "../cli/actions.neo"
+
+fn same(actual:Arr u8 _, expected:Arr u8 _) -> bool = text_equal(actual,expected)
+fn config(borrow text:Arr u8 _) -> Json = match toml_load("route.toml",text) { Ok(value) => value, Err(message) => json_none().value }
+fn adapter(borrow text:Arr u8 _) -> Arr u8 _
+  = match act_adapter(config(text),"Action_abc") { Ok(found) => if found.present then found.code else "None", Err(message) => concat("error: ",message) }
+fn typed(borrow fields:Arr u8 _) -> Arr u8 _ = adapter(concat("handler=\"h\"\ninput_type=\"T\"\n[input]\n",fields))
+
+fn head(csrf:bool) -> Arr u8 _
+  = concat("effect fn Action_abc(request:WebRequest) -> WebResponse = ",
+      if csrf then "if !web_same_origin(request,env_get(\"NEOKIT_ORIGIN\").value) then web_reply(403,\"Invalid action origin\",\"text/plain\") else " else "",
+      "let input=web_input(request) in if !input.ok then web_status(web_json(\"{\\\"error\\\":\\\"Invalid request body\\\"}\"),400) else ")
+fn fields_check(borrow checks:Arr u8 _) -> Arr u8 _
+  = concat("if !(",checks,") then web_status(web_json(\"{\\\"error\\\":\\\"Invalid action fields\\\"}\"),422) else ")
+
+fn test_examples_features_typed_action() -> bool
+  = same(adapter("handler=\"feature_typed\"\ninput_type=\"TypedInput\"\nmethods=[\"POST\"]\ncsrf=false\n[input]\ntitle={type=\"text\",min=1,max=50}\ncount={type=\"int\",min=0,max=100}\nenabled=\"bool\"\n"),
+      concat(head(false),"let field_title=web_input_text(input,\"title\",1,50,true) in let field_count=web_input_int(input,\"count\",0,100,true) in let field_enabled=web_input_bool(input,\"enabled\",true) in ",
+        fields_check("field_title.ok && field_count.ok && field_enabled.ok"),
+        "feature_typed(request,TypedInput {title=field_title.value,count=field_count.value,enabled=field_enabled.value})"))
+
+fn test_browser_fixture_action_with_csrf() -> bool
+  = same(adapter("handler=\"lab_action\"\ninput_type=\"LabInput\"\nmethods=[\"POST\"]\n[input]\ntitle={type=\"text\",min=1,max=100}\ncount={type=\"int\",min=0,max=100}\nenabled=\"bool\"\n"),
+      concat(head(true),"let field_title=web_input_text(input,\"title\",1,100,true) in let field_count=web_input_int(input,\"count\",0,100,true) in let field_enabled=web_input_bool(input,\"enabled\",true) in ",
+        fields_check("field_title.ok && field_count.ok && field_enabled.ok"),
+        "lab_action(request,LabInput {title=field_title.value,count=field_count.value,enabled=field_enabled.value})"))
+
+fn test_defaults_and_empty_schema() -> bool
+  = same(typed(""),concat(head(true),fields_check("true"),"h(request,T {})"))
+    && same(typed("name=\"text\"\nn=\"int\"\nflag={type=\"bool\",required=false,min=\"ignored\"}\n"),
+      concat(head(true),"let field_name=web_input_text(input,\"name\",1,4096,true) in let field_n=web_input_int(input,\"n\",-9223372036854775808,9223372036854775807,true) in let field_flag=web_input_bool(input,\"flag\",false) in ",
+        fields_check("field_name.ok && field_n.ok && field_flag.ok"),"h(request,T {name=field_name.value,n=field_n.value,flag=field_flag.value})"))
+    && same(typed("t={type=\"text\",min=0,max=1048576}\n"),
+      concat(head(true),"let field_t=web_input_text(input,\"t\",0,1048576,true) in ",fields_check("field_t.ok"),"h(request,T {t=field_t.value})"))
+    && same(adapter("handler=\"h\"\n"),"None") && same(adapter("handler=\"h\"\ninput_type=\"T\"\n"),"None")
+
+fn test_schema_errors() -> bool
+  = same(adapter("handler=\"h\"\ninput_type=\"T\"\ninput=\"x\"\n"),"error: Typed actions require input_type and an [input] field schema")
+    && same(adapter("handler=\"h\"\n[input]\nx=\"text\"\n"),"error: Typed actions require input_type and an [input] field schema")
+    && same(adapter("handler=\"h\"\ninput_type=\"not valid\"\n[input]\n"),"error: Typed actions require input_type and an [input] field schema")
+    && same(adapter("handler=\"h\"\ninput_type=1\n[input]\n"),"error: Typed actions require input_type and an [input] field schema")
+    && same(typed("\"bad name\"=\"text\"\n"),"error: Action field names must be Neo identifiers")
+    && same(typed("x=\"float\"\n"),"error: Unsupported action field type: x")
+    && same(typed("x=1\n"),"error: Unsupported action field type: x")
+    && same(typed("x={required=true}\n"),"error: Unsupported action field type: x")
+    && same(typed("x={type=[\"text\"]}\n"),"error: Unsupported action field type: x")
+    && same(typed("x={type=\"text\",required=\"yes\"}\n"),"error: Action required must be a boolean")
+    && same(typed("x={type=\"text\",min=-1}\n"),"error: Invalid bounds for x")
+    && same(typed("x={type=\"text\",max=1048577}\n"),"error: Invalid bounds for x")
+    && same(typed("x={type=\"int\",min=5,max=4}\n"),"error: Invalid bounds for x")
+    && same(typed("x={type=\"int\",min=1.5}\n"),"error: Invalid bounds for x")
+    && same(typed("x={type=\"int\",max=true}\n"),"error: Invalid bounds for x")
+    && same(typed("a=\"text\"\nb=\"nope\"\n"),"error: Unsupported action field type: b")
+    && same(adapter("handler=\"h\"\ninput_type=\"T\"\ncsrf=\"no\"\n[input]\nx=\"text\"\n"),"error: Typed action csrf must be a boolean")
+    && same(adapter("handler=\"h\"\ninput_type=\"T\"\ncsrf=\"no\"\n[input]\nx=\"nope\"\n"),"error: Unsupported action field type: x")

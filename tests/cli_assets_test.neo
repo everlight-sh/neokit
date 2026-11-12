@@ -1,0 +1,213 @@
+; Unit tests for cli/assets.neo, ported from tests/test_features.py (the
+; metadata, image, sitemap and robots cases) with the exact BuildError texts
+; and outputs compiler/assets.py gives.
+;
+; `neo test --unit-only` runs each test_ function inside `check`, where
+; effects cannot run, so the cases that need files or processes are the
+; fs_test_ functions: tests/cli_golden/assets/effects.neo runs them as the
+; "assets effectful unit cases" entry of tests/cli_golden/assets/assets.neo.toml.
+; The image cases need libvips's vips and vipsheader on PATH and pass
+; without checking anything when they are missing, as the Python skips them
+; without Pillow. Scratch files go under build/ in the project and are
+; removed afterwards.
+import "std:json"
+import "std:result"
+import "std:io"
+import "std:fs"
+import "std:deflate"
+import "../cli/assets.neo"
+
+fn same(actual:Arr u8 _, expected:Arr u8 _) -> bool = text_equal(actual,expected)
+fn toml(borrow text:Arr u8 _) -> Json = match toml_load("web.toml",text) { Ok(value) => value, Err(message) => json_none().value }
+fn none() -> Arr Arr u8 _ _ = text_words()
+fn head(borrow web:Arr u8 _, borrow page:Arr u8 _, borrow skip:Arr Arr u8 _ _) -> Arr u8 _
+  = match meta_metadata(toml(web),toml(page),skip) { Ok(text) => text, Err(message) => concat("error: ",message) }
+fn props_of(borrow page:Arr u8 _) -> Arr Arr u8 _ _
+  = match meta_metadata_props(toml(page)) { Ok(table) => toml_keys(table), Err(message) => push(text_words(),concat("error: ",message)) }
+fn dynamic(borrow web:Arr u8 _, borrow page:Arr u8 _, borrow names:Arr u8 _, borrow kinds:Arr u8 _) -> Arr u8 _
+  = match meta_dynamic_metadata(toml(web),toml(page),text_split(names,","),text_split(kinds,",")) {
+      Ok(found) => concat(text_join(found.parts," | "),if found.jsonld then " | jsonld" else ""), Err(message) => concat("error: ",message) }
+
+fn web() -> Arr u8 _
+  = "[site]\nurl=\"https://audit.test/\"\ndescription=\"Audit <site> & \\\"more\\\"\"\nrobots=\"index\"\nog_title=42\nog_image=[\"a\", 1, true, {k=\"v\"}]\ncanonical=\"https://audit.test/x?a=1&b='q'\"\n"
+
+fn test_metadata_escapes_site_text() -> bool
+  = same(head("[site]\ndescription=\"<tag>\"\n","",none()),"<meta name=\"description\" content=\"&lt;tag&gt;\">")
+
+fn test_metadata_fields_overrides_and_skip() -> bool
+  = let page="loader=\"x\"\n[metadata]\ndescription=\"Page desc\"\nog_description=false\n[metadata.props]\nrobots=\"r\"\n" in
+    same(head(web(),page,props_of(page)),
+      "<meta name=\"description\" content=\"Page desc\"><meta property=\"og:title\" content=\"42\"><meta property=\"og:description\" content=\"False\"><meta property=\"og:image\" content=\"[&#x27;a&#x27;, 1, True, {&#x27;k&#x27;: &#x27;v&#x27;}]\"><link rel=\"canonical\" href=\"https://audit.test/x?a=1&amp;b=&#x27;q&#x27;\">")
+    && same(head(web(),"",none()),
+      "<meta name=\"description\" content=\"Audit &lt;site&gt; &amp; &quot;more&quot;\"><meta name=\"robots\" content=\"index\"><meta property=\"og:title\" content=\"42\"><meta property=\"og:image\" content=\"[&#x27;a&#x27;, 1, True, {&#x27;k&#x27;: &#x27;v&#x27;}]\"><link rel=\"canonical\" href=\"https://audit.test/x?a=1&amp;b=&#x27;q&#x27;\">")
+    && same(head("[site]\ncanonical=\"\"\n","",none()),"") && same(head("[site]\ncanonical=0\n","",none()),"")
+    && same(head("[site]\ncanonical=5\n","",none()),"error: Canonical metadata requires an HTTP URL")
+    && same(head("[site]\ncanonical=\"ftp://x\"\n","",none()),"error: Canonical metadata requires an HTTP URL")
+    && same(head("[site]\nrobots=1\n","",none()),"error: Metadata robots must be text")
+    && same(head("","[metadata]\ndescription=[]\n",none()),"error: Metadata description must be text")
+    && same(head("","[metadata]\ndescription=[]\n",push(none(),"description")),"")
+    && same(head("[site]\nprops=\"x\"\n","[metadata]\nprops={description=\"d\"}\n",none()),"")
+    && same(head("site=1\n","",none()),"error: [site] must be a table")
+    && same(head("","metadata=1\n",none()),"error: [metadata] must be a table")
+    && same(head("[site]\nog_title=1.5\n","",none()),"error: Metadata og_title cannot be a float")
+
+fn test_metadata_props_and_dynamic_metadata() -> bool
+  = same(text_join(props_of("[metadata.props]\ndescription=\"summary\"\njsonld=\"jsonld\"\n"),","),"description,jsonld")
+    && same(text_join(props_of("loader=\"x\"\n"),","),"")
+    && same(text_join(props_of("[metadata]\nprops=1\n"),","),"error: [metadata.props] must be a table of metadata field = prop name")
+    && same(dynamic(web(),"loader=\"audit_home\"\n[metadata.props]\ndescription=\"summary\"\njsonld=\"jsonld\"\n","title,query,posts,summary,jsonld","text,text,Post[],text,text"),
+      "\"<meta name=\\\"description\\\" content=\\\"\" | html_escape(props.summary) | \"\\\">\" | \"<script type=\\\"application/ld+json\\\">\" | neokit_json_script(props.jsonld) | \"</script>\" | jsonld")
+    && same(dynamic(web(),"[metadata.props]\nog_title=\"t\"\nog_description=\"t\"\nog_image=\"u\"\ncanonical=\"u\"\nrobots=\"t\"\n","t,u","text,url"),
+      concat("\"<meta property=\\\"og:title\\\" content=\\\"\" | html_escape(props.t) | \"\\\">\" | \"<meta property=\\\"og:description\\\" content=\\\"\" | html_escape(props.t) | \"\\\">\" | ",
+        "\"<meta property=\\\"og:image\\\" content=\\\"https://audit.test\" | html_escape(props.u.value) | \"\\\">\" | \"<link rel=\\\"canonical\\\" href=\\\"https://audit.test\" | html_escape(props.u.value) | \"\\\">\" | ",
+        "\"<meta name=\\\"robots\\\" content=\\\"\" | html_escape(props.t) | \"\\\">\""))
+    && same(dynamic("","[metadata.props]\nog_title=\"t\"\nog_image=\"u\"\n","t,u","text,url"),"error: [metadata.props] og_image needs an absolute [site] url")
+    && same(dynamic(web(),"[metadata.props]\ntitle=\"t\"\n","t","text"),"error: [metadata.props] supports description, robots, og_title, og_description, og_image, canonical, jsonld")
+    && same(dynamic(web(),"[metadata.props]\nog_image=\"t\"\n","t","text"),"error: [metadata.props] og_image must name a url prop of the page template")
+    && same(dynamic(web(),"[metadata.props]\nog_image=1\n","t","text"),"error: [metadata.props] og_image must name a url prop of the page template")
+    && same(dynamic(web(),"[metadata.props]\ndescription=\"missing\"\n","t","text"),"error: [metadata.props] description must name a text prop of the page template")
+    && same(dynamic(web(),"loader=\"x\"\n","t","text"),"")
+
+fn test_compression_rules() -> bool
+  = let a511=arr(i in 0..511) u8(97) in let a512=arr(i in 0..512) u8(97) in
+    let noise=loop (o=text_empty(), i=0) while i<128 next (concat(o,sha256(text_int(i))), i+1) yield o in
+    let packed=meta_compressed(a512) in
+    meta_compressible("text/html; charset=utf-8") && meta_compressible("application/javascript") && meta_compressible("image/svg+xml")
+    && meta_compressible("application/manifest+json") && meta_compressible("application/wasm") && meta_compressible("application/json; charset=utf-8")
+    && !meta_compressible("image/png") && !meta_compressible("application/octet-stream") && !meta_compressible("Text/html")
+    && !meta_compressed(a511).present && packed.present && len(packed.value)<512
+    && same(gzip_decode(packed.value,1048576).value,a512) && !meta_compressed(noise).present
+    && !meta_brotli_compressed(a512,packed).present && !meta_compressed("").present
+
+fn test_image_helpers_match_python() -> bool
+  = same(meta_image_cache_name("abc",640,"webp","vips-8.15.1"),"9f2f19a73b048bca953958d73a74d138caf8d844939ffc431b687fae913c8c4b.webp")
+    && meta_round_div(2000,100)==20 && meta_round_div(25,2)==12 && meta_round_div(27,2)==14 && meta_round_div(26,4)==6 && meta_round_div(1,3)==0
+    && same(meta_stem("/a/photo.png"),"photo") && same(meta_stem("/a/b.c.png"),"b.c") && same(meta_stem("/a/.png"),".png")
+    && same(meta_stem("/a/x."),"x.") && same(meta_stem("noext"),"noext")
+    && same(meta_sha256_hex(""),"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+
+effect fn fs_test_missing_image_tools_are_named() -> bool
+  = same(match meta_image_tools_in("") { Ok(tools) => tools.vips, Err(message) => message },"Responsive images require vips (libvips) on PATH in the build environment")
+    && same(match meta_image_tools_in("/nonexistent-dir") { Ok(tools) => tools.vips, Err(message) => message },"Responsive images require vips (libvips) on PATH in the build environment")
+
+; ---- scratch apps ----
+
+effect fn scratch(borrow name:Arr u8 _) -> Arr u8 _
+  = let project=env_get("NEO_TEST_PROJECT") in let cwd=fs_cwd() in
+    let root=if project.present && len(project.value)>0 then project.value else cwd.value in
+    concat(root,"/build/cli-assets-test-",name,"-",text_int(process_id()))
+effect fn remove_tree(borrow path:Arr u8 _) -> bool
+  = let listed=fs_list(path) in
+    let gone=loop (i:i64{i>=0}=0, ok=true) while i<len(listed.entries)
+      next (i+1, let child=concat(path,"/",listed.entries[i].name) in
+        if listed.entries[i].kind==fs_kind_directory() then remove_tree(child) && ok else fs_remove(child).ok && ok) yield ok in
+    gone && fs_rmdir(path).ok
+fn be32(value:i64) -> Arr u8 _ = arr(i in 0..4) u8(bit_and(shift_right(value,(3-i)*8),255))
+fn png_chunk(borrow kind:Arr u8 _, borrow data:Arr u8 _) -> Arr u8 _
+  = concat(be32(len(data)),kind,data,be32(crc32(concat(kind,data))))
+; A truecolor PNG of one color, as Image.new('RGB', size, color).save().
+fn png(width:i64, height:i64, red:i64, green:i64, blue:i64) -> Arr u8 _
+  = check width>0 && width<100000 in let row=concat(push(text_empty(),u8(0)),arr(i in 0..width*3) u8(if i%3==0 then red else if i%3==1 then green else blue)) in
+    let rows=loop (o=text_empty(), y=0) while y<height next (concat(o,row), y+1) yield o in
+    concat(arr(i in 0..8) u8(if i==0 then 137 else if i==1 then 80 else if i==2 then 78 else if i==3 then 71 else if i==4 then 13 else if i==5 then 10 else if i==6 then 26 else 10),
+      png_chunk("IHDR",concat(be32(width),be32(height),arr(i in 0..5) u8(if i==0 then 8 else if i==1 then 2 else 0))),
+      png_chunk("IDAT",zlib_encode(rows,6).value),png_chunk("IEND",""))
+effect fn app_with(borrow name:Arr u8 _, borrow image:Arr u8 _) -> Arr u8 _
+  = let app=scratch(name) in let made=meta_mkdirs(concat(app,"/public")) in
+    let written=if len(image)>0 then fs_write(concat(app,"/public/photo.png"),image) else int_ok(0) in app
+fn variant_url(borrow image:MetaImage, i:i64) -> Arr u8 _
+  = if i<0 || i>=len(image.variants) then text_empty() else
+    concat("/_web/images/photo-",text_int(image.variants[i].width),"-",text_slice(meta_sha256_hex(image.variants[i].data),0,12),".",image.variants[i].format)
+fn file_at(borrow assets:MetaAssets, borrow url:Arr u8 _) -> Arr u8 _
+  = loop (i:i64{i>=0}=0, found=text_empty()) while i<len(assets.files) next (i+1, if text_equal(assets.files[i].key,url) then assets.files[i].value else found) yield found
+fn binding(borrow assets:MetaAssets, borrow key:Arr u8 _) -> Arr u8 _
+  = loop (i:i64{i>=0}=0, found=text_empty()) while i<len(assets.bindings) next (i+1, if text_equal(assets.bindings[i].key,key) then assets.bindings[i].value else found) yield found
+fn keys(borrow pairs:Arr MetaPair _) -> Arr u8 _ = text_join(arr(i in 0..len(pairs)) check i>=0 && i<len(pairs) in pairs[i].key,",")
+fn same_assets(borrow a:MetaAssets, borrow b:MetaAssets) -> bool
+  = len(a.files)==len(b.files) && len(a.bindings)==len(b.bindings)
+    && loop (i:i64{i>=0}=0, ok=true) while ok && i<len(a.files) && i<len(b.files)
+         next (i+1, text_equal(a.files[i].key,b.files[i].key) && text_equal(a.files[i].value,b.files[i].value)) yield ok
+    && loop (i:i64{i>=0}=0, ok=true) while ok && i<len(a.bindings) && i<len(b.bindings)
+         next (i+1, text_equal(a.bindings[i].key,b.bindings[i].key) && text_equal(a.bindings[i].value,b.bindings[i].value)) yield ok
+effect fn assets(borrow app:Arr u8 _, borrow web:Arr u8 _, borrow exported:Arr Arr u8 _ _, borrow cache:Arr u8 _) -> Result<MetaAssets,Arr u8 _>
+  = meta_generated_assets(app,toml(web),exported,cache)
+fn failure(result:Result<MetaAssets,Arr u8 _>) -> Arr u8 _ = match result { Ok(found) => keys(found.files), Err(message) => message }
+; The decoded size of an encoded variant, as "WxH".
+effect fn decoded(borrow tools:MetaTools, borrow app:Arr u8 _, borrow data:Arr u8 _, borrow suffix:Arr u8 _) -> Arr u8 _
+  = let path=concat(app,"/check.",suffix) in let written=fs_write(path,data) in
+    match meta_image_header(tools,path) { Ok(h) => concat(text_int(h.width),"x",text_int(h.height)), Err(message) => message }
+
+effect fn fs_test_public_sitemap_and_robots_take_precedence() -> bool
+  = let app=app_with("public",text_empty()) in
+    let web="[site]\nurl=\"https://site.test\"\n" in
+    let both=same(failure(assets(app,web,none(),"")),"/sitemap.xml,/robots.txt") in
+    let robots=fs_write(concat(app,"/public/robots.txt"),"User-agent: *\n") in
+    let one=same(failure(assets(app,web,none(),"")),"/sitemap.xml") in
+    let sitemap=fs_write(concat(app,"/public/sitemap.xml"),"<urlset/>") in
+    let neither=same(failure(assets(app,web,none(),"")),"") in
+    let cleaned=remove_tree(app) in
+    both && one && neither && cleaned
+
+effect fn fs_test_sitemap_robots_and_origin_rules() -> bool
+  = let app=app_with("origin",text_empty()) in
+    let paths=arr(i in 0..4) if i==0 then "/b" else if i==1 then "/a&b" else if i==2 then "/" else "/b" in
+    let result=assets(app,"[site]\nurl=\"https://site.test//\"\n",paths,"") in
+    let files=match result { Ok(found) => found, Err(message) => MetaAssets { files=meta_no_pairs(), bindings=meta_no_pairs() } } in
+    let ok=same(file_at(files,"/sitemap.xml"),"<?xml version=\"1.0\" encoding=\"UTF-8\"?><urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"><url><loc>https://site.test/</loc></url><url><loc>https://site.test/a&amp;b</loc></url><url><loc>https://site.test/b</loc></url></urlset>")
+      && same(file_at(files,"/robots.txt"),"User-agent: *\nAllow: /\nSitemap: https://site.test/sitemap.xml\n")
+      && same(failure(assets(app,"[site]\nurl=\"javascript:alert(1)\"\n",none(),"")),"[site] url must be an HTTP origin")
+      && same(failure(assets(app,"[site]\nurl=\"https://a.test/\\\"x\"\n",none(),"")),"[site] url must be an HTTP origin")
+      && same(failure(assets(app,"[site]\nurl=\"https:///\"\n",none(),"")),"[site] url must be an HTTP origin")
+      && same(failure(assets(app,"[site]\nname=\"x\"\n",none(),"")),"")
+      && same(failure(assets(app,"images=1\n",none(),"")),"[images] must be a table")
+      && same(failure(assets(app,"[images]\nfiles=[]\nwidths=\"bad\"\n",none(),"")),"") in
+    let cleaned=remove_tree(app) in ok && cleaned
+
+effect fn fs_test_metadata_images_are_hashed_resized_and_traversal_is_rejected() -> bool
+  = match meta_image_tools() {
+      Err(message) => true,
+      Ok(tools) =>
+        let app=app_with("images",png(100,50,255,0,0)) in
+        let web="[site]\nurl=\"https://site.test\"\n[images]\nfiles=[\"photo.png\"]\nwidths=[40,1000]\nformats=[\"webp\"]\n" in
+        let paths=arr(i in 0..2) if i==0 then "/" else "/public" in
+        let first=assets(app,web,paths,"") in
+        let found=match first { Ok(value) => value, Err(message) => MetaAssets { files=push(meta_no_pairs(),MetaPair { key="error", value=message }), bindings=meta_no_pairs() } } in
+        let small=binding(found,"image:photo.png:40:webp") in let large=binding(found,"image:photo.png:1000:webp") in
+        let ok=!text_contains(file_at(found,"/sitemap.xml"),"/private") && text_contains(file_at(found,"/sitemap.xml"),"/public")
+          && text_starts(small,"/_web/images/photo-40-") && text_ends(small,".webp") && len(small)==len("/_web/images/photo-40-")+12+5
+          && text_starts(large,"/_web/images/photo-100-") && same(binding(found,"image:photo.png:100:webp"),large)
+          && same(decoded(tools,app,file_at(found,small),"webp"),"40x20") && same(decoded(tools,app,file_at(found,large),"webp"),"100x50")
+          && same(keys(found.bindings),"image:photo.png:40:webp,image:photo.png:1000:webp,image:photo.png:100:webp")
+          && same_assets(match assets(app,web,paths,"") { Ok(value) => value, Err(message) => MetaAssets { files=meta_no_pairs(), bindings=meta_no_pairs() } },found)
+          && same(failure(assets(app,"[images]\nfiles=[\"../../secret.png\"]\n",paths,"")),"Image source must be a public file: ../../secret.png")
+          && same(failure(assets(app,"[images]\nfiles=[\"missing.png\"]\n",paths,"")),"Image source must be a public file: missing.png")
+          && same(failure(assets(app,"[images]\nfiles=[\"photo.png\"]\nwidths=[0]\n",paths,"")),"Image widths must be integers in 1..8192")
+          && same(failure(assets(app,"[images]\nfiles=[\"photo.png\"]\nwidths=[]\n",paths,"")),"Image widths must be integers in 1..8192")
+          && same(failure(assets(app,"[images]\nfiles=[\"photo.png\"]\nwidths=[8193]\n",paths,"")),"Image widths must be integers in 1..8192")
+          && same(failure(assets(app,"[images]\nfiles=[\"photo.png\"]\nformats=[\"gif\"]\n",paths,"")),"Supported image formats: webp, jpeg, png, avif")
+          && same(failure(assets(app,"[images]\nfiles=\"x\"\n",paths,"")),"Image source must be a public file: x")
+          && same(failure(assets(app,"[images]\nfiles=1\n",paths,"")),"[images] files must be a list of public file names") in
+        let cleaned=remove_tree(app) in ok && cleaned
+    }
+
+effect fn fs_test_image_variants_are_cached_by_content() -> bool
+  = match meta_image_tools() {
+      Err(message) => true,
+      Ok(tools) =>
+        let app=app_with("cache",png(80,40,0,0,255)) in let cache=concat(app,"/cache") in
+        let web="[images]\nfiles=[\"photo.png\"]\nwidths=[20]\nformats=[\"webp\",\"jpeg\"]\n" in
+        let first=match assets(app,web,none(),cache) { Ok(value) => value, Err(message) => MetaAssets { files=meta_no_pairs(), bindings=meta_no_pairs() } } in
+        let stored=fs_list(cache) in
+        let widths=push(arr(i in 0..0) 0,20) in let formats=push(push(text_words(),"webp"),"jpeg") in
+        let offline=tools with { vips="/nonexistent/vips" } in
+        let again=meta_image_variants(offline,concat(app,"/public/photo.png"),widths,formats,cache) in
+        let ok=len(first.files)==2 && stored.ok && len(stored.entries)==2
+          && same(decoded(tools,app,file_at(first,binding(first,"image:photo.png:20:jpeg")),"jpeg"),"20x10")
+          && match again {
+               Err(message) => false,
+               Ok(image) => image.original==80 && len(image.variants)==2
+                 && same(variant_url(image,0),binding(first,"image:photo.png:20:webp"))
+                 && same(variant_url(image,1),binding(first,"image:photo.png:20:jpeg"))
+             } in
+        let cleaned=remove_tree(app) in ok && cleaned
+    }

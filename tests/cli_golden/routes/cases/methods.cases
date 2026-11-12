@@ -1,0 +1,53 @@
+#--- no methods
+handler="h"
+#--- GET
+methods=["GET"]
+#--- POST
+methods=["POST"]
+#--- GET HEAD
+methods=["GET","HEAD"]
+#--- HEAD GET
+methods=["HEAD","GET"]
+#--- HEAD
+methods=["HEAD"]
+#--- all
+methods=["OPTIONS","DELETE","PATCH","PUT","POST","GET"]
+#--- all with HEAD
+methods=["GET","POST","PUT","PATCH","DELETE","OPTIONS","HEAD"]
+#--- empty
+methods=[]
+#--- text
+methods="GET"
+#--- duplicate
+methods=["GET","POST","GET"]
+#--- lowercase
+methods=["get"]
+#--- CONNECT
+methods=["CONNECT"]
+#--- integer
+methods=[1]
+#--- boolean
+methods=[true]
+#--- number
+methods=1
+#--- table
+methods={GET=true}
+#--- unknown then integer
+methods=["FOO",1]
+#--- typed default
+handler="h"
+input_type="T"
+[input]
+x="text"
+#--- typed with GET
+handler="h"
+input_type="T"
+methods=["GET"]
+[input]
+x="text"
+#--- typed empty methods
+handler="h"
+input_type="T"
+methods=[]
+[input]
+x="text"

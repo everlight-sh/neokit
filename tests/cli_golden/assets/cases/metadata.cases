@@ -1,0 +1,876 @@
+#--- examples/blog/app/about/page.toml
+[site]
+name="Fieldnotes"
+description="Independent thoughts on design, engineering, and the everyday."
+[server]
+timing=true
+before="journal_guard"
+#-- page
+loader="journal_about"
+client=true
+#-- props
+title	text
+#--- examples/blog/app/journal/[slug]/page.toml
+[site]
+name="Fieldnotes"
+description="Independent thoughts on design, engineering, and the everyday."
+[server]
+timing=true
+before="journal_guard"
+#-- page
+loader="journal_article"
+mode="ssr"
+client=true
+paths=["/journal/a-smaller-web","/journal/slower-mornings","/journal/quiet-interfaces"]
+#-- props
+title	text
+category	text
+minutes	text
+date	text
+author	text
+initials	text
+excerpt	text
+cover	url
+body	html
+related	html[]
+#--- examples/blog/app/page.toml
+[site]
+name="Fieldnotes"
+description="Independent thoughts on design, engineering, and the everyday."
+[server]
+timing=true
+before="journal_guard"
+#-- page
+loader="journal_home"
+mode="ssr"
+client=true
+#-- props
+title	text
+server	bool
+query	text
+category	text
+cards	html[]
+featured	bool
+empty	bool
+#--- examples/dashboard/app/dashboard/page.toml
+[site]
+name="NeoKit Tasks"
+[server]
+before="dashboard_before"
+after="dashboard_after"
+#-- page
+loader="dashboard_load"
+export=false
+client=true
+#-- props
+title	text
+subject	text
+csrf	text
+rows	html[]
+failed	bool
+#--- examples/dashboard/app/page.toml
+[site]
+name="NeoKit Tasks"
+[server]
+before="dashboard_before"
+after="dashboard_after"
+#-- page
+loader="landing_load"
+#-- props
+title	text
+#--- examples/features/app/async-page/page.toml
+[site]
+name="NeoKit feature verification"
+url="https://features.test"
+description="Typed routes & native pages"
+#-- page
+loader="feature_async_page"
+async=true
+async_timeout_ms=2000
+export=false
+#-- props
+title	text
+body	text
+#--- examples/features/app/cached/page.toml
+[site]
+name="NeoKit feature verification"
+url="https://features.test"
+description="Typed routes & native pages"
+#-- page
+loader="feature_cached"
+cache_ttl=1
+stale_ttl=10
+cache_tag="features"
+#-- props
+title	text
+stamp	int
+#--- examples/features/app/docs/[[...slug]]/page.toml
+[site]
+name="NeoKit feature verification"
+url="https://features.test"
+description="Typed routes & native pages"
+#-- page
+loader="feature_docs"
+paths=["/docs","/docs/a/b"]
+#-- props
+title	text
+slug	text
+#--- examples/features/app/org/[org]/items/[id]/page.toml
+[site]
+name="NeoKit feature verification"
+url="https://features.test"
+description="Typed routes & native pages"
+#-- page
+loader="feature_item"
+paths=["/org/acme/items/42"]
+#-- props
+title	text
+org	text
+id	text
+#--- examples/features/app/page.toml
+[site]
+name="NeoKit feature verification"
+url="https://features.test"
+description="Typed routes & native pages"
+#-- page
+loader="features_load"
+#-- props
+title	text
+items	text[]
+numbers	int[]
+link	url
+#--- examples/saas/app/activity/page.toml
+[site]
+name="Meridian Analytics"
+description="A native NeoKit SaaS dashboard with server-rendered charts and a searchable customer dataset."
+[server]
+timing=true
+startup="saas_start"
+#-- page
+loader="saas_activity"
+mode="ssr"
+client=true
+#-- props
+title	text
+events	html[]
+#--- examples/saas/app/customers/page.toml
+[site]
+name="Meridian Analytics"
+description="A native NeoKit SaaS dashboard with server-rendered charts and a searchable customer dataset."
+[server]
+timing=true
+startup="saas_start"
+#-- page
+loader="saas_customers"
+mode="ssr"
+client=true
+#-- props
+title	text
+server	bool
+records	int
+total	text
+query	text
+all	bool
+growth	bool
+pro	bool
+enterprise	bool
+large	bool
+rows	html[]
+found	text
+page	int
+pages	int
+has_previous	bool
+has_next	bool
+previous	url
+next_url	url
+csv	url
+empty	bool
+range_label	text
+#--- examples/saas/app/page.toml
+[site]
+name="Meridian Analytics"
+description="A native NeoKit SaaS dashboard with server-rendered charts and a searchable customer dataset."
+[server]
+timing=true
+startup="saas_start"
+#-- page
+loader="saas_overview"
+mode="ssr"
+client=true
+#-- props
+title	text
+server	bool
+records	int
+record_count	text
+range	int
+week	bool
+month	bool
+quarter	bool
+large	bool
+revenue	text
+change	text
+mrr	text
+active	text
+trials	text
+total	text
+caption	text
+chart	html
+sources	html
+customers	html[]
+csv	url
+customers_url	url
+#--- examples/ssr-site/app/page.toml
+[site]
+name="Forma Studio"
+description="Spaces for a slower, better everyday. A native NeoKit SSR example."
+[server]
+timing=true
+#-- page
+loader="forma_home"
+mode="ssr"
+client=true
+#-- props
+title	text
+stamp	int
+server	bool
+#--- examples/ssr-site/app/studio/page.toml
+[site]
+name="Forma Studio"
+description="Spaces for a slower, better everyday. A native NeoKit SSR example."
+[server]
+timing=true
+#-- page
+loader="forma_studio"
+mode="ssr"
+client=true
+#-- props
+title	text
+#--- examples/studio/app/about/page.toml
+[site]
+name = "NeoKit starter"
+
+[css]
+tailwind = ["site.css"]
+#-- page
+loader = "about_load"
+mode = "static"
+client = false
+export = true
+#-- props
+title	text
+#--- examples/studio/app/greet/page.toml
+[site]
+name = "NeoKit starter"
+
+[css]
+tailwind = ["site.css"]
+#-- page
+loader = "greet_load"
+mode = "ssr"
+client = false
+export = false
+#-- props
+title	text
+name	text
+stamp	int
+#--- examples/studio/app/notes/[slug]/page.toml
+[site]
+name = "NeoKit starter"
+
+[css]
+tailwind = ["site.css"]
+#-- page
+loader = "note_load"
+mode = "ssr"
+client = true
+export = true
+paths = ["/notes/native", "/notes/static", "/notes/islands"]
+#-- props
+title	text
+slug	text
+summary	text
+#--- examples/studio/app/page.toml
+[site]
+name = "NeoKit starter"
+
+[css]
+tailwind = ["site.css"]
+#-- page
+loader = "home_load"
+mode = "ssr"
+client = true
+export = true
+#-- props
+title	text
+name	text
+stamp	int
+server	bool
+#--- examples/studio/app/stress/page.toml
+[site]
+name = "NeoKit starter"
+
+[css]
+tailwind = ["site.css"]
+#-- page
+loader = "stress_load"
+mode = "ssr"
+client = true
+export = true
+#-- props
+title	text
+count	int
+rows	html
+data	html
+full_url	url
+full	bool
+server	bool
+stamp	int
+#--- tests/catalog_fixture/app/interactive/page.toml
+[site]
+name="Catalog fixture"
+#-- page
+loader="load_interactive"
+mode="ssr"
+client=true
+export=true
+#-- props
+title	text
+n	int
+seed	int
+token	text
+stamp	int
+checksum	int
+rows	html
+interactive	bool
+#--- tests/catalog_fixture/app/large/page.toml
+[site]
+name="Catalog fixture"
+#-- page
+loader="load_large"
+mode="ssr"
+client=false
+export=true
+#-- props
+title	text
+n	int
+seed	int
+token	text
+stamp	int
+checksum	int
+rows	html
+interactive	bool
+#--- tests/catalog_fixture/app/page.toml
+[site]
+name="Catalog fixture"
+#-- page
+loader="load_home"
+mode="ssr"
+client=false
+export=true
+#-- props
+title	text
+n	int
+seed	int
+token	text
+stamp	int
+checksum	int
+rows	html
+interactive	bool
+#--- tests/realtime_fixture/app/page.toml
+[server]
+before="fixture_guard"
+shutdown_grace_ms=250
+#-- page
+loader="fixture_page"
+#-- props
+title	text
+#--- tests/realtime_limits_fixture/app/page.toml
+[server]
+before="fixture_guard"
+shutdown_grace_ms=250
+[realtime]
+max_event_bytes=8192
+#-- page
+loader="fixture_page"
+client=false
+export=false
+#-- props
+title	text
+#--- ts:core-audit_features/app/(marketing)/pricing/page.toml
+[site]
+url="https://audit.test"
+description="Audit site"
+
+[[redirects]]
+from="/old"
+to="/pricing"
+
+[[redirects]]
+from="/docs-external"
+to="https://docs.example/start"
+status=301
+query=false
+
+[security]
+csp="default-src 'self'; img-src 'self' https://cdn.example"
+#-- page
+loader="audit_pricing"
+mode="static"
+#-- props
+#--- ts:core-audit_features/app/account/page.toml
+[site]
+url="https://audit.test"
+description="Audit site"
+
+[[redirects]]
+from="/old"
+to="/pricing"
+
+[[redirects]]
+from="/docs-external"
+to="https://docs.example/start"
+status=301
+query=false
+
+[security]
+csp="default-src 'self'; img-src 'self' https://cdn.example"
+#-- page
+loader="audit_account"
+guard="audit_guard"
+#-- props
+#--- ts:core-audit_features/app/blog/[slug]/page.toml
+[site]
+url="https://audit.test"
+description="Audit site"
+
+[[redirects]]
+from="/old"
+to="/pricing"
+
+[[redirects]]
+from="/docs-external"
+to="https://docs.example/start"
+status=301
+query=false
+
+[security]
+csp="default-src 'self'; img-src 'self' https://cdn.example"
+#-- page
+loader="audit_post"
+mode="static"
+paths_fn="audit_slugs"
+#-- props
+#--- ts:core-audit_features/app/page.toml
+[site]
+url="https://audit.test"
+description="Audit site"
+
+[[redirects]]
+from="/old"
+to="/pricing"
+
+[[redirects]]
+from="/docs-external"
+to="https://docs.example/start"
+status=301
+query=false
+
+[security]
+csp="default-src 'self'; img-src 'self' https://cdn.example"
+#-- page
+loader="audit_home"
+[metadata.props]
+description="summary"
+jsonld="jsonld"
+#-- props
+title	text
+query	text
+posts	Post[]
+summary	text
+jsonld	text
+#--- ts:core-audit_features/app/private-info/page.toml
+[site]
+url="https://audit.test"
+description="Audit site"
+
+[[redirects]]
+from="/old"
+to="/pricing"
+
+[[redirects]]
+from="/docs-external"
+to="https://docs.example/start"
+status=301
+query=false
+
+[security]
+csp="default-src 'self'; img-src 'self' https://cdn.example"
+#-- page
+loader="audit_private"
+cache_control="private, max-age=30"
+#-- props
+#--- ts:core-audit_features/app/search/page.toml
+[site]
+url="https://audit.test"
+description="Audit site"
+
+[[redirects]]
+from="/old"
+to="/pricing"
+
+[[redirects]]
+from="/docs-external"
+to="https://docs.example/start"
+status=301
+query=false
+
+[security]
+csp="default-src 'self'; img-src 'self' https://cdn.example"
+#-- page
+loader="audit_search"
+cache_ttl=60
+cache_query=["q"]
+#-- props
+#--- ts:core-consumer/app/page.toml
+[site]
+name="Another site"
+#-- page
+loader="other_load"
+client=false
+mode="ssr"
+#-- props
+#--- ts:core-scaffold/app/page.toml
+[site]
+name="app"
+#-- page
+loader="load"
+client=true
+#-- props
+#--- ts:extended-dev_css/app/page.toml
+[css]
+tailwind=["site.css"]
+#-- page
+loader="load"
+mode="ssr"
+client=false
+#-- props
+#--- ts:tools-browser_fixture/app/lab/one/page.toml
+[site]
+name="Browser verification lab"
+[server]
+access_log=true
+#-- page
+loader="lab_load_one"
+client=true
+export=true
+cache_ttl=30
+[metadata]
+description="Page one description"
+#-- props
+#--- ts:tools-browser_fixture/app/lab/two/page.toml
+[site]
+name="Browser verification lab"
+[server]
+access_log=true
+#-- page
+loader="lab_load_two"
+client=true
+export=true
+cache_ttl=30
+[metadata]
+description="Page two description"
+#-- props
+#--- site only
+[site]
+url="https://edge.test/"
+description="Edge <site> & \"more\""
+robots="index"
+og_title=42
+og_image=["a", 1, true, {k="v"}]
+canonical="https://edge.test/x?a=1&b='q'"
+#-- page
+loader="x"
+#-- props
+title	text
+#--- page overrides and skip
+[site]
+url="https://edge.test/"
+description="Edge <site> & \"more\""
+robots="index"
+og_title=42
+og_image=["a", 1, true, {k="v"}]
+canonical="https://edge.test/x?a=1&b='q'"
+#-- page
+loader="x"
+[metadata]
+description="Page desc"
+og_description=false
+[metadata.props]
+robots="r"
+#-- props
+title	text
+r	text
+#--- og values
+#-- page
+[metadata]
+og_title="T <1>"
+og_description=-7
+og_image={a=[1,"b'c"],d=false}
+#-- props
+#--- og quotes repr
+#-- page
+[metadata]
+og_title=["it's", "say \"hi\"", "both '\""]
+#-- props
+#--- og unicode repr
+#-- page
+[metadata]
+og_title=["café", "\u0007", "\u00a0", "\u2028"]
+#-- props
+#--- escape all
+[site]
+description="& < > \" '"
+#-- page
+#-- props
+#--- canonical empty
+[site]
+canonical=""
+#-- page
+#-- props
+#--- canonical zero
+[site]
+canonical=0
+#-- page
+#-- props
+#--- canonical false
+[site]
+canonical=false
+#-- page
+#-- props
+#--- canonical empty list
+[site]
+canonical=[]
+#-- page
+#-- props
+#--- canonical number
+[site]
+canonical=5
+#-- page
+#-- props
+#--- canonical ftp
+[site]
+canonical="ftp://x"
+#-- page
+#-- props
+#--- canonical http
+#-- page
+[metadata]
+canonical="http://x.test/<a>"
+#-- props
+#--- canonical skipped
+#-- page
+[metadata]
+canonical="ftp://x"
+[metadata.props]
+canonical="u"
+#-- props
+u	url
+#--- robots number
+[site]
+robots=1
+#-- page
+#-- props
+#--- description list
+#-- page
+[metadata]
+description=[]
+#-- props
+#--- description list skipped
+#-- page
+[metadata]
+description=[]
+[metadata.props]
+description="d"
+#-- props
+d	text
+#--- props key ignored
+[site]
+props="x"
+#-- page
+[metadata]
+props={description="d"}
+#-- props
+d	text
+#--- site props
+[site]
+props="x"
+#-- page
+#-- props
+#--- title is not metadata
+[site]
+title="Site"
+name="N"
+#-- page
+[metadata]
+title="T"
+#-- props
+#--- props not table
+#-- page
+[metadata]
+props=1
+#-- props
+#--- props empty
+#-- page
+[metadata]
+props={}
+#-- props
+#--- dynamic home
+[site]
+url="https://edge.test/"
+description="Edge <site> & \"more\""
+robots="index"
+og_title=42
+og_image=["a", 1, true, {k="v"}]
+canonical="https://edge.test/x?a=1&b='q'"
+#-- page
+[metadata.props]
+description="summary"
+jsonld="jsonld"
+#-- props
+title	text
+summary	text
+jsonld	text
+#--- dynamic all
+[site]
+url="https://edge.test/"
+description="Edge <site> & \"more\""
+robots="index"
+og_title=42
+og_image=["a", 1, true, {k="v"}]
+canonical="https://edge.test/x?a=1&b='q'"
+#-- page
+[metadata.props]
+og_title="t"
+og_description="t"
+og_image="u"
+canonical="u"
+robots="t"
+#-- props
+t	text
+u	url
+#--- dynamic origin escaped
+[site]
+url="https://a.test/p?a=1&b=2//"
+#-- page
+[metadata.props]
+og_image="u"
+#-- props
+u	url
+#--- dynamic no origin
+#-- page
+[metadata.props]
+og_title="t"
+og_image="u"
+#-- props
+t	text
+u	url
+#--- dynamic canonical no origin
+[site]
+url="/"
+#-- page
+[metadata.props]
+canonical="u"
+#-- props
+u	url
+#--- dynamic unsupported
+[site]
+url="https://edge.test/"
+description="Edge <site> & \"more\""
+robots="index"
+og_title=42
+og_image=["a", 1, true, {k="v"}]
+canonical="https://edge.test/x?a=1&b='q'"
+#-- page
+[metadata.props]
+title="t"
+#-- props
+t	text
+#--- dynamic wrong kind
+[site]
+url="https://edge.test/"
+description="Edge <site> & \"more\""
+robots="index"
+og_title=42
+og_image=["a", 1, true, {k="v"}]
+canonical="https://edge.test/x?a=1&b='q'"
+#-- page
+[metadata.props]
+og_image="t"
+#-- props
+t	text
+#--- dynamic prop not text
+[site]
+url="https://edge.test/"
+description="Edge <site> & \"more\""
+robots="index"
+og_title=42
+og_image=["a", 1, true, {k="v"}]
+canonical="https://edge.test/x?a=1&b='q'"
+#-- page
+[metadata.props]
+og_image=1
+#-- props
+t	text
+#--- dynamic missing prop
+[site]
+url="https://edge.test/"
+description="Edge <site> & \"more\""
+robots="index"
+og_title=42
+og_image=["a", 1, true, {k="v"}]
+canonical="https://edge.test/x?a=1&b='q'"
+#-- page
+[metadata.props]
+description="missing"
+#-- props
+t	text
+#--- dynamic list prop
+[site]
+url="https://edge.test/"
+description="Edge <site> & \"more\""
+robots="index"
+og_title=42
+og_image=["a", 1, true, {k="v"}]
+canonical="https://edge.test/x?a=1&b='q'"
+#-- page
+[metadata.props]
+description="items"
+#-- props
+items	text[]
+#--- dynamic second fails
+[site]
+url="https://edge.test/"
+description="Edge <site> & \"more\""
+robots="index"
+og_title=42
+og_image=["a", 1, true, {k="v"}]
+canonical="https://edge.test/x?a=1&b='q'"
+#-- page
+[metadata.props]
+description="t"
+title="t"
+#-- props
+t	text
+#--- dynamic jsonld url
+[site]
+url="https://edge.test/"
+description="Edge <site> & \"more\""
+robots="index"
+og_title=42
+og_image=["a", 1, true, {k="v"}]
+canonical="https://edge.test/x?a=1&b='q'"
+#-- page
+[metadata.props]
+jsonld="u"
+#-- props
+u	url

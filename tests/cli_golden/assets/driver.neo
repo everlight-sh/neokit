@@ -1,0 +1,170 @@
+; Golden driver for cli/assets.neo; generate.py writes the expected output
+; with compiler/assets.py.
+;
+; Usage: driver.neo MODE FILE... (paths relative to the repository root
+; under `neo test`, else to the working directory).
+; - metadata: .cases files of pages, each after a line "#--- LABEL": the
+;   web.toml text, a line "#-- page", the page.toml text, a line "#-- props"
+;   and the page template's props as "name<TAB>kind" lines;
+; - generated: .cases files of apps, each "#--- LABEL", the app folder, a
+;   line "#-- web", the web.toml text, a line "#-- paths" and the exported
+;   paths. Images print as their URL with the content hash replaced by
+;   <hash>, their format and their decoded size; the image cache is a
+;   scratch directory under build/, removed afterwards;
+; - compressible: one content type per line;
+; - compressed: files whose gzip form, when kept, must decode back to them.
+import "std:io"
+import "std:fs"
+import "std:process"
+import "std:deflate"
+import "../../../cli/assets.neo"
+
+fn flag(value:bool) -> Arr u8 _ = if value then "1" else "0"
+fn lines_of(borrow text:Arr u8 _) -> Arr Arr u8 _ _
+  = let all=text_split_byte(text,10) in loop (out=text_words(), i=0) while i<len(all)-1 next (push(out,text_word(all,i)), i+1) yield out
+
+; ---- chunks ----
+
+type Chunks = { pairs:Arr MetaPair _, name:Arr u8 _, body:Arr u8 _, open:bool }
+fn chunk_close(move c:Chunks) -> Arr MetaPair _ = if c.open then push(c.pairs,MetaPair { key=c.name, value=c.body }) else c.pairs
+fn chunk_line(move c:Chunks, borrow line:Arr u8 _) -> Chunks
+  = if text_starts(line,"#--- ") then let name=text_from(line,5) in Chunks { pairs=chunk_close(c), name=name, body=text_empty(), open=true }
+    else if !c.open then c else c with { body=concat(c.body,line,"\n") }
+; The "#--- LABEL" chunks of a .cases file as (label, body) pairs.
+fn chunks_of(borrow text:Arr u8 _) -> Arr MetaPair _
+  = let lines=lines_of(text) in
+    chunk_close(loop (c=Chunks { pairs=meta_no_pairs(), name=text_empty(), body=text_empty(), open=false }, i:i64{i>=0}=0)
+      while i<len(lines) next (chunk_line(c,lines[i]), i+1) yield c)
+type Split = { before:Arr u8 _, after:Arr u8 _, seen:bool }
+; The lines of text before and after the first line equal to marker.
+fn split_at(borrow text:Arr u8 _, borrow marker:Arr u8 _) -> Split
+  = let lines=lines_of(text) in
+    loop (s=Split { before=text_empty(), after=text_empty(), seen=false }, i:i64{i>=0}=0) while i<len(lines)
+      next (if !s.seen && text_equal(lines[i],marker) then s with { seen=true }
+            else if s.seen then s with { after=concat(s.after,lines[i],"\n") } else s with { before=concat(s.before,lines[i],"\n") }, i+1) yield s
+
+; ---- metadata ----
+
+fn props_text(borrow found:Result<Json,Arr u8 _>) -> Arr u8 _
+  = match found {
+      Err(message) => concat("error: ",message),
+      Ok(table) => loop (o=text_empty(), i=0) while i<toml_size(table)
+        next (let value=toml_value_at(table,i) in
+              concat(o,if i>0 then ", " else "",toml_key_at(table,i),"=",if toml_is_text(value) then toml_text(value) else "<not text>"), i+1) yield o
+    }
+fn skip_of(borrow found:Result<Json,Arr u8 _>) -> Arr Arr u8 _ _
+  = match found { Err(message) => text_words(), Ok(table) => loop (o=text_words(), i=0) while i<toml_size(table) next (push(o,toml_key_at(table,i)), i+1) yield o }
+fn dynamic_text(borrow found:Result<MetaDynamic,Arr u8 _>) -> Arr u8 _
+  = match found {
+      Err(message) => concat("error: ",message),
+      Ok(dynamic) => concat(text_join(dynamic.parts," | "),if dynamic.jsonld then " | jsonld" else "")
+    }
+fn metadata_chunk(borrow label:Arr u8 _, borrow body:Arr u8 _) -> Arr u8 _
+  = let first=split_at(body,"#-- page") in let second=split_at(first.after,"#-- props") in
+    let props=lines_of(second.after) in
+    let names=arr(i in 0..len(props)) check i>=0 && i<len(props) in text_partition(props[i],"\t").before in
+    let kinds=arr(i in 0..len(props)) check i>=0 && i<len(props) in text_partition(props[i],"\t").after in
+    match toml_load(label,first.before) {
+      Err(message) => concat("=== ",label,"\nTOML web ",message,"\n"),
+      Ok(web) => match toml_load(label,second.before) {
+        Err(message) => concat("=== ",label,"\nTOML page ",message,"\n"),
+        Ok(page) =>
+          let found=meta_metadata_props(page) in
+          let head=match meta_metadata(web,page,skip_of(found)) { Ok(text) => text, Err(message) => concat("error: ",message) } in
+          concat("=== ",label,"\nprops: ",props_text(found),"\nstatic: ",head,"\ndynamic: ",
+            dynamic_text(meta_dynamic_metadata(web,page,names,kinds)),"\n")
+      }
+    }
+
+; ---- generated ----
+
+effect fn remove_tree(borrow path:Arr u8 _) -> bool
+  = let listed=fs_list(path) in
+    let gone=loop (i:i64{i>=0}=0, ok=true) while i<len(listed.entries)
+      next (i+1, let child=concat(path,"/",listed.entries[i].name) in
+        if listed.entries[i].kind==fs_kind_directory() then remove_tree(child) && ok else fs_remove(child).ok && ok) yield ok in
+    gone && fs_rmdir(path).ok
+; The format an encoded image's first bytes name.
+fn image_format(borrow data:Arr u8 _) -> Arr u8 _
+  = if len(data)>=4 && text_byte(data,0)==137 && text_equal(text_slice(data,1,4),"PNG") then "png"
+    else if len(data)>=3 && text_byte(data,0)==255 && text_byte(data,1)==216 && text_byte(data,2)==255 then "jpeg"
+    else if len(data)>=12 && text_starts(data,"RIFF") && text_equal(text_slice(data,8,12),"WEBP") then "webp"
+    else "unknown"
+fn file_at(borrow assets:MetaAssets, borrow url:Arr u8 _) -> Arr u8 _
+  = loop (i:i64{i>=0}=0, found=text_empty()) while i<len(assets.files) next (i+1, if text_equal(assets.files[i].key,url) then assets.files[i].value else found) yield found
+fn is_image(borrow url:Arr u8 _) -> bool = text_starts(url,"/_web/images/")
+; An image URL with its content hash replaced by <hash> (<badhash> when it
+; is not the start of the sha256 of data).
+fn masked(borrow url:Arr u8 _, borrow data:Arr u8 _) -> Arr u8 _
+  = let dot=text_rfind(url,".") in let stem=text_slice(url,0,dot) in
+    let digest=text_from(stem,len(stem)-12) in
+    concat(text_slice(stem,0,len(stem)-12),if text_equal(digest,text_slice(meta_sha256_hex(data),0,12)) then "<hash>" else "<badhash>",".",text_from(url,dot+1))
+effect fn decoded(borrow tools:Result<MetaTools,Arr u8 _>, borrow scratch:Arr u8 _, borrow data:Arr u8 _) -> Arr u8 _
+  = match tools {
+      Err(message) => message,
+      Ok(found) =>
+        let made=meta_mkdirs(scratch) in let path=concat(scratch,"/decoded.img") in let written=fs_write(path,data) in
+        let size=match meta_image_header(found,path) { Ok(h) => concat(text_int(h.width),"x",text_int(h.height)), Err(message) => message } in
+        let removed=fs_remove(path) in size
+    }
+fn same_assets(borrow a:MetaAssets, borrow b:MetaAssets) -> bool
+  = len(a.files)==len(b.files) && len(a.bindings)==len(b.bindings)
+    && loop (i:i64{i>=0}=0, ok=true) while ok && i<len(a.files) && i<len(b.files)
+         next (i+1, text_equal(a.files[i].key,b.files[i].key) && text_equal(a.files[i].value,b.files[i].value)) yield ok
+    && loop (i:i64{i>=0}=0, ok=true) while ok && i<len(a.bindings) && i<len(b.bindings)
+         next (i+1, text_equal(a.bindings[i].key,b.bindings[i].key) && text_equal(a.bindings[i].value,b.bindings[i].value)) yield ok
+effect fn assets_text(borrow tools:Result<MetaTools,Arr u8 _>, borrow scratch:Arr u8 _, borrow found:MetaAssets) -> Arr u8 _
+  = let files=loop (o=text_empty(), i:i64{i>=0}=0) while i<len(found.files)
+      next (let url=found.files[i].key in let data=found.files[i].value in
+            concat(o,"file ",if is_image(url) then concat(masked(url,data)," ",image_format(data)," ",decoded(tools,scratch,data),"\n") else concat(url,"\n",data,"\n")), i+1) yield o in
+    loop (o=files, i:i64{i>=0}=0) while i<len(found.bindings)
+      next (let url=found.bindings[i].value in
+            concat(o,"binding ",found.bindings[i].key," ",if is_image(url) then masked(url,file_at(found,url)) else url,"\n"), i+1) yield o
+effect fn generated_chunk(borrow root:Arr u8 _, borrow tools:Result<MetaTools,Arr u8 _>, borrow label:Arr u8 _, borrow body:Arr u8 _, n:i64) -> Arr u8 _
+  = let first=split_at(body,"#-- web") in let second=split_at(first.after,"#-- paths") in
+    let app=concat(root,text_strip(first.before)) in let paths=lines_of(second.after) in
+    let scratch=concat(root,"build/cli-golden-assets-",text_int(process_id()),"-",text_int(n)) in
+    let cache=concat(scratch,"/cache") in
+    let out=match toml_load(label,second.before) {
+      Err(message) => concat("=== ",label,"\nTOML ",message,"\n"),
+      Ok(config) => match meta_generated_assets(app,config,paths,cache) {
+        Err(message) => concat("=== ",label,"\nerror: ",message,"\n"),
+        Ok(found) =>
+          let again=match meta_generated_assets(app,config,paths,cache) { Ok(other) => same_assets(found,other), Err(message) => false } in
+          concat("=== ",label,"\n",assets_text(tools,concat(scratch,"/check"),found),"second run: ",if again then "same" else "different","\n")
+      }
+    } in
+    let cleaned=remove_tree(scratch) in out
+
+; ---- compression ----
+
+effect fn compressed_line(borrow root:Arr u8 _, borrow file:Arr u8 _) -> Arr u8 _
+  = let raw=fs_read(concat(root,file)) in
+    if !raw.ok then concat(file,"\tunreadable: ",raw.error.message,"\n") else
+    let packed=meta_compressed(raw.value) in
+    let kind=if !packed.present then "none" else
+      let back=gzip_decode(packed.value,len(raw.value)+1) in if back.ok && text_equal(back.value,raw.value) then "gzip" else "gzip-mismatch" in
+    concat(file,"\t",kind,"\tbr ",if meta_brotli_compressed(raw.value,packed).present then "some" else "none","\n")
+
+; ---- main ----
+
+effect fn golden_root() -> Arr u8 _
+  = let source=env_get("NEO_TEST_SOURCE") in let suffix="tests/cli_golden/assets/driver.neo" in
+    if source.present && text_ends(source.value,suffix) then text_slice(source.value,0,len(source.value)-len(suffix)) else text_empty()
+effect fn golden_file(borrow root:Arr u8 _, borrow tools:Result<MetaTools,Arr u8 _>, borrow mode:Arr u8 _, borrow file:Arr u8 _) -> Arr u8 _
+  = if text_equal(mode,"compressed") then compressed_line(root,file) else
+    let raw=fs_read(concat(root,file)) in
+    if !raw.ok then concat("=== ",file,"\nunreadable: ",raw.error.message,"\n") else
+    let text=text_universal_newlines(raw.value) in
+    if text_equal(mode,"compressible") then
+      let lines=lines_of(text) in
+      loop (o=text_empty(), i:i64{i>=0}=0) while i<len(lines) next (concat(o,lines[i],"\t",flag(meta_compressible(lines[i])),"\n"), i+1) yield o
+    else let chunks=chunks_of(text) in
+      loop (o=text_empty(), i:i64{i>=0}=0) while i<len(chunks)
+        next (concat(o,if text_equal(mode,"metadata") then metadata_chunk(chunks[i].key,chunks[i].value)
+                       else generated_chunk(root,tools,chunks[i].key,chunks[i].value,i)), i+1) yield o
+effect fn main() -> unit
+  = let root=golden_root() in let mode=cli_arg(1).value in
+    let tools=if text_equal(mode,"generated") then meta_image_tools() else Err::<MetaTools,Arr u8 _>("no image tools needed") in
+    let out=loop (i=2, out=text_empty()) while cli_arg(i).present next (i+1, concat(out,golden_file(root,tools,mode,cli_arg(i).value))) yield out in
+    let written=print_out(out) in noop()

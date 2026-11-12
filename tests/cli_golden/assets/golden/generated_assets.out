@@ -1,0 +1,478 @@
+=== examples/blog
+second run: same
+=== examples/dashboard
+second run: same
+=== examples/features
+file /sitemap.xml
+<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://features.test/</loc></url><url><loc>https://features.test/cached</loc></url><url><loc>https://features.test/docs</loc></url><url><loc>https://features.test/docs/a/b</loc></url><url><loc>https://features.test/org/acme/items/42</loc></url></urlset>
+file /robots.txt
+User-agent: *
+Allow: /
+Sitemap: https://features.test/sitemap.xml
+
+second run: same
+=== examples/saas
+second run: same
+=== examples/ssr-site
+second run: same
+=== examples/studio
+second run: same
+=== tests/catalog_fixture
+second run: same
+=== tests/realtime_fixture
+second run: same
+=== tests/realtime_limits_fixture
+second run: same
+=== ts:core-audit_features
+file /sitemap.xml
+<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://audit.test/</loc></url><url><loc>https://audit.test/pricing</loc></url><url><loc>https://audit.test/private-info</loc></url><url><loc>https://audit.test/search</loc></url></urlset>
+file /robots.txt
+User-agent: *
+Allow: /
+Sitemap: https://audit.test/sitemap.xml
+
+second run: same
+=== ts:core-consumer
+second run: same
+=== ts:core-scaffold
+second run: same
+=== ts:extended-dev_css
+second run: same
+=== ts:tools-browser_fixture
+second run: same
+=== origin trailing slashes
+file /sitemap.xml
+<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://x.test/</loc></url><url><loc>https://x.test/a&amp;b</loc></url><url><loc>https://x.test/b</loc></url><url><loc>https://x.test/café</loc></url><url><loc>https://x.test/x&quot;y</loc></url></urlset>
+file /robots.txt
+User-agent: *
+Allow: /
+Sitemap: https://x.test/sitemap.xml
+
+second run: same
+=== origin http
+file /sitemap.xml
+<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>http://x.test/</loc></url><url><loc>http://x.test/a&amp;b</loc></url><url><loc>http://x.test/b</loc></url><url><loc>http://x.test/café</loc></url><url><loc>http://x.test/x&quot;y</loc></url></urlset>
+file /robots.txt
+User-agent: *
+Allow: /
+Sitemap: http://x.test/sitemap.xml
+
+second run: same
+=== origin with path
+file /sitemap.xml
+<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://x.test/base/</loc></url><url><loc>https://x.test/base/a&amp;b</loc></url><url><loc>https://x.test/base/b</loc></url><url><loc>https://x.test/base/café</loc></url><url><loc>https://x.test/base/x&quot;y</loc></url></urlset>
+file /robots.txt
+User-agent: *
+Allow: /
+Sitemap: https://x.test/base/sitemap.xml
+
+second run: same
+=== origin with ampersand
+file /sitemap.xml
+<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://x.test/?a=1&amp;b=2/</loc></url><url><loc>https://x.test/?a=1&amp;b=2/a&amp;b</loc></url><url><loc>https://x.test/?a=1&amp;b=2/b</loc></url><url><loc>https://x.test/?a=1&amp;b=2/café</loc></url><url><loc>https://x.test/?a=1&amp;b=2/x&quot;y</loc></url></urlset>
+file /robots.txt
+User-agent: *
+Allow: /
+Sitemap: https://x.test/?a=1&b=2/sitemap.xml
+
+second run: same
+=== origin javascript
+error: [site] url must be an HTTP origin
+=== origin quote
+error: [site] url must be an HTTP origin
+=== origin newline
+error: [site] url must be an HTTP origin
+=== origin angle
+error: [site] url must be an HTTP origin
+=== origin ftp
+error: [site] url must be an HTTP origin
+=== origin slashes only
+second run: same
+=== origin scheme only
+error: [site] url must be an HTTP origin
+=== origin empty
+second run: same
+=== origin unicode
+file /sitemap.xml
+<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://café.test/</loc></url><url><loc>https://café.test/a&amp;b</loc></url><url><loc>https://café.test/b</loc></url><url><loc>https://café.test/café</loc></url><url><loc>https://café.test/x&quot;y</loc></url></urlset>
+file /robots.txt
+User-agent: *
+Allow: /
+Sitemap: https://café.test/sitemap.xml
+
+second run: same
+=== images not table
+error: [images] must be a table
+=== images empty
+second run: same
+=== images no files
+second run: same
+=== images empty string files
+second run: same
+=== public robots
+file /sitemap.xml
+<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://public.test/</loc></url></urlset>
+second run: same
+=== public sitemap
+file /robots.txt
+User-agent: *
+Allow: /
+Sitemap: https://public.test/sitemap.xml
+
+second run: same
+=== public both
+second run: same
+=== public none
+file /sitemap.xml
+<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>
+file /robots.txt
+User-agent: *
+Allow: /
+Sitemap: https://public.test/sitemap.xml
+
+second run: same
+=== images main
+file /sitemap.xml
+<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://images.test/</loc></url></urlset>
+file /robots.txt
+User-agent: *
+Allow: /
+Sitemap: https://images.test/sitemap.xml
+
+file /_web/images/photo-16-<hash>.webp webp 16x8
+file /_web/images/photo-16-<hash>.jpeg jpeg 16x8
+file /_web/images/photo-16-<hash>.png png 16x8
+file /_web/images/photo-40-<hash>.webp webp 40x20
+file /_web/images/photo-40-<hash>.jpeg jpeg 40x20
+file /_web/images/photo-40-<hash>.png png 40x20
+file /_web/images/photo-56-<hash>.webp webp 56x28
+file /_web/images/photo-56-<hash>.jpeg jpeg 56x28
+file /_web/images/photo-56-<hash>.png png 56x28
+file /_web/images/photo-100-<hash>.webp webp 100x50
+file /_web/images/photo-100-<hash>.jpeg jpeg 100x50
+file /_web/images/photo-100-<hash>.png png 100x50
+file /_web/images/halves-16-<hash>.webp webp 16x5
+file /_web/images/halves-16-<hash>.jpeg jpeg 16x5
+file /_web/images/halves-16-<hash>.png png 16x5
+file /_web/images/halves-40-<hash>.webp webp 40x12
+file /_web/images/halves-40-<hash>.jpeg jpeg 40x12
+file /_web/images/halves-40-<hash>.png png 40x12
+file /_web/images/halves-56-<hash>.webp webp 56x18
+file /_web/images/halves-56-<hash>.jpeg jpeg 56x18
+file /_web/images/halves-56-<hash>.png png 56x18
+file /_web/images/halves-80-<hash>.webp webp 80x25
+file /_web/images/halves-80-<hash>.jpeg jpeg 80x25
+file /_web/images/halves-80-<hash>.png png 80x25
+file /_web/images/tall-16-<hash>.webp webp 16x103
+file /_web/images/tall-16-<hash>.jpeg jpeg 16x103
+file /_web/images/tall-16-<hash>.png png 16x103
+file /_web/images/tall-31-<hash>.webp webp 31x200
+file /_web/images/tall-31-<hash>.jpeg jpeg 31x200
+file /_web/images/tall-31-<hash>.png png 31x200
+file /_web/images/wide-16-<hash>.webp webp 16x1
+file /_web/images/wide-16-<hash>.jpeg jpeg 16x1
+file /_web/images/wide-16-<hash>.png png 16x1
+file /_web/images/wide-40-<hash>.webp webp 40x1
+file /_web/images/wide-40-<hash>.jpeg jpeg 40x1
+file /_web/images/wide-40-<hash>.png png 40x1
+file /_web/images/wide-56-<hash>.webp webp 56x1
+file /_web/images/wide-56-<hash>.jpeg jpeg 56x1
+file /_web/images/wide-56-<hash>.png png 56x1
+file /_web/images/wide-400-<hash>.webp webp 400x3
+file /_web/images/wide-400-<hash>.jpeg jpeg 400x3
+file /_web/images/wide-400-<hash>.png png 400x3
+file /_web/images/palette-16-<hash>.webp webp 16x16
+file /_web/images/palette-16-<hash>.jpeg jpeg 16x16
+file /_web/images/palette-16-<hash>.png png 16x16
+file /_web/images/palette-40-<hash>.webp webp 40x40
+file /_web/images/palette-40-<hash>.jpeg jpeg 40x40
+file /_web/images/palette-40-<hash>.png png 40x40
+file /_web/images/palette-50-<hash>.webp webp 50x50
+file /_web/images/palette-50-<hash>.jpeg jpeg 50x50
+file /_web/images/palette-50-<hash>.png png 50x50
+file /_web/images/rot6-16-<hash>.webp webp 16x48
+file /_web/images/rot6-16-<hash>.jpeg jpeg 16x48
+file /_web/images/rot6-16-<hash>.png png 16x48
+file /_web/images/rot6-40-<hash>.webp webp 40x120
+file /_web/images/rot6-40-<hash>.jpeg jpeg 40x120
+file /_web/images/rot6-40-<hash>.png png 40x120
+file /_web/images/rot3-16-<hash>.webp webp 16x5
+file /_web/images/rot3-16-<hash>.jpeg jpeg 16x5
+file /_web/images/rot3-16-<hash>.png png 16x5
+file /_web/images/rot3-40-<hash>.webp webp 40x13
+file /_web/images/rot3-40-<hash>.jpeg jpeg 40x13
+file /_web/images/rot3-40-<hash>.png png 40x13
+file /_web/images/rot3-56-<hash>.webp webp 56x19
+file /_web/images/rot3-56-<hash>.jpeg jpeg 56x19
+file /_web/images/rot3-56-<hash>.png png 56x19
+file /_web/images/rot3-120-<hash>.webp webp 120x40
+file /_web/images/rot3-120-<hash>.jpeg jpeg 120x40
+file /_web/images/rot3-120-<hash>.png png 120x40
+file /_web/images/rot8-16-<hash>.webp webp 16x32
+file /_web/images/rot8-16-<hash>.jpeg jpeg 16x32
+file /_web/images/rot8-16-<hash>.png png 16x32
+file /_web/images/rot8-30-<hash>.webp webp 30x60
+file /_web/images/rot8-30-<hash>.jpeg jpeg 30x60
+file /_web/images/rot8-30-<hash>.png png 30x60
+file /_web/images/rot5-16-<hash>.webp webp 16x40
+file /_web/images/rot5-16-<hash>.jpeg jpeg 16x40
+file /_web/images/rot5-16-<hash>.png png 16x40
+file /_web/images/rot5-20-<hash>.webp webp 20x50
+file /_web/images/rot5-20-<hash>.jpeg jpeg 20x50
+file /_web/images/rot5-20-<hash>.png png 20x50
+file /_web/images/anim-16-<hash>.webp webp 16x11
+file /_web/images/anim-16-<hash>.jpeg jpeg 16x11
+file /_web/images/anim-16-<hash>.png png 16x11
+file /_web/images/anim-30-<hash>.webp webp 30x20
+file /_web/images/anim-30-<hash>.jpeg jpeg 30x20
+file /_web/images/anim-30-<hash>.png png 30x20
+file /_web/images/deep-16-<hash>.webp webp 16x12
+file /_web/images/deep-16-<hash>.jpeg jpeg 16x12
+file /_web/images/deep-16-<hash>.png png 16x12
+file /_web/images/deep-40-<hash>.webp webp 40x30
+file /_web/images/deep-40-<hash>.jpeg jpeg 40x30
+file /_web/images/deep-40-<hash>.png png 40x30
+file /_web/images/deep-56-<hash>.webp webp 56x42
+file /_web/images/deep-56-<hash>.jpeg jpeg 56x42
+file /_web/images/deep-56-<hash>.png png 56x42
+file /_web/images/deep-64-<hash>.webp webp 64x48
+file /_web/images/deep-64-<hash>.jpeg jpeg 64x48
+file /_web/images/deep-64-<hash>.png png 64x48
+file /_web/images/two.dots-16-<hash>.webp webp 16x16
+file /_web/images/two.dots-16-<hash>.jpeg jpeg 16x16
+file /_web/images/two.dots-16-<hash>.png png 16x16
+file /_web/images/two.dots-20-<hash>.webp webp 20x20
+file /_web/images/two.dots-20-<hash>.jpeg jpeg 20x20
+file /_web/images/two.dots-20-<hash>.png png 20x20
+binding image:photo.png:16:webp /_web/images/photo-16-<hash>.webp
+binding image:photo.png:16:jpeg /_web/images/photo-16-<hash>.jpeg
+binding image:photo.png:16:png /_web/images/photo-16-<hash>.png
+binding image:photo.png:40:webp /_web/images/photo-40-<hash>.webp
+binding image:photo.png:40:jpeg /_web/images/photo-40-<hash>.jpeg
+binding image:photo.png:40:png /_web/images/photo-40-<hash>.png
+binding image:photo.png:56:webp /_web/images/photo-56-<hash>.webp
+binding image:photo.png:56:jpeg /_web/images/photo-56-<hash>.jpeg
+binding image:photo.png:56:png /_web/images/photo-56-<hash>.png
+binding image:photo.png:1000:webp /_web/images/photo-100-<hash>.webp
+binding image:photo.png:1000:jpeg /_web/images/photo-100-<hash>.jpeg
+binding image:photo.png:1000:png /_web/images/photo-100-<hash>.png
+binding image:photo.png:100:webp /_web/images/photo-100-<hash>.webp
+binding image:photo.png:100:jpeg /_web/images/photo-100-<hash>.jpeg
+binding image:photo.png:100:png /_web/images/photo-100-<hash>.png
+binding image:halves.png:16:webp /_web/images/halves-16-<hash>.webp
+binding image:halves.png:16:jpeg /_web/images/halves-16-<hash>.jpeg
+binding image:halves.png:16:png /_web/images/halves-16-<hash>.png
+binding image:halves.png:40:webp /_web/images/halves-40-<hash>.webp
+binding image:halves.png:40:jpeg /_web/images/halves-40-<hash>.jpeg
+binding image:halves.png:40:png /_web/images/halves-40-<hash>.png
+binding image:halves.png:56:webp /_web/images/halves-56-<hash>.webp
+binding image:halves.png:56:jpeg /_web/images/halves-56-<hash>.jpeg
+binding image:halves.png:56:png /_web/images/halves-56-<hash>.png
+binding image:halves.png:1000:webp /_web/images/halves-80-<hash>.webp
+binding image:halves.png:1000:jpeg /_web/images/halves-80-<hash>.jpeg
+binding image:halves.png:1000:png /_web/images/halves-80-<hash>.png
+binding image:halves.png:80:webp /_web/images/halves-80-<hash>.webp
+binding image:halves.png:80:jpeg /_web/images/halves-80-<hash>.jpeg
+binding image:halves.png:80:png /_web/images/halves-80-<hash>.png
+binding image:tall.png:16:webp /_web/images/tall-16-<hash>.webp
+binding image:tall.png:16:jpeg /_web/images/tall-16-<hash>.jpeg
+binding image:tall.png:16:png /_web/images/tall-16-<hash>.png
+binding image:tall.png:40:webp /_web/images/tall-31-<hash>.webp
+binding image:tall.png:40:jpeg /_web/images/tall-31-<hash>.jpeg
+binding image:tall.png:40:png /_web/images/tall-31-<hash>.png
+binding image:tall.png:56:webp /_web/images/tall-31-<hash>.webp
+binding image:tall.png:56:jpeg /_web/images/tall-31-<hash>.jpeg
+binding image:tall.png:56:png /_web/images/tall-31-<hash>.png
+binding image:tall.png:1000:webp /_web/images/tall-31-<hash>.webp
+binding image:tall.png:1000:jpeg /_web/images/tall-31-<hash>.jpeg
+binding image:tall.png:1000:png /_web/images/tall-31-<hash>.png
+binding image:tall.png:31:webp /_web/images/tall-31-<hash>.webp
+binding image:tall.png:31:jpeg /_web/images/tall-31-<hash>.jpeg
+binding image:tall.png:31:png /_web/images/tall-31-<hash>.png
+binding image:wide.png:16:webp /_web/images/wide-16-<hash>.webp
+binding image:wide.png:16:jpeg /_web/images/wide-16-<hash>.jpeg
+binding image:wide.png:16:png /_web/images/wide-16-<hash>.png
+binding image:wide.png:40:webp /_web/images/wide-40-<hash>.webp
+binding image:wide.png:40:jpeg /_web/images/wide-40-<hash>.jpeg
+binding image:wide.png:40:png /_web/images/wide-40-<hash>.png
+binding image:wide.png:56:webp /_web/images/wide-56-<hash>.webp
+binding image:wide.png:56:jpeg /_web/images/wide-56-<hash>.jpeg
+binding image:wide.png:56:png /_web/images/wide-56-<hash>.png
+binding image:wide.png:1000:webp /_web/images/wide-400-<hash>.webp
+binding image:wide.png:1000:jpeg /_web/images/wide-400-<hash>.jpeg
+binding image:wide.png:1000:png /_web/images/wide-400-<hash>.png
+binding image:wide.png:400:webp /_web/images/wide-400-<hash>.webp
+binding image:wide.png:400:jpeg /_web/images/wide-400-<hash>.jpeg
+binding image:wide.png:400:png /_web/images/wide-400-<hash>.png
+binding image:palette.png:16:webp /_web/images/palette-16-<hash>.webp
+binding image:palette.png:16:jpeg /_web/images/palette-16-<hash>.jpeg
+binding image:palette.png:16:png /_web/images/palette-16-<hash>.png
+binding image:palette.png:40:webp /_web/images/palette-40-<hash>.webp
+binding image:palette.png:40:jpeg /_web/images/palette-40-<hash>.jpeg
+binding image:palette.png:40:png /_web/images/palette-40-<hash>.png
+binding image:palette.png:56:webp /_web/images/palette-50-<hash>.webp
+binding image:palette.png:56:jpeg /_web/images/palette-50-<hash>.jpeg
+binding image:palette.png:56:png /_web/images/palette-50-<hash>.png
+binding image:palette.png:1000:webp /_web/images/palette-50-<hash>.webp
+binding image:palette.png:1000:jpeg /_web/images/palette-50-<hash>.jpeg
+binding image:palette.png:1000:png /_web/images/palette-50-<hash>.png
+binding image:palette.png:50:webp /_web/images/palette-50-<hash>.webp
+binding image:palette.png:50:jpeg /_web/images/palette-50-<hash>.jpeg
+binding image:palette.png:50:png /_web/images/palette-50-<hash>.png
+binding image:rot6.jpg:16:webp /_web/images/rot6-16-<hash>.webp
+binding image:rot6.jpg:16:jpeg /_web/images/rot6-16-<hash>.jpeg
+binding image:rot6.jpg:16:png /_web/images/rot6-16-<hash>.png
+binding image:rot6.jpg:40:webp /_web/images/rot6-40-<hash>.webp
+binding image:rot6.jpg:40:jpeg /_web/images/rot6-40-<hash>.jpeg
+binding image:rot6.jpg:40:png /_web/images/rot6-40-<hash>.png
+binding image:rot6.jpg:56:webp /_web/images/rot6-40-<hash>.webp
+binding image:rot6.jpg:56:jpeg /_web/images/rot6-40-<hash>.jpeg
+binding image:rot6.jpg:56:png /_web/images/rot6-40-<hash>.png
+binding image:rot6.jpg:1000:webp /_web/images/rot6-40-<hash>.webp
+binding image:rot6.jpg:1000:jpeg /_web/images/rot6-40-<hash>.jpeg
+binding image:rot6.jpg:1000:png /_web/images/rot6-40-<hash>.png
+binding image:rot3.jpg:16:webp /_web/images/rot3-16-<hash>.webp
+binding image:rot3.jpg:16:jpeg /_web/images/rot3-16-<hash>.jpeg
+binding image:rot3.jpg:16:png /_web/images/rot3-16-<hash>.png
+binding image:rot3.jpg:40:webp /_web/images/rot3-40-<hash>.webp
+binding image:rot3.jpg:40:jpeg /_web/images/rot3-40-<hash>.jpeg
+binding image:rot3.jpg:40:png /_web/images/rot3-40-<hash>.png
+binding image:rot3.jpg:56:webp /_web/images/rot3-56-<hash>.webp
+binding image:rot3.jpg:56:jpeg /_web/images/rot3-56-<hash>.jpeg
+binding image:rot3.jpg:56:png /_web/images/rot3-56-<hash>.png
+binding image:rot3.jpg:1000:webp /_web/images/rot3-120-<hash>.webp
+binding image:rot3.jpg:1000:jpeg /_web/images/rot3-120-<hash>.jpeg
+binding image:rot3.jpg:1000:png /_web/images/rot3-120-<hash>.png
+binding image:rot3.jpg:120:webp /_web/images/rot3-120-<hash>.webp
+binding image:rot3.jpg:120:jpeg /_web/images/rot3-120-<hash>.jpeg
+binding image:rot3.jpg:120:png /_web/images/rot3-120-<hash>.png
+binding image:rot8.png:16:webp /_web/images/rot8-16-<hash>.webp
+binding image:rot8.png:16:jpeg /_web/images/rot8-16-<hash>.jpeg
+binding image:rot8.png:16:png /_web/images/rot8-16-<hash>.png
+binding image:rot8.png:40:webp /_web/images/rot8-30-<hash>.webp
+binding image:rot8.png:40:jpeg /_web/images/rot8-30-<hash>.jpeg
+binding image:rot8.png:40:png /_web/images/rot8-30-<hash>.png
+binding image:rot8.png:56:webp /_web/images/rot8-30-<hash>.webp
+binding image:rot8.png:56:jpeg /_web/images/rot8-30-<hash>.jpeg
+binding image:rot8.png:56:png /_web/images/rot8-30-<hash>.png
+binding image:rot8.png:1000:webp /_web/images/rot8-30-<hash>.webp
+binding image:rot8.png:1000:jpeg /_web/images/rot8-30-<hash>.jpeg
+binding image:rot8.png:1000:png /_web/images/rot8-30-<hash>.png
+binding image:rot8.png:30:webp /_web/images/rot8-30-<hash>.webp
+binding image:rot8.png:30:jpeg /_web/images/rot8-30-<hash>.jpeg
+binding image:rot8.png:30:png /_web/images/rot8-30-<hash>.png
+binding image:rot5.webp:16:webp /_web/images/rot5-16-<hash>.webp
+binding image:rot5.webp:16:jpeg /_web/images/rot5-16-<hash>.jpeg
+binding image:rot5.webp:16:png /_web/images/rot5-16-<hash>.png
+binding image:rot5.webp:40:webp /_web/images/rot5-20-<hash>.webp
+binding image:rot5.webp:40:jpeg /_web/images/rot5-20-<hash>.jpeg
+binding image:rot5.webp:40:png /_web/images/rot5-20-<hash>.png
+binding image:rot5.webp:56:webp /_web/images/rot5-20-<hash>.webp
+binding image:rot5.webp:56:jpeg /_web/images/rot5-20-<hash>.jpeg
+binding image:rot5.webp:56:png /_web/images/rot5-20-<hash>.png
+binding image:rot5.webp:1000:webp /_web/images/rot5-20-<hash>.webp
+binding image:rot5.webp:1000:jpeg /_web/images/rot5-20-<hash>.jpeg
+binding image:rot5.webp:1000:png /_web/images/rot5-20-<hash>.png
+binding image:rot5.webp:20:webp /_web/images/rot5-20-<hash>.webp
+binding image:rot5.webp:20:jpeg /_web/images/rot5-20-<hash>.jpeg
+binding image:rot5.webp:20:png /_web/images/rot5-20-<hash>.png
+binding image:anim.gif:16:webp /_web/images/anim-16-<hash>.webp
+binding image:anim.gif:16:jpeg /_web/images/anim-16-<hash>.jpeg
+binding image:anim.gif:16:png /_web/images/anim-16-<hash>.png
+binding image:anim.gif:40:webp /_web/images/anim-30-<hash>.webp
+binding image:anim.gif:40:jpeg /_web/images/anim-30-<hash>.jpeg
+binding image:anim.gif:40:png /_web/images/anim-30-<hash>.png
+binding image:anim.gif:56:webp /_web/images/anim-30-<hash>.webp
+binding image:anim.gif:56:jpeg /_web/images/anim-30-<hash>.jpeg
+binding image:anim.gif:56:png /_web/images/anim-30-<hash>.png
+binding image:anim.gif:1000:webp /_web/images/anim-30-<hash>.webp
+binding image:anim.gif:1000:jpeg /_web/images/anim-30-<hash>.jpeg
+binding image:anim.gif:1000:png /_web/images/anim-30-<hash>.png
+binding image:anim.gif:30:webp /_web/images/anim-30-<hash>.webp
+binding image:anim.gif:30:jpeg /_web/images/anim-30-<hash>.jpeg
+binding image:anim.gif:30:png /_web/images/anim-30-<hash>.png
+binding image:sub/deep.png:16:webp /_web/images/deep-16-<hash>.webp
+binding image:sub/deep.png:16:jpeg /_web/images/deep-16-<hash>.jpeg
+binding image:sub/deep.png:16:png /_web/images/deep-16-<hash>.png
+binding image:sub/deep.png:40:webp /_web/images/deep-40-<hash>.webp
+binding image:sub/deep.png:40:jpeg /_web/images/deep-40-<hash>.jpeg
+binding image:sub/deep.png:40:png /_web/images/deep-40-<hash>.png
+binding image:sub/deep.png:56:webp /_web/images/deep-56-<hash>.webp
+binding image:sub/deep.png:56:jpeg /_web/images/deep-56-<hash>.jpeg
+binding image:sub/deep.png:56:png /_web/images/deep-56-<hash>.png
+binding image:sub/deep.png:1000:webp /_web/images/deep-64-<hash>.webp
+binding image:sub/deep.png:1000:jpeg /_web/images/deep-64-<hash>.jpeg
+binding image:sub/deep.png:1000:png /_web/images/deep-64-<hash>.png
+binding image:sub/deep.png:64:webp /_web/images/deep-64-<hash>.webp
+binding image:sub/deep.png:64:jpeg /_web/images/deep-64-<hash>.jpeg
+binding image:sub/deep.png:64:png /_web/images/deep-64-<hash>.png
+binding image:two.dots.png:16:webp /_web/images/two.dots-16-<hash>.webp
+binding image:two.dots.png:16:jpeg /_web/images/two.dots-16-<hash>.jpeg
+binding image:two.dots.png:16:png /_web/images/two.dots-16-<hash>.png
+binding image:two.dots.png:40:webp /_web/images/two.dots-20-<hash>.webp
+binding image:two.dots.png:40:jpeg /_web/images/two.dots-20-<hash>.jpeg
+binding image:two.dots.png:40:png /_web/images/two.dots-20-<hash>.png
+binding image:two.dots.png:56:webp /_web/images/two.dots-20-<hash>.webp
+binding image:two.dots.png:56:jpeg /_web/images/two.dots-20-<hash>.jpeg
+binding image:two.dots.png:56:png /_web/images/two.dots-20-<hash>.png
+binding image:two.dots.png:1000:webp /_web/images/two.dots-20-<hash>.webp
+binding image:two.dots.png:1000:jpeg /_web/images/two.dots-20-<hash>.jpeg
+binding image:two.dots.png:1000:png /_web/images/two.dots-20-<hash>.png
+binding image:two.dots.png:20:webp /_web/images/two.dots-20-<hash>.webp
+binding image:two.dots.png:20:jpeg /_web/images/two.dots-20-<hash>.jpeg
+binding image:two.dots.png:20:png /_web/images/two.dots-20-<hash>.png
+second run: same
+=== images defaults
+file /_web/images/photo-100-<hash>.webp webp 100x50
+binding image:photo.png:320:webp /_web/images/photo-100-<hash>.webp
+binding image:photo.png:640:webp /_web/images/photo-100-<hash>.webp
+binding image:photo.png:1280:webp /_web/images/photo-100-<hash>.webp
+binding image:photo.png:100:webp /_web/images/photo-100-<hash>.webp
+second run: same
+=== images large width
+file /_web/images/halves-1-<hash>.png png 1x1
+file /_web/images/halves-80-<hash>.png png 80x25
+binding image:halves.png:8192:png /_web/images/halves-80-<hash>.png
+binding image:halves.png:1:png /_web/images/halves-1-<hash>.png
+binding image:halves.png:80:png /_web/images/halves-80-<hash>.png
+second run: same
+=== images huge
+error: Image exceeds 40 megapixels
+=== images traversal
+error: Image source must be a public file: ../../secret.png
+=== images outside
+error: Image source must be a public file: ../web.toml
+=== images absolute
+error: Image source must be a public file: /etc/hostname
+=== images directory
+error: Image source must be a public file: 
+=== images subdirectory
+error: Image source must be a public file: sub
+=== images missing
+error: Image source must be a public file: missing.png
+=== images second fails
+error: Image source must be a public file: missing.png
+=== images width zero
+error: Image widths must be integers in 1..8192
+=== images width too large
+error: Image widths must be integers in 1..8192
+=== images widths empty
+error: Image widths must be integers in 1..8192
+=== images width float
+error: Image widths must be integers in 1..8192
+=== images width boolean
+error: Image widths must be integers in 1..8192
+=== images widths text
+error: Image widths must be integers in 1..8192
+=== images format gif
+error: Supported image formats: webp, jpeg, png, avif
+=== images formats empty
+error: Supported image formats: webp, jpeg, png, avif
+=== images formats text
+error: Supported image formats: webp, jpeg, png, avif
+=== images format upper
+error: Supported image formats: webp, jpeg, png, avif
+=== images string files
+error: Image source must be a public file: a
+=== images table files
+error: Image source must be a public file: x

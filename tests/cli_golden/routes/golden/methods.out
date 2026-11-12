@@ -1,0 +1,111 @@
+=== examples/dashboard/app/actions/tasks/route.toml
+methods: POST
+=== examples/dashboard/app/api/tasks/[id]/route.toml
+methods: PATCH, DELETE
+=== examples/dashboard/app/api/tasks/route.toml
+methods: POST
+=== examples/dashboard/app/login/route.toml
+methods: GET, POST, HEAD
+=== examples/dashboard/app/logout/route.toml
+methods: POST
+=== examples/dashboard/app/oauth/callback/route.toml
+methods: GET, HEAD
+=== examples/dashboard/app/oauth/route.toml
+methods: GET, HEAD
+=== examples/features/app/actions/typed/route.toml
+methods: POST
+typed methods: POST
+=== examples/features/app/api/[id]/route.toml
+methods: POST, PATCH, DELETE, OPTIONS
+=== examples/features/app/async/route.toml
+methods: GET, HEAD
+=== examples/features/app/async-api/route.toml
+methods: GET, HEAD
+=== examples/features/app/async-stats/route.toml
+methods: GET, HEAD
+=== examples/features/app/invalidate/route.toml
+methods: POST
+=== examples/features/app/stream/route.toml
+methods: GET, HEAD
+=== examples/saas/app/api/events/route.toml
+methods: GET, HEAD
+=== examples/saas/app/api/export-customers/route.toml
+methods: GET, HEAD
+=== examples/saas/app/api/metrics/route.toml
+methods: GET, HEAD
+=== examples/studio/app/api/status/route.toml
+methods: GET, HEAD
+=== tests/realtime_fixture/app/feed/[slug]/route.toml
+methods: GET, HEAD
+=== tests/realtime_fixture/app/feed/route.toml
+methods: GET, HEAD
+=== tests/realtime_fixture/app/feed/snapshot/route.toml
+methods: GET, HEAD
+=== tests/realtime_fixture/app/publish/route.toml
+methods: POST
+=== tests/realtime_fixture/app/publish-other/route.toml
+methods: POST
+=== tests/realtime_fixture/app/stats/route.toml
+methods: GET, HEAD
+=== tests/realtime_fixture/app/wait/route.toml
+methods: GET, HEAD
+=== tests/realtime_limits_fixture/app/feed/route.toml
+methods: GET, HEAD
+=== tests/realtime_limits_fixture/app/publish/route.toml
+methods: POST
+=== tests/realtime_limits_fixture/app/stats/route.toml
+methods: GET, HEAD
+=== ts:core-audit_features/app/api/own-policy/route.toml
+methods: GET, HEAD
+=== ts:core-audit_features/app/feed.xml/route.toml
+methods: GET, HEAD
+=== ts:core-audit_features/app/api/data/route.toml
+methods: GET, POST, HEAD
+=== ts:tools-browser_fixture/app/actions/test/route.toml
+methods: POST
+typed methods: POST
+=== no methods
+methods: GET, HEAD
+=== GET
+methods: GET, HEAD
+=== POST
+methods: POST
+=== GET HEAD
+methods: GET, HEAD
+=== HEAD GET
+methods: HEAD, GET
+=== HEAD
+methods: HEAD
+=== all
+methods: OPTIONS, DELETE, PATCH, PUT, POST, GET, HEAD
+=== all with HEAD
+methods: GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD
+=== empty
+methods: error: empty: methods must be a nonempty list of distinct HTTP methods
+=== text
+methods: error: text: methods must be a nonempty list of distinct HTTP methods
+=== duplicate
+methods: error: duplicate: methods must be a nonempty list of distinct HTTP methods
+=== lowercase
+methods: error: lowercase: methods must be a nonempty list of distinct HTTP methods
+=== CONNECT
+methods: error: CONNECT: methods must be a nonempty list of distinct HTTP methods
+=== integer
+methods: error: integer: methods must be a nonempty list of distinct HTTP methods
+=== boolean
+methods: error: boolean: methods must be a nonempty list of distinct HTTP methods
+=== number
+methods: error: number: methods must be a nonempty list of distinct HTTP methods
+=== table
+methods: error: table: methods must be a nonempty list of distinct HTTP methods
+=== unknown then integer
+methods: error: unknown then integer: methods must be a nonempty list of distinct HTTP methods
+=== typed default
+methods: GET, HEAD
+typed methods: POST
+=== typed with GET
+methods: GET, HEAD
+typed methods: GET, HEAD
+=== typed empty methods
+methods: error: typed empty methods: methods must be a nonempty list of distinct HTTP methods
+typed methods: error: typed empty methods: methods must be a nonempty list of distinct HTTP methods

@@ -1,0 +1,18 @@
+; Runs the effectful cases of tests/cli_assets_test.neo (scratch apps under
+; build/, libvips), which `neo test --unit-only` cannot call inside its
+; `check`s, and prints "ok NAME" or "FAIL NAME" for each.
+import "std:io"
+import "../../cli_assets_test.neo"
+
+fn outcome(borrow name:Arr u8 _, passed:bool) -> Arr u8 _ = concat(if passed then "ok " else "FAIL ",name,"\n")
+effect fn main() -> unit
+  = let tools=fs_test_missing_image_tools_are_named() in
+    let public=fs_test_public_sitemap_and_robots_take_precedence() in
+    let origin=fs_test_sitemap_robots_and_origin_rules() in
+    let images=fs_test_metadata_images_are_hashed_resized_and_traversal_is_rejected() in
+    let cached=fs_test_image_variants_are_cached_by_content() in
+    let written=print_out(concat(outcome("missing image tools are named",tools),
+      outcome("public sitemap and robots take precedence",public),
+      outcome("sitemap, robots and origin rules",origin),
+      outcome("images are hashed, resized and traversal is rejected",images),
+      outcome("image variants are cached by content",cached))) in noop()

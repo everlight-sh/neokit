@@ -1,0 +1,505 @@
+; Build-time metadata, generated public files and precompressed assets,
+; ported from compiler/assets.py. Each public meta_ function mirrors the
+; Python function of the same name (metadata, metadata_props,
+; dynamic_metadata, image_variants, generated_assets, compressible,
+; compressed, brotli_compressed); a Python BuildError is Err(message) with
+; the same text.
+;
+; Two parts differ by design (cli/PORTING.md):
+; - compressed() uses std:deflate's gzip_encode, so the bytes differ from
+;   zlib's; the rule is the same (at least 512 bytes in, and kept only when
+;   smaller than the input). brotli_compressed() is always "no variant", as
+;   in Python without the optional brotli module.
+; - Responsive images use libvips's command-line tools (vips and vipsheader
+;   on PATH) instead of Pillow: the same widths, heights, formats, cache keys
+;   and URL scheme, other encoder bytes. The cache key's last field is the
+;   encoder version, `vips --version` instead of Pillow's version.
+;
+; Python crashes (TypeError, AttributeError) on a few malformed configs;
+; those are errors here: [site] or [metadata] that is not a table, a [site]
+; url that is not text, image files that are not a list of text. A float in
+; og_title/og_description/og_image is refused (Python prints its repr).
+import "std:json"
+import "std:option"
+import "std:result"
+import "std:io"
+import "std:fs"
+import "std:process"
+import "std:sha256"
+import "std:deflate"
+import "text.neo"
+import "toml.neo"
+
+; One entry of a Python dict with str keys: a generated file (URL to bytes)
+; or an asset binding (name to URL).
+type MetaPair = { key:Arr u8 _, value:Arr u8 _ }
+; dynamic_metadata's (parts, jsonld).
+type MetaDynamic = { parts:Arr Arr u8 _ _, jsonld:bool }
+; generated_assets's (files, bindings), each in insertion order.
+type MetaAssets = { files:Arr MetaPair _, bindings:Arr MetaPair _ }
+; The image tools: absolute paths of vips and vipsheader, and the
+; `vips --version` text that replaces Pillow's version in cache keys.
+type MetaTools = { vips:Arr u8 _, header:Arr u8 _, version:Arr u8 _ }
+; An image file's stored size and EXIF orientation (1 when absent).
+type MetaHeader = { width:i64, height:i64, orientation:i64 }
+type MetaVariant = { width:i64, format:Arr u8 _, data:Arr u8 _ }
+; image_variants's (original, variants): the displayed width and the
+; encoded variants keyed by (actual width, format) in insertion order.
+type MetaImage = { original:i64, variants:Arr MetaVariant _ }
+
+fn meta_no_pairs() -> Arr MetaPair _ = arr(i in 0..0) MetaPair { key=text_empty(), value=text_empty() }
+private fn meta_no_variants() -> Arr MetaVariant _ = arr(i in 0..0) MetaVariant { width=0, format=text_empty(), data=text_empty() }
+private fn meta_ok(borrow text:Arr u8 _) -> Result<Arr u8 _,Arr u8 _> = Ok::<Arr u8 _,Arr u8 _>(text)
+private fn meta_err(borrow text:Arr u8 _) -> Result<Arr u8 _,Arr u8 _> = Err::<Arr u8 _,Arr u8 _>(text)
+
+; ---- text helpers ----
+
+; html.escape(text, quote=True).
+private fn meta_escape(borrow text:Arr u8 _) -> Arr u8 _
+  = loop (o=text_empty(), i=0) while i<len(text)
+      next (let b=text_byte(text,i) in
+            if b==38 then concat(o,"&amp;") else if b==60 then concat(o,"&lt;") else if b==62 then concat(o,"&gt;")
+            else if b==34 then concat(o,"&quot;") else if b==39 then concat(o,"&#x27;") else push(o,u8(b)), i+1) yield o
+; templates.literal: a Neo string literal holding text's UTF-8 bytes.
+private fn meta_literal(borrow text:Arr u8 _) -> Arr u8 _
+  = let body=loop (o=push(text_empty(),u8(34)), i=0) while i<len(text)
+      next (let b=text_byte(text,i) in
+            if b==10 then concat(o,"\\n") else if b==13 then concat(o,"\\r") else if b==9 then concat(o,"\\t")
+            else if b==34 then concat(o,"\\\"") else if b==92 then concat(o,"\\\\")
+            else if b>=32 && b<127 then push(o,u8(b)) else concat(o,"\\x",text_hex(b,2)), i+1) yield o in
+    push(body,u8(34))
+; hashlib's hexdigest() of raw digest bytes.
+fn meta_hex(borrow digest:Arr u8 _) -> Arr u8 _
+  = loop (o=text_empty(), i=0) while i<len(digest) next (concat(o,text_hex(text_byte(digest,i),2)), i+1) yield o
+; hashlib.sha256(data).hexdigest().
+fn meta_sha256_hex(borrow data:Arr u8 _) -> Arr u8 _ = meta_hex(sha256(data))
+
+; Python repr() of a TOML value, or None for a float (not implemented).
+private fn meta_repr(borrow value:Json) -> Option<Arr u8 _>
+  = if toml_is_text(value) then Some::<Arr u8 _>(text_repr(toml_text(value)))
+    else if toml_is_int(value) then Some::<Arr u8 _>(text_int(toml_int(value)))
+    else if toml_is_bool(value) then Some::<Arr u8 _>(if toml_bool(value) then "True" else "False")
+    else if toml_is_array(value) then meta_repr_items(toml_items(value))
+    else if toml_is_table(value) then meta_repr_members(value)
+    else None::<Arr u8 _>()
+type MetaJoin = { out:Arr u8 _, ok:bool }
+private fn meta_join_step(move s:MetaJoin, piece:Option<Arr u8 _>, first:bool) -> MetaJoin
+  = match piece { None => MetaJoin { out=s.out, ok=false }, Some(text) => MetaJoin { out=if first then concat(s.out,text) else concat(s.out,", ",text), ok=s.ok } }
+private fn meta_repr_items(borrow items:Arr Json _) -> Option<Arr u8 _>
+  = let s=loop (s=MetaJoin { out="[", ok=true }, i:i64{i>=0}=0) while s.ok && i<len(items)
+      next (meta_join_step(s,meta_repr(items[i]),i==0), i+1) yield s in
+    if s.ok then Some::<Arr u8 _>(concat(s.out,"]")) else None::<Arr u8 _>()
+private fn meta_repr_member(borrow table:Json, i:i64) -> Option<Arr u8 _>
+  = match meta_repr(toml_value_at(table,i)) { None => None::<Arr u8 _>(), Some(text) => Some::<Arr u8 _>(concat(text_repr(toml_key_at(table,i)),": ",text)) }
+private fn meta_repr_members(borrow table:Json) -> Option<Arr u8 _>
+  = let s=loop (s=MetaJoin { out="{", ok=true }, i=0) while s.ok && i<toml_size(table)
+      next (meta_join_step(s,meta_repr_member(table,i),i==0), i+1) yield s in
+    if s.ok then Some::<Arr u8 _>(concat(s.out,"}")) else None::<Arr u8 _>()
+; Python str() of a TOML value: a str as is, otherwise its repr.
+private fn meta_str(borrow value:Json) -> Option<Arr u8 _>
+  = if toml_is_text(value) then Some::<Arr u8 _>(toml_text(value)) else meta_repr(value)
+
+; d[key]=value on a dict kept as pairs.
+private fn meta_put(move pairs:Arr MetaPair _, borrow key:Arr u8 _, borrow value:Arr u8 _) -> Arr MetaPair _
+  = let at=loop (i:i64{i>=0}=0, found= -1) while found<0 && i<len(pairs) next (i+1, if text_equal(pairs[i].key,key) then i else -1) yield found in
+    if at>=0 && at<len(pairs) then set(pairs,at,MetaPair { key=key, value=value }) else push(pairs,MetaPair { key=key, value=value })
+private fn meta_has(borrow pairs:Arr MetaPair _, borrow key:Arr u8 _) -> bool
+  = loop (i:i64{i>=0}=0, found=false) while !found && i<len(pairs) next (i+1, text_equal(pairs[i].key,key)) yield found
+; d.setdefault(key, value).
+private fn meta_setdefault(move pairs:Arr MetaPair _, borrow key:Arr u8 _, borrow value:Arr u8 _) -> Arr MetaPair _
+  = if meta_has(pairs,key) then pairs else push(pairs,MetaPair { key=key, value=value })
+
+; ---- metadata ----
+
+; config.get('site', {}); Python fails on a [site] that is not a table.
+private fn meta_site(borrow config:Json) -> Result<Json,Arr u8 _>
+  = let site=toml_get_table(config,"site") in
+    if site.ok then Ok::<Json,Arr u8 _>(site.value) else Err::<Json,Arr u8 _>("[site] must be a table")
+; page.get('metadata', {}); Python fails on [metadata] that is not a table.
+private fn meta_page(borrow page:Json) -> Result<Json,Arr u8 _>
+  = let meta=toml_get_table(page,"metadata") in
+    if meta.ok then Ok::<Json,Arr u8 _>(meta.value) else Err::<Json,Arr u8 _>("[metadata] must be a table")
+; values[name] for values={**site, **page metadata without 'props'}.
+private fn meta_value(borrow site:Json, borrow meta:Json, borrow name:Arr u8 _) -> Option<Json>
+  = let own=if text_equal(name,"props") then None::<Json>() else toml_get(meta,name) in
+    match own { Some(value) => Some::<Json>(value), None => toml_get(site,name) }
+private fn meta_named(borrow site:Json, borrow meta:Json, borrow skip:Arr Arr u8 _ _, borrow name:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = if text_member(skip,name) then meta_ok("") else
+    match meta_value(site,meta,name) {
+      None => meta_ok(""),
+      Some(value) => if !toml_is_text(value) then meta_err(concat("Metadata ",name," must be text"))
+        else meta_ok(concat("<meta name=\"",name,"\" content=\"",meta_escape(toml_text(value)),"\">"))
+    }
+private fn meta_og(borrow site:Json, borrow meta:Json, borrow skip:Arr Arr u8 _ _, borrow name:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = let key=concat("og_",name) in
+    if text_member(skip,key) then meta_ok("") else
+    match meta_value(site,meta,key) {
+      None => meta_ok(""),
+      Some(value) => match meta_str(value) {
+        None => meta_err(concat("Metadata ",key," cannot be a float")),
+        Some(text) => meta_ok(concat("<meta property=\"og:",name,"\" content=\"",meta_escape(text),"\">"))
+      }
+    }
+private fn meta_canonical(borrow site:Json, borrow meta:Json, borrow skip:Arr Arr u8 _ _) -> Result<Arr u8 _,Arr u8 _>
+  = match meta_value(site,meta,"canonical") {
+      None => meta_ok(""),
+      Some(value) => if !toml_truthy(value) || text_member(skip,"canonical") then meta_ok("")
+        else if !toml_is_text(value) || !(text_starts(toml_text(value),"https://") || text_starts(toml_text(value),"http://"))
+        then meta_err("Canonical metadata requires an HTTP URL")
+        else meta_ok(concat("<link rel=\"canonical\" href=\"",meta_escape(toml_text(value)),"\">"))
+    }
+; metadata(config, page, skip): the static <head> tags of a page from [site]
+; in web.toml and [metadata] in its page.toml, leaving out the skip fields
+; (the ones [metadata.props] supplies per request).
+fn meta_metadata(borrow config:Json, borrow page:Json, borrow skip:Arr Arr u8 _ _) -> Result<Arr u8 _,Arr u8 _>
+  = let site=meta_site(config)? in let meta=meta_page(page)? in
+    let description=meta_named(site,meta,skip,"description")? in
+    let robots=meta_named(site,meta,skip,"robots")? in
+    let title=meta_og(site,meta,skip,"title")? in
+    let summary=meta_og(site,meta,skip,"description")? in
+    let image=meta_og(site,meta,skip,"image")? in
+    let canonical=meta_canonical(site,meta,skip)? in
+    meta_ok(concat(description,robots,title,summary,image,canonical))
+
+; metadata_props(page): the [metadata.props] table (field to prop name).
+fn meta_metadata_props(borrow page:Json) -> Result<Json,Arr u8 _>
+  = let meta=meta_page(page)? in
+    let props=toml_get_table(meta,"props") in
+    if props.ok then Ok::<Json,Arr u8 _>(props.value)
+    else Err::<Json,Arr u8 _>("[metadata.props] must be a table of metadata field = prop name")
+
+; config.get('site',{}).get('url','').rstrip('/').
+fn meta_origin(borrow config:Json) -> Result<Arr u8 _,Arr u8 _>
+  = let site=meta_site(config)? in
+    let url=toml_get_text(site,"url","") in
+    if url.ok then meta_ok(text_rstrip_chars(url.value,"/")) else meta_err("[site] url must be an HTTP origin")
+
+; DYNAMIC_METADATA[key]: the prop kind a dynamic field needs, or "".
+fn meta_dynamic_kind(borrow key:Arr u8 _) -> Arr u8 _
+  = if text_equal(key,"og_image") || text_equal(key,"canonical") then "url"
+    else if text_equal(key,"description") || text_equal(key,"robots") || text_equal(key,"og_title")
+      || text_equal(key,"og_description") || text_equal(key,"jsonld") then "text" else ""
+private fn meta_prop_kind(borrow names:Arr Arr u8 _ _, borrow kinds:Arr Arr u8 _ _, borrow name:Arr u8 _) -> Arr u8 _
+  = let at=loop (i:i64{i>=0}=0, found= -1) while found<0 && i<len(names) next (i+1, if text_equal(names[i],name) then i else -1) yield found in
+    if at<0 then text_empty() else text_word(kinds,at)
+type MetaDynamicState = { parts:Arr Arr u8 _ _, jsonld:bool, err:Arr u8 _ }
+private fn meta_dynamic_step(move s:MetaDynamicState, borrow key:Arr u8 _, borrow prop:Json, borrow origin:Arr u8 _,
+                             borrow names:Arr Arr u8 _ _, borrow kinds:Arr Arr u8 _ _) -> MetaDynamicState
+  = let kind=meta_dynamic_kind(key) in
+    if len(kind)==0 then s with { err="[metadata.props] supports description, robots, og_title, og_description, og_image, canonical, jsonld" }
+    else if !toml_is_text(prop) || !text_equal(meta_prop_kind(names,kinds,toml_text(prop)),kind)
+    then s with { err=concat("[metadata.props] ",key," must name a ",kind," prop of the page template") } else
+    let value=concat("props.",toml_text(prop)) in
+    if text_equal(key,"description") || text_equal(key,"robots") then
+      s with { parts=push(push(push(s.parts,meta_literal(concat("<meta name=\"",key,"\" content=\""))),concat("html_escape(",value,")")),meta_literal("\">")) }
+    else if text_equal(key,"og_title") || text_equal(key,"og_description") then
+      s with { parts=push(push(push(s.parts,meta_literal(concat("<meta property=\"og:",text_from(key,3),"\" content=\""))),concat("html_escape(",value,")")),meta_literal("\">")) }
+    else if text_equal(key,"jsonld") then
+      MetaDynamicState { parts=push(push(push(s.parts,meta_literal("<script type=\"application/ld+json\">")),concat("neokit_json_script(",value,")")),meta_literal("</script>")),
+        jsonld=true, err=s.err }
+    else if len(origin)==0 then s with { err=concat("[metadata.props] ",key," needs an absolute [site] url") }
+    else let opening=if text_equal(key,"og_image") then concat("<meta property=\"og:image\" content=\"",meta_escape(origin))
+      else concat("<link rel=\"canonical\" href=\"",meta_escape(origin)) in
+      s with { parts=push(push(push(s.parts,meta_literal(opening)),concat("html_escape(",value,".value)")),meta_literal("\">")) }
+; dynamic_metadata(config, page, props): Neo expressions for the metadata
+; taken from the loader's props, escaped per request. The page template's
+; props dict is given as its names and kinds in declaration order.
+fn meta_dynamic_metadata(borrow config:Json, borrow page:Json, borrow prop_names:Arr Arr u8 _ _, borrow prop_kinds:Arr Arr u8 _ _) -> Result<MetaDynamic,Arr u8 _>
+  = match meta_origin(config) {
+      Err(message) => Err::<MetaDynamic,Arr u8 _>(message),
+      Ok(origin) => match meta_metadata_props(page) {
+        Err(message) => Err::<MetaDynamic,Arr u8 _>(message),
+        Ok(mapping) =>
+          let s=loop (s=MetaDynamicState { parts=text_words(), jsonld=false, err=text_empty() }, i=0) while len(s.err)==0 && i<toml_size(mapping)
+            next (meta_dynamic_step(s,toml_key_at(mapping,i),toml_value_at(mapping,i),origin,prop_names,prop_kinds), i+1) yield s in
+          if len(s.err)>0 then Err::<MetaDynamic,Arr u8 _>(s.err) else Ok::<MetaDynamic,Arr u8 _>(MetaDynamic { parts=s.parts, jsonld=s.jsonld })
+      }
+    }
+
+; ---- compression ----
+
+; compressible(content_type): text/*, JavaScript, JSON, XML, web manifests,
+; WebAssembly and SVG.
+fn meta_compressible(borrow content_type:Arr u8 _) -> bool
+  = text_starts(content_type,"text/") || text_starts(content_type,"application/javascript") || text_starts(content_type,"application/json")
+    || text_starts(content_type,"application/xml") || text_starts(content_type,"application/manifest+json")
+    || text_starts(content_type,"application/wasm") || text_starts(content_type,"image/svg")
+; compressed(data): the gzip form (level 9, MTIME 0) when data has at least
+; 512 bytes and the gzip form is smaller.
+fn meta_compressed(borrow data:Arr u8 _) -> OptionBytes
+  = if len(data)<512 then none_bytes() else
+    let packed=gzip_encode(data,9) in
+    if packed.ok && len(packed.value)<len(data) then some_bytes(packed.value) else none_bytes()
+; brotli_compressed(data, gzipped): the native build has no Brotli encoder,
+; so never a variant (Python without its optional brotli module).
+fn meta_brotli_compressed(borrow data:Arr u8 _, borrow gzipped:OptionBytes) -> OptionBytes = none_bytes()
+
+; ---- files and processes ----
+
+effect(fs) fn meta_is_file(borrow path:Arr u8 _) -> bool
+  = let stat=fs_stat(path,true) in stat.ok && stat.kind==fs_kind_file()
+; Path.read_bytes(), without std:io's 16 MiB limit.
+effect(fs) fn meta_read_all(borrow path:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = let opened=file_open(path,0) in
+    if !opened.ok then meta_err(concat("Cannot read ",path,": ",opened.error.message)) else
+    let read=loop (chunk=file_read_chunk(opened.value,65536), out=text_empty()) while chunk.ok && len(chunk.value)>0
+      next (file_read_chunk(opened.value,65536), concat(out,chunk.value)) yield if chunk.ok then bytes_ok(out) else chunk in
+    let closed=file_close(opened.value) in
+    if read.ok then meta_ok(read.value) else meta_err(concat("Cannot read ",path,": ",read.error.message))
+; Path.mkdir(parents=True, exist_ok=True).
+effect(fs) fn meta_mkdirs(borrow path:Arr u8 _) -> bool
+  = let parts=text_split(path,"/") in
+    let made=loop (at=if text_starts(path,"/") then "" else ".", i:i64{i>=0}=0) while i<len(parts)
+      next (if len(parts[i])==0 then at else let step=concat(at,"/",parts[i]) in let made=fs_mkdir(step) in step, i+1) yield at in
+    let stat=fs_stat(path,true) in stat.ok && stat.kind==fs_kind_directory()
+
+; A finished child process: exit code (128+signal when killed), stdout and stderr.
+type MetaRun = { ok:bool, code:i64, output:Arr u8 _, errors:Arr u8 _ }
+type MetaPoll = { run:MetaRun, pending:bool }
+private effect(process,fs,time) fn meta_poll(process:Process, move state:MetaPoll) -> MetaPoll
+  = let status=process_status(process) in
+    let out=process_try_read(process,1,65536) in let err=process_try_read(process,2,65536) in
+    let got=(out.ok && len(out.value)>0) || (err.ok && len(err.value)>0) in
+    let paused=if status.running && !got then sleep_ms(2) else int_ok(0) in
+    MetaPoll { run=MetaRun { ok=status.ok, code=if !status.ok then 127 else if status.signal!=0 then 128+status.signal else status.exit_code,
+        output=if out.ok then concat(state.run.output,out.value) else state.run.output,
+        errors=if err.ok then concat(state.run.errors,err.value) else state.run.errors },
+      pending=status.ok && (status.running || got) }
+; Run tool (an absolute path) with args and this process's environment, and
+; wait for it.
+effect(fs,env,process,time) fn meta_run(borrow tool:Arr u8 _, borrow args:Arr Arr u8 _ _) -> MetaRun
+  = using child=process_start(tool,args,env_list()) in
+    let done=loop (p=MetaPoll { run=MetaRun { ok=false, code=127, output=text_empty(), errors=text_empty() }, pending=true })
+      while p.pending next (meta_poll(child,p)) yield p in
+    done.run
+
+; ---- image tools ----
+
+private effect(fs) fn meta_tool_in(borrow directory:Arr u8 _, borrow name:Arr u8 _) -> Arr u8 _
+  = if len(directory)==0 then text_empty() else
+    let candidate=concat(directory,"/",name) in
+    if !meta_is_file(candidate) || !fs_executable(candidate) then text_empty()
+    else if text_starts(candidate,"/") then candidate
+    else let cwd=fs_cwd() in if cwd.ok then concat(cwd.value,"/",candidate) else text_empty()
+; The first executable name in a PATH-style list of directories, or "".
+effect(fs) fn meta_find_tool(borrow name:Arr u8 _, borrow search:Arr u8 _) -> Arr u8 _
+  = let dirs=text_split(search,":") in
+    loop (i:i64{i>=0}=0, found=text_empty()) while len(found)==0 && i<len(dirs) next (i+1, meta_tool_in(dirs[i],name)) yield found
+private fn meta_missing(borrow tool:Arr u8 _) -> Arr u8 _
+  = concat("Responsive images require ",tool," (libvips) on PATH in the build environment")
+private fn meta_one(borrow word:Arr u8 _) -> Arr Arr u8 _ _ = push(text_words(),word)
+; The image tools found in search (a PATH value). Python instead imports
+; Pillow and fails with 'Responsive images require Pillow in the build
+; environment'.
+effect(fs,env,process,time) fn meta_image_tools_in(borrow search:Arr u8 _) -> Result<MetaTools,Arr u8 _>
+  = let vips=meta_find_tool("vips",search) in
+    if len(vips)==0 then Err::<MetaTools,Arr u8 _>(meta_missing("vips")) else
+    let header=meta_find_tool("vipsheader",search) in
+    if len(header)==0 then Err::<MetaTools,Arr u8 _>(meta_missing("vipsheader")) else
+    let version=meta_run(vips,meta_one("--version")) in
+    if !version.ok || version.code!=0 || len(text_strip(version.output))==0
+    then Err::<MetaTools,Arr u8 _>(concat(vips," --version failed: ",text_strip(version.errors)))
+    else Ok::<MetaTools,Arr u8 _>(MetaTools { vips=vips, header=header, version=text_strip(version.output) })
+; The image tools on this process's PATH.
+effect(fs,env,process,time) fn meta_image_tools() -> Result<MetaTools,Arr u8 _>
+  = let search=env_get("PATH") in meta_image_tools_in(if search.present then search.value else text_empty())
+
+private fn meta_field(borrow lines:Arr Arr u8 _ _, borrow name:Arr u8 _) -> i64
+  = let prefix=concat(name,": ") in
+    loop (i:i64{i>=0}=0, found= -1) while found<0 && i<len(lines)
+      next (i+1, if text_starts(lines[i],prefix) then (let parsed=int_parse(text_strip(text_from(lines[i],len(prefix)))) in if parsed.ok then parsed.value else -1) else -1) yield found
+; The stored width and height of an image file and its EXIF orientation,
+; as `vipsheader -a` reports them.
+effect(fs,env,process,time) fn meta_image_header(borrow tools:MetaTools, borrow path:Arr u8 _) -> Result<MetaHeader,Arr u8 _>
+  = let run=meta_run(tools.header,push(meta_one("-a"),path)) in
+    let lines=text_splitlines(run.output) in
+    let width=meta_field(lines,"width") in let height=meta_field(lines,"height") in let orientation=meta_field(lines,"orientation") in
+    if !run.ok || run.code!=0 || width<1 || height<1
+    then Err::<MetaHeader,Arr u8 _>(concat("vipsheader cannot read the image ",path,": ",text_strip(run.errors)))
+    else Ok::<MetaHeader,Arr u8 _>(MetaHeader { width=width, height=height, orientation=if orientation<0 then 1 else orientation })
+
+; ---- image_variants ----
+
+; The cache file name image_variants uses for one variant:
+; sha256(f"{digest}:{width}:{format}:82:{version}").hexdigest()+'.'+format.
+fn meta_image_cache_name(borrow digest:Arr u8 _, width:i64, borrow format:Arr u8 _, borrow version:Arr u8 _) -> Arr u8 _
+  = concat(meta_sha256_hex(concat(digest,":",text_int(width),":",format,":82:",version)),".",format)
+; Python round(num/den) (half to even) for num>=0, den>0.
+fn meta_round_div(num:i64, den:i64) -> i64
+  = if den<=0 then 0 else let q=num/den in let r=num-q*den in
+    if 2*r>den then q+1 else if 2*r<den then q else q+q%2
+; The smallest value above last, or -1.
+private fn meta_above(borrow values:Arr i64 _, last:i64) -> i64
+  = loop (i:i64{i>=0}=0, best= -1) while i<len(values)
+      next (i+1, if values[i]>last && (best<0 || values[i]<best) then values[i] else best) yield best
+; sorted({min(w, original) for w in widths}) for positive widths.
+private fn meta_widths(borrow widths:Arr i64 _, original:i64) -> Arr i64 _
+  = let clamped=arr(i in 0..len(widths)) check i>=0 && i<len(widths) in if widths[i]<original then widths[i] else original in
+    loop (out=arr(i in 0..0) 0, at=meta_above(clamped,0)) while at>0 next (push(out,at), meta_above(clamped,at)) yield out
+private fn meta_save_options(borrow format:Arr u8 _) -> Arr u8 _ = if text_equal(format,"png") then "[strip]" else "[Q=82,strip]"
+; One encoded variant: from the cache when there, else `vips thumbnail`
+; at exactly width x height (after EXIF rotation), stored in the cache.
+private effect(fs,env,process,time) fn meta_variant(borrow tools:MetaTools, borrow path:Arr u8 _, borrow digest:Arr u8 _,
+    width:i64, height:i64, borrow format:Arr u8 _, borrow cache:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = let name=meta_image_cache_name(digest,width,format,tools.version) in
+    if len(cache)>0 && meta_is_file(concat(cache,"/",name)) then meta_read_all(concat(cache,"/",name)) else
+    let temporary=env_get("TMPDIR") in
+    let directory=if len(cache)>0 then cache else if temporary.present && len(temporary.value)>0 then temporary.value else "/tmp" in
+    if !meta_mkdirs(directory) then meta_err(concat("Cannot create the image cache ",directory)) else
+    let staged=concat(directory,"/",text_slice(name,0,64),".tmp",text_int(process_id()),".",format) in
+    let run=meta_run(tools.vips,arr(i in 0..8) if i==0 then "thumbnail" else if i==1 then path else if i==2 then concat(staged,meta_save_options(format))
+      else if i==3 then text_int(width) else if i==4 then "--height" else if i==5 then text_int(height) else if i==6 then "--size" else "force") in
+    if !run.ok || run.code!=0 then
+      let removed=fs_remove(staged) in
+      meta_err(concat("vips cannot make the ",text_int(width),"px ",format," variant of ",path,": ",text_strip(run.errors)))
+    else
+    let content=meta_read_all(staged) in
+    let moved=if len(cache)>0 then fs_rename(staged,concat(cache,"/",name)) else fs_remove(staged) in
+    content
+type MetaVariants = { variants:Arr MetaVariant _, err:Arr u8 _ }
+private effect(fs,env,process,time) fn meta_variant_step(move s:MetaVariants, borrow tools:MetaTools, borrow path:Arr u8 _, borrow digest:Arr u8 _,
+    width:i64, height:i64, borrow format:Arr u8 _, borrow cache:Arr u8 _) -> MetaVariants
+  = match meta_variant(tools,path,digest,width,height,format,cache) {
+      Err(message) => s with { err=message },
+      Ok(data) => let at=loop (i:i64{i>=0}=0, found= -1) while found<0 && i<len(s.variants)
+          next (i+1, if s.variants[i].width==width && text_equal(s.variants[i].format,format) then i else -1) yield found in
+        let variant=MetaVariant { width=width, format=format, data=data } in
+        s with { variants=if at>=0 && at<len(s.variants) then set(s.variants,at,variant) else push(s.variants,variant) }
+    }
+; image_variants(path, widths, formats, cache): the displayed width of the
+; image at path (its height for EXIF orientations 5-8) and every variant
+; (min(width, original), format) in ascending width, then formats order.
+; cache "" is Python's None.
+effect(fs,env,process,time) fn meta_image_variants(borrow tools:MetaTools, borrow path:Arr u8 _, borrow widths:Arr i64 _,
+    borrow formats:Arr Arr u8 _ _, borrow cache:Arr u8 _) -> Result<MetaImage,Arr u8 _>
+  = match meta_read_all(path) {
+      Err(message) => Err::<MetaImage,Arr u8 _>(message),
+      Ok(source) => let digest=meta_sha256_hex(source) in
+        match meta_image_header(tools,path) {
+          Err(message) => Err::<MetaImage,Arr u8 _>(message),
+          Ok(header) =>
+            if header.width*header.height>40000000 then Err::<MetaImage,Arr u8 _>("Image exceeds 40 megapixels") else
+            let turned=header.orientation>=5 && header.orientation<=8 in
+            let original=if turned then header.height else header.width in
+            let tall=if turned then header.width else header.height in
+            let sizes=meta_widths(widths,original) in
+            let s=loop (s=MetaVariants { variants=meta_no_variants(), err=text_empty() }, i:i64{i>=0}=0) while len(s.err)==0 && i<len(sizes)
+              next (let height=meta_round_div(tall*sizes[i],original) in
+                    loop (t=s, j:i64{j>=0}=0) while len(t.err)==0 && j<len(formats)
+                      next (meta_variant_step(t,tools,path,digest,sizes[i],if height<1 then 1 else height,formats[j],cache), j+1) yield t, i+1) yield s in
+            if len(s.err)>0 then Err::<MetaImage,Arr u8 _>(s.err) else Ok::<MetaImage,Arr u8 _>(MetaImage { original=original, variants=s.variants })
+        }
+    }
+
+; ---- generated_assets ----
+
+; Path(name).stem.
+fn meta_stem(borrow path:Arr u8 _) -> Arr u8 _
+  = let name=text_from(path,text_rfind(path,"/")+1) in
+    let dot=text_rfind(name,".") in if dot>0 && dot<len(name)-1 then text_slice(name,0,dot) else name
+private fn meta_sitemap(borrow origin:Arr u8 _, borrow exported:Arr Arr u8 _ _) -> Arr u8 _
+  = let paths=text_sort(exported) in
+    let entries=loop (o=text_empty(), i:i64{i>=0}=0) while i<len(paths)
+      next (if i>0 && text_equal(paths[i],text_word(paths,i-1)) then o else concat(o,"<url><loc>",meta_escape(concat(origin,paths[i])),"</loc></url>"), i+1) yield o in
+    concat("<?xml version=\"1.0\" encoding=\"UTF-8\"?><urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">",entries,"</urlset>")
+private fn meta_bad_origin(borrow origin:Arr u8 _) -> bool
+  = !(text_starts(origin,"https://") || text_starts(origin,"http://")) || text_contains(origin,"\r") || text_contains(origin,"\n")
+    || text_contains(origin,"<") || text_contains(origin,">") || text_contains(origin,"\"")
+; One element of images.files as Python iterates it: ok for a str.
+type MetaSource = { ok:bool, text:Arr u8 _ }
+private fn meta_sources(borrow value:Json) -> Arr MetaSource _
+  = if toml_is_array(value) then
+      let items=toml_items(value) in
+      arr(i in 0..len(items)) check i>=0 && i<len(items) in
+        if toml_is_text(items[i]) then MetaSource { ok=true, text=toml_text(items[i]) }
+        else MetaSource { ok=false, text=match meta_str(items[i]) { Some(text) => text, None => items[i].raw } }
+    else if toml_is_table(value) then
+      loop (out=arr(i in 0..0) MetaSource { ok=true, text=text_empty() }, i=0) while i<toml_size(value)
+        next (push(out,MetaSource { ok=true, text=toml_key_at(value,i) }), i+1) yield out
+    else let text=toml_text(value) in
+      loop (out=arr(i in 0..0) MetaSource { ok=true, text=text_empty() }, i=0) while i<len(text)
+        next (push(out,MetaSource { ok=true, text=text_slice(text,i,i+text_char_width(text,i)) }), i+text_char_width(text,i)) yield out
+private fn meta_widths_ok(borrow items:Arr Json _) -> bool
+  = len(items)>0 && loop (i:i64{i>=0}=0, ok=true) while ok && i<len(items)
+      next (i+1, toml_is_int(items[i]) && toml_int(items[i])>=1 && toml_int(items[i])<=8192) yield ok
+private fn meta_format_ok(borrow format:Arr u8 _) -> bool
+  = text_equal(format,"webp") || text_equal(format,"jpeg") || text_equal(format,"png") || text_equal(format,"avif")
+private fn meta_formats_ok(borrow items:Arr Json _) -> bool
+  = len(items)>0 && loop (i:i64{i>=0}=0, ok=true) while ok && i<len(items)
+      next (i+1, toml_is_text(items[i]) && meta_format_ok(toml_text(items[i]))) yield ok
+; The resolved image path when source names a regular file inside public
+; ((public/source).resolve() is_relative_to public.resolve()), else "".
+private effect(fs) fn meta_public_file(borrow public:Arr u8 _, borrow source:Arr u8 _) -> Arr u8 _
+  = let joined=if text_starts(source,"/") then source else if len(source)==0 then public else concat(public,"/",source) in
+    let path=fs_realpath(joined) in let root=fs_realpath(public) in
+    if !path.ok || !root.ok || !meta_is_file(path.value) then text_empty()
+    else if text_equal(root.value,"/") || text_starts(path.value,concat(root.value,"/")) then path.value else text_empty()
+type MetaBuild = { files:Arr MetaPair _, bindings:Arr MetaPair _, err:Arr u8 _ }
+private fn meta_url_of(borrow image:MetaImage, width:i64, borrow format:Arr u8 _, borrow urls:Arr Arr u8 _ _) -> Arr u8 _
+  = let at=loop (i:i64{i>=0}=0, found= -1) while found<0 && i<len(image.variants)
+      next (i+1, if image.variants[i].width==width && text_equal(image.variants[i].format,format) then i else -1) yield found in
+    text_word(urls,at)
+private fn meta_bind(move b:MetaBuild, borrow source:Arr u8 _, borrow image:MetaImage, borrow widths:Arr i64 _,
+                     borrow formats:Arr Arr u8 _ _, borrow stem:Arr u8 _) -> MetaBuild
+  = let urls=arr(i in 0..len(image.variants)) check i>=0 && i<len(image.variants) in
+      concat("/_web/images/",stem,"-",text_int(image.variants[i].width),"-",text_slice(meta_sha256_hex(image.variants[i].data),0,12),".",image.variants[i].format) in
+    let files=loop (f=b.files, i:i64{i>=0}=0) while i<len(image.variants) next (meta_put(f,text_word(urls,i),image.variants[i].data), i+1) yield f in
+    let requested=loop (d=b.bindings, i:i64{i>=0}=0) while i<len(widths)
+      next (let width=widths[i] in let actual=if width<image.original then width else image.original in
+            loop (e=d, j:i64{j>=0}=0) while j<len(formats)
+              next (meta_put(e,concat("image:",source,":",text_int(width),":",formats[j]),meta_url_of(image,actual,formats[j],urls)), j+1) yield e, i+1) yield d in
+    let bindings=loop (d=requested, i:i64{i>=0}=0) while i<len(image.variants)
+      next (meta_setdefault(d,concat("image:",source,":",text_int(image.variants[i].width),":",image.variants[i].format),text_word(urls,i)), i+1) yield d in
+    MetaBuild { files=files, bindings=bindings, err=b.err }
+private effect(fs,env,process,time) fn meta_image_step(move b:MetaBuild, borrow tools:MetaTools, borrow public:Arr u8 _, borrow source:MetaSource,
+    borrow widths:Arr i64 _, borrow formats:Arr Arr u8 _ _, borrow cache:Arr u8 _) -> MetaBuild
+  = let path=if source.ok then meta_public_file(public,source.text) else text_empty() in
+    if len(path)==0 then b with { err=concat("Image source must be a public file: ",source.text) } else
+    match meta_image_variants(tools,path,widths,formats,cache) {
+      Err(message) => b with { err=message },
+      Ok(image) => meta_bind(b,source.text,image,widths,formats,meta_stem(path))
+    }
+private effect(fs,env,process,time) fn meta_images(move b:MetaBuild, borrow public:Arr u8 _, borrow images:Json, borrow sources:Arr MetaSource _,
+    borrow cache:Arr u8 _) -> MetaBuild
+  = match meta_image_tools() {
+      Err(message) => b with { err=message },
+      Ok(tools) =>
+        let widths=toml_get_array(images,"widths") in let formats=toml_get_array(images,"formats") in
+        if widths.present && !(widths.ok && meta_widths_ok(widths.items)) then b with { err="Image widths must be integers in 1..8192" }
+        else if formats.present && !(formats.ok && meta_formats_ok(formats.items)) then b with { err="Supported image formats: webp, jpeg, png, avif" } else
+        let sizes=if widths.present then arr(i in 0..len(widths.items)) check i>=0 && i<len(widths.items) in toml_int(widths.items[i])
+          else arr(i in 0..3) if i==0 then 320 else if i==1 then 640 else 1280 in
+        let kinds=if formats.present then arr(i in 0..len(formats.items)) check i>=0 && i<len(formats.items) in toml_text(formats.items[i])
+          else meta_one("webp") in
+        loop (acc=b, i:i64{i>=0}=0) while len(acc.err)==0 && i<len(sources)
+          next (meta_image_step(acc,tools,public,sources[i],sizes,kinds,cache), i+1) yield acc
+    }
+; generated_assets(app, config, routes, cache): sitemap.xml and robots.txt
+; for a [site] url (unless public/ has its own), and the [images]
+; responsive variants with their asset bindings. app is the resolved app
+; directory, config its web.toml, exported the paths of every route whose
+; config has export (default true), and cache the image cache directory
+; ("" for None).
+effect(fs,env,process,time) fn meta_generated_assets(borrow app:Arr u8 _, borrow config:Json, borrow exported:Arr Arr u8 _ _,
+    borrow cache:Arr u8 _) -> Result<MetaAssets,Arr u8 _>
+  = match meta_origin(config) {
+      Err(message) => Err::<MetaAssets,Arr u8 _>(message),
+      Ok(origin) =>
+        let public=concat(app,"/public") in
+        if len(origin)>0 && meta_bad_origin(origin) then Err::<MetaAssets,Arr u8 _>("[site] url must be an HTTP origin") else
+        let sitemap=if len(origin)>0 && !meta_is_file(concat(public,"/sitemap.xml"))
+          then push(meta_no_pairs(),MetaPair { key="/sitemap.xml", value=meta_sitemap(origin,exported) }) else meta_no_pairs() in
+        let files=if len(origin)>0 && !meta_is_file(concat(public,"/robots.txt"))
+          then push(sitemap,MetaPair { key="/robots.txt", value=concat("User-agent: *\nAllow: /\nSitemap: ",origin,"/sitemap.xml\n") }) else sitemap in
+        let images=toml_get_table(config,"images") in
+        if !images.ok then Err::<MetaAssets,Arr u8 _>("[images] must be a table") else
+        let listed=toml_get(images.value,"files") in
+        let start=MetaBuild { files=files, bindings=meta_no_pairs(), err=text_empty() } in
+        let built=match listed {
+          None => start,
+          Some(value) => if !toml_truthy(value) then start
+            else if !toml_is_array(value) && !toml_is_table(value) && !toml_is_text(value) then start with { err="[images] files must be a list of public file names" }
+            else meta_images(start,public,images.value,meta_sources(value),cache)
+        } in
+        if len(built.err)>0 then Err::<MetaAssets,Arr u8 _>(built.err) else Ok::<MetaAssets,Arr u8 _>(MetaAssets { files=built.files, bindings=built.bindings })
+    }

@@ -1,0 +1,18 @@
+#--- ts:core-audit_features/app/api/own-policy/route.toml
+handler="audit_own_policy"
+#--- ts:core-audit_features/app/feed.xml/route.toml
+handler="audit_feed"
+#--- ts:core-audit_features/app/api/data/route.toml
+handler="audit_data"
+methods=["GET","POST"]
+cors=["https://app.example"]
+cors_headers=["content-type","x-token"]
+csrf=false
+#--- ts:tools-browser_fixture/app/actions/test/route.toml
+handler="lab_action"
+input_type="LabInput"
+methods=["POST"]
+[input]
+title={type="text",min=1,max=100}
+count={type="int",min=0,max=100}
+enabled="bool"

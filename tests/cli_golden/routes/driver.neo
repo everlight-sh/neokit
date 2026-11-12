@@ -1,0 +1,80 @@
+; Golden driver for cli/routes.neo and cli/actions.neo; generate.py writes
+; the expected output with compiler/routes.py and compiler/actions.py.
+;
+; Usage: driver.neo MODE FILE... (paths relative to the repository root
+; under `neo test`, else to the working directory). Line modes read one
+; input per line ("" for an empty line) and print "INPUT<TAB>RESULT":
+; folders (route_path of a folder below app/, or of a "folder<TAB>base"
+; pair), canonical, shape, matches ("pattern<TAB>path" lines) and
+; precedence (rank tuples, then the stable sort). The methods and actions
+; modes read route.toml files, or .cases files holding several, each after
+; a line "#--- LABEL".
+import "std:io"
+import "../../../cli/routes.neo"
+import "../../../cli/actions.neo"
+
+fn shown(borrow result:Result<Arr u8 _,Arr u8 _>) -> Arr u8 _ = match result { Ok(value) => value, Err(message) => concat("error: ",message) }
+fn flag(value:bool) -> Arr u8 _ = if value then "1" else "0"
+fn lines_of(borrow text:Arr u8 _) -> Arr Arr u8 _ _
+  = let all=text_split_byte(text,10) in loop (out=text_words(), i=0) while i<len(all)-1 next (push(out,text_word(all,i)), i+1) yield out
+
+fn folder_line(borrow line:Arr u8 _) -> Arr u8 _
+  = let pair=text_partition(line,"\t") in
+    if pair.found then shown(route_path(pair.before,pair.after)) else shown(route_path_relative(line))
+fn ranks_text(borrow path:Arr u8 _) -> Arr u8 _
+  = let ranks=route_ranks(path) in text_join(arr(i in 0..len(ranks)) text_int(if i>=0 && i<len(ranks) then ranks[i] else -1),",")
+fn line_mode(borrow mode:Arr u8 _, borrow lines:Arr Arr u8 _ _) -> Arr u8 _
+  = if text_equal(mode,"precedence") then
+      let order=route_precedence_order(lines) in
+      let ranked=loop (o=text_empty(), i:i64{i>=0}=0) while i<len(lines) next (concat(o,lines[i],"\t",ranks_text(lines[i]),"\n"), i+1) yield o in
+      loop (o=concat(ranked,"--- sorted\n"), i:i64{i>=0}=0) while i<len(order) next (concat(o,text_word(lines,order[i]),"\n"), i+1) yield o
+    else loop (o=text_empty(), i:i64{i>=0}=0) while i<len(lines)
+      next (let line=lines[i] in
+            let result=if text_equal(mode,"folders") then folder_line(line)
+              else if text_equal(mode,"canonical") then flag(route_canonical_path(line))
+              else if text_equal(mode,"shape") then route_shape(line)
+              else let pair=text_partition(line,"\t") in flag(route_matches(pair.before,pair.after)) in
+            concat(o,line,"\t",result,"\n"), i+1) yield o
+
+fn methods_text(borrow result:Result<Arr Arr u8 _ _,Arr u8 _>) -> Arr u8 _
+  = match result { Ok(value) => text_join(value,", "), Err(message) => concat("error: ",message) }
+fn config_output(borrow mode:Arr u8 _, borrow label:Arr u8 _, borrow text:Arr u8 _) -> Arr u8 _
+  = match toml_load(label,text) {
+      Err(message) => concat("=== ",label,"\nTOML ",message,"\n"),
+      Ok(config) =>
+        if text_equal(mode,"methods") then
+          let plain=concat("=== ",label,"\nmethods: ",methods_text(route_methods(config,label)),"\n") in
+          if !toml_has(config,"input") then plain
+          else concat(plain,"typed methods: ",methods_text(route_methods_or(config,label,push(text_words(),"POST"))),"\n")
+        else concat("=== ",label,"\n",match act_adapter(config,"Action_0123456789ab") {
+          Ok(found) => if found.present then found.code else "None", Err(message) => concat("error: ",message) },"\n")
+    }
+
+type GoldenChunk = { out:Arr u8 _, name:Arr u8 _, body:Arr u8 _, open:bool }
+fn golden_close(move c:GoldenChunk, borrow mode:Arr u8 _) -> Arr u8 _
+  = if !c.open then c.out else concat(c.out,config_output(mode,c.name,c.body))
+fn golden_line(move c:GoldenChunk, borrow mode:Arr u8 _, borrow line:Arr u8 _, last:bool) -> GoldenChunk
+  = if !last && text_starts(line,"#--- ") then
+      let name=text_from(line,5) in GoldenChunk { out=golden_close(c,mode), name=name, body=text_empty(), open=true }
+    else if !c.open then c
+    else c with { body=if last then concat(c.body,line) else concat(c.body,line,"\n") }
+fn golden_chunks(borrow mode:Arr u8 _, borrow text:Arr u8 _) -> Arr u8 _
+  = let lines=text_split_byte(text,10) in
+    let c=loop (c=GoldenChunk { out=text_empty(), name=text_empty(), body=text_empty(), open=false }, i:i64{i>=0}=0)
+      while i<len(lines) next (golden_line(c,mode,lines[i],i==len(lines)-1), i+1) yield c in
+    golden_close(c,mode)
+
+effect(env) fn golden_root() -> Arr u8 _
+  = let source=env_get("NEO_TEST_SOURCE") in let suffix="tests/cli_golden/routes/driver.neo" in
+    if source.present && text_ends(source.value,suffix) then text_slice(source.value,0,len(source.value)-len(suffix)) else text_empty()
+effect(fs) fn golden_file(borrow root:Arr u8 _, borrow mode:Arr u8 _, borrow file:Arr u8 _) -> Arr u8 _
+  = let raw=fs_read(concat(root,file)) in
+    if !raw.ok then concat("=== ",file,"\nunreadable: ",raw.error.message,"\n") else
+    let text=text_universal_newlines(raw.value) in
+    if text_equal(mode,"methods") || text_equal(mode,"actions") then
+      (if text_ends(file,".cases") then golden_chunks(mode,text) else config_output(mode,file,text))
+    else line_mode(mode,lines_of(text))
+effect(fs,env) fn main() -> unit
+  = let root=golden_root() in let mode=cli_arg(1).value in
+    let out=loop (i=2, out=text_empty()) while cli_arg(i).present next (i+1, concat(out,golden_file(root,mode,cli_arg(i).value))) yield out in
+    let written=print_out(out) in noop()

@@ -1,0 +1,567 @@
+#--- examples/blog
+examples/blog
+#-- web
+[site]
+name="Fieldnotes"
+description="Independent thoughts on design, engineering, and the everyday."
+[server]
+timing=true
+before="journal_guard"
+#-- paths
+/
+/about
+/journal/a-smaller-web
+/journal/slower-mornings
+/journal/quiet-interfaces
+#--- examples/dashboard
+examples/dashboard
+#-- web
+[site]
+name="NeoKit Tasks"
+[server]
+before="dashboard_before"
+after="dashboard_after"
+#-- paths
+/
+#--- examples/features
+examples/features
+#-- web
+[site]
+name="NeoKit feature verification"
+url="https://features.test"
+description="Typed routes & native pages"
+#-- paths
+/
+/cached
+/org/acme/items/42
+/docs
+/docs/a/b
+#--- examples/saas
+examples/saas
+#-- web
+[site]
+name="Meridian Analytics"
+description="A native NeoKit SaaS dashboard with server-rendered charts and a searchable customer dataset."
+[server]
+timing=true
+startup="saas_start"
+#-- paths
+/
+/activity
+/customers
+#--- examples/ssr-site
+examples/ssr-site
+#-- web
+[site]
+name="Forma Studio"
+description="Spaces for a slower, better everyday. A native NeoKit SSR example."
+[server]
+timing=true
+#-- paths
+/
+/studio
+#--- examples/studio
+examples/studio
+#-- web
+[site]
+name = "NeoKit starter"
+
+[css]
+tailwind = ["site.css"]
+#-- paths
+/
+/about
+/stress
+/notes/native
+/notes/static
+/notes/islands
+#--- tests/catalog_fixture
+tests/catalog_fixture
+#-- web
+[site]
+name="Catalog fixture"
+#-- paths
+/
+/interactive
+/large
+#--- tests/realtime_fixture
+tests/realtime_fixture
+#-- web
+[server]
+before="fixture_guard"
+shutdown_grace_ms=250
+#-- paths
+/
+#--- tests/realtime_limits_fixture
+tests/realtime_limits_fixture
+#-- web
+[server]
+before="fixture_guard"
+shutdown_grace_ms=250
+[realtime]
+max_event_bytes=8192
+#-- paths
+#--- ts:core-audit_features
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+url="https://audit.test"
+description="Audit site"
+
+[[redirects]]
+from="/old"
+to="/pricing"
+
+[[redirects]]
+from="/docs-external"
+to="https://docs.example/start"
+status=301
+query=false
+
+[security]
+csp="default-src 'self'; img-src 'self' https://cdn.example"
+#-- paths
+/pricing
+/
+/private-info
+/search
+#--- ts:core-consumer
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+name="Another site"
+#-- paths
+/
+#--- ts:core-scaffold
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+name="app"
+#-- paths
+/
+#--- ts:extended-dev_css
+tests/cli_golden/assets/apps/none
+#-- web
+[css]
+tailwind=["site.css"]
+#-- paths
+/
+#--- ts:tools-browser_fixture
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+name="Browser verification lab"
+[server]
+access_log=true
+#-- paths
+/lab/one
+/lab/two
+#--- origin trailing slashes
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+url="https://x.test///"
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- origin http
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+url="http://x.test"
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- origin with path
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+url="https://x.test/base/"
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- origin with ampersand
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+url="https://x.test/?a=1&b=2"
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- origin javascript
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+url="javascript:alert(1)"
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- origin quote
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+url="https://a.test/\"x"
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- origin newline
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+url="https://a.test\n"
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- origin angle
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+url="https://a.test/<x>"
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- origin ftp
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+url="ftp://x.test"
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- origin slashes only
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+url="///"
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- origin scheme only
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+url="https:///"
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- origin empty
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+url=""
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- origin unicode
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+url="https://café.test"
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- images not table
+tests/cli_golden/assets/apps/none
+#-- web
+images=1
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- images empty
+tests/cli_golden/assets/apps/none
+#-- web
+[images]
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- images no files
+tests/cli_golden/assets/apps/none
+#-- web
+[images]
+files=[]
+widths=[0]
+formats=["gif"]
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- images empty string files
+tests/cli_golden/assets/apps/none
+#-- web
+[images]
+files=""
+#-- paths
+/b
+/a&b
+/
+/b
+/café
+/x"y
+#--- public robots
+tests/cli_golden/assets/apps/robots
+#-- web
+[site]
+url="https://public.test"
+#-- paths
+/
+#--- public sitemap
+tests/cli_golden/assets/apps/sitemap
+#-- web
+[site]
+url="https://public.test"
+#-- paths
+/
+#--- public both
+tests/cli_golden/assets/apps/both
+#-- web
+[site]
+url="https://public.test"
+#-- paths
+/
+#--- public none
+tests/cli_golden/assets/apps/none
+#-- web
+[site]
+url="https://public.test"
+#-- paths
+#--- images main
+tests/cli_golden/assets/apps/images
+#-- web
+[site]
+url="https://images.test"
+[images]
+files=["photo.png","halves.png","tall.png","wide.png","palette.png","rot6.jpg","rot3.jpg","rot8.png","rot5.webp","anim.gif","sub/deep.png","two.dots.png","photo.png"]
+widths=[16,40,56,1000,40]
+formats=["webp","jpeg","png"]
+#-- paths
+/
+#--- images defaults
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["photo.png"]
+#-- paths
+/
+#--- images large width
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["halves.png"]
+widths=[8192,1]
+formats=["png","png"]
+#-- paths
+/
+#--- images huge
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["huge.png"]
+#-- paths
+/
+#--- images traversal
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["../../secret.png"]
+#-- paths
+/
+#--- images outside
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["../web.toml"]
+#-- paths
+/
+#--- images absolute
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["/etc/hostname"]
+#-- paths
+/
+#--- images directory
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=[""]
+#-- paths
+/
+#--- images subdirectory
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["sub"]
+#-- paths
+/
+#--- images missing
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["missing.png"]
+#-- paths
+/
+#--- images second fails
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["photo.png","missing.png"]
+widths=[16]
+#-- paths
+/
+#--- images width zero
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["photo.png"]
+widths=[0]
+#-- paths
+/
+#--- images width too large
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["photo.png"]
+widths=[8193]
+#-- paths
+/
+#--- images widths empty
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["photo.png"]
+widths=[]
+#-- paths
+/
+#--- images width float
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["photo.png"]
+widths=[1.5]
+#-- paths
+/
+#--- images width boolean
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["photo.png"]
+widths=[true]
+#-- paths
+/
+#--- images widths text
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["photo.png"]
+widths="320"
+#-- paths
+/
+#--- images format gif
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["photo.png"]
+formats=["gif"]
+#-- paths
+/
+#--- images formats empty
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["photo.png"]
+formats=[]
+#-- paths
+/
+#--- images formats text
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["photo.png"]
+formats="webp"
+#-- paths
+/
+#--- images format upper
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files=["photo.png"]
+formats=["WEBP"]
+#-- paths
+/
+#--- images string files
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files="ab"
+#-- paths
+/
+#--- images table files
+tests/cli_golden/assets/apps/images
+#-- web
+[images]
+files={x=1}
+#-- paths
+/

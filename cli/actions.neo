@@ -1,0 +1,75 @@
+; Typed action adapters, ported from compiler/actions.py: a route.toml with
+; an [input] field schema gets a generated Neo function that checks the
+; request's origin and fields before calling the handler. act_adapter
+; mirrors action_adapter; the generated code is byte-identical and a Python
+; BuildError is Err(message) with the same text.
+import "std:json"
+import "std:result"
+import "text.neo"
+import "toml.neo"
+
+; action_adapter's result: present is false for Python's None (no [input]).
+type ActAdapter = { present:bool, code:Arr u8 _ }
+
+private fn act_hex(move out:Arr u8 _, byte:i64) -> Arr u8 _
+  = push(push(out,u8(if byte/16<10 then 48+byte/16 else 87+byte/16)),u8(if byte%16<10 then 48+byte%16 else 87+byte%16))
+; templates.literal: a Neo string literal holding value's UTF-8 bytes.
+private fn act_literal(borrow value:Arr u8 _) -> Arr u8 _
+  = let body=loop (o=push(text_empty(),u8(34)), i=0) while i<len(value)
+      next (let b=text_byte(value,i) in
+            if b==10 then concat(o,"\\n") else if b==13 then concat(o,"\\r") else if b==9 then concat(o,"\\t")
+            else if b==34 then concat(o,"\\\"") else if b==92 then concat(o,"\\\\")
+            else if b>=32 && b<127 then push(o,u8(b)) else act_hex(concat(o,"\\x"),b),
+            i+1) yield o in
+    push(body,u8(34))
+
+type ActFields = { bindings:Arr u8 _, checks:Arr Arr u8 _ _, values:Arr Arr u8 _ _, err:Arr u8 _ }
+private fn act_fail(move s:ActFields, borrow message:Arr u8 _) -> ActFields = s with { err=message }
+; The (low, high) bounds of a text or int field, or ok=false.
+type ActBounds = { ok:bool, low:i64, high:i64 }
+private fn act_bounds(borrow field:Json, borrow kind:Arr u8 _) -> ActBounds
+  = let text=text_equal(kind,"text") in
+    let low=toml_get_int(field,"min",if text then 1 else -9223372036854775807-1) in
+    let high=toml_get_int(field,"max",if text then 4096 else 9223372036854775807) in
+    ActBounds { ok=low.ok && high.ok && low.value<=high.value && (!text || (low.value>=0 && high.value<=1048576)), low=low.value, high=high.value }
+; One schema entry: name = "kind" or name = { type, required, min, max }.
+private fn act_field(move s:ActFields, borrow name:Arr u8 _, borrow description:Json) -> ActFields
+  = if !text_is_identifier(name) then act_fail(s,"Action field names must be Neo identifiers") else
+    let short=toml_is_text(description) in
+    let kind=if short then toml_text(description) else toml_get_text(description,"type","").value in
+    let typed=(short || (toml_is_table(description) && toml_get_text(description,"type","").ok))
+      && (text_equal(kind,"text") || text_equal(kind,"int") || text_equal(kind,"bool")) in
+    if !typed then act_fail(s,concat("Unsupported action field type: ",name)) else
+    let required=if short then TomlGetBool { present=false, ok=true, value=true } else toml_get_bool(description,"required",true) in
+    if !required.ok then act_fail(s,"Action required must be a boolean") else
+    let bounds=if text_equal(kind,"bool") || short then act_bounds(json_none().value,kind) else act_bounds(description,kind) in
+    if !text_equal(kind,"bool") && !bounds.ok then act_fail(s,concat("Invalid bounds for ",name)) else
+    let call=concat("web_input_",kind,"(input,",act_literal(name),",") in
+    let call=if text_equal(kind,"bool") then call else concat(call,text_int(bounds.low),",",text_int(bounds.high),",") in
+    ActFields { bindings=concat(s.bindings,"let field_",name,"=",call,if required.value then "true" else "false",") in "),
+      checks=push(s.checks,concat("field_",name,".ok")), values=push(s.values,concat(name,"=field_",name,".value")), err=s.err }
+
+; action_adapter(config, key): None (present=false) without [input],
+; otherwise the adapter function named key. config['handler'] and
+; config['input_type'] are build.py's checked names.
+fn act_adapter(borrow config:Json, borrow key:Arr u8 _) -> Result<ActAdapter,Arr u8 _>
+  = let schema=toml_get(config,"input") in
+    match schema {
+      None => Ok::<ActAdapter,Arr u8 _>(ActAdapter { present=false, code=text_empty() }),
+      Some(fields) =>
+        let input_type=toml_get_text(config,"input_type","") in
+        if !toml_is_table(fields) || !input_type.ok || !text_is_identifier(input_type.value)
+        then Err::<ActAdapter,Arr u8 _>("Typed actions require input_type and an [input] field schema") else
+        let s=loop (s=ActFields { bindings=text_empty(), checks=text_words(), values=text_words(), err=text_empty() }, i=0)
+          while len(s.err)==0 && i<toml_size(fields) next (act_field(s,toml_key_at(fields,i),toml_value_at(fields,i)), i+1) yield s in
+        if len(s.err)>0 then Err::<ActAdapter,Arr u8 _>(s.err) else
+        let csrf=toml_get_bool(config,"csrf",true) in
+        if !csrf.ok then Err::<ActAdapter,Arr u8 _>("Typed action csrf must be a boolean") else
+        let guard=if csrf.value then "if !web_same_origin(request,env_get(\"NEOKIT_ORIGIN\").value) then web_reply(403,\"Invalid action origin\",\"text/plain\") else " else "" in
+        let checks=if len(s.checks)==0 then "true" else text_join(s.checks," && ") in
+        Ok::<ActAdapter,Arr u8 _>(ActAdapter { present=true, code=concat(
+          "effect fn ",key,"(request:WebRequest) -> WebResponse = ",guard,
+          "let input=web_input(request) in if !input.ok then web_status(web_json(\"{\\\"error\\\":\\\"Invalid request body\\\"}\"),400) else ",
+          s.bindings,"if !(",checks,") then web_status(web_json(\"{\\\"error\\\":\\\"Invalid action fields\\\"}\"),422) else ",
+          toml_get_text(config,"handler","").value,"(request,",input_type.value," {",text_join(s.values,","),"})") })
+    }

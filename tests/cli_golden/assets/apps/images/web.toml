@@ -1,0 +1,6 @@
+[site]
+url="https://images.test"
+[images]
+files=["photo.png","halves.png","tall.png","wide.png","palette.png","rot6.jpg","rot3.jpg","rot8.png","rot5.webp","anim.gif","sub/deep.png","two.dots.png","photo.png"]
+widths=[16,40,56,1000,40]
+formats=["webp","jpeg","png"]

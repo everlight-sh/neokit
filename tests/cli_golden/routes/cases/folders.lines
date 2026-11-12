@@ -1,0 +1,117 @@
+about
+journal/[slug]
+
+actions/tasks
+api/tasks/[id]
+api/tasks
+dashboard
+login
+logout
+oauth/callback
+oauth
+actions/typed
+api/[id]
+async
+async-api
+async-page
+async-stats
+cached
+docs/[[...slug]]
+invalidate
+org/[org]/items/[id]
+stream
+activity
+api/events
+api/export-customers
+api/metrics
+customers
+studio
+api/status
+greet
+notes/[slug]
+stress
+interactive
+large
+feed/[slug]
+feed
+feed/snapshot
+publish
+publish-other
+stats
+wait
+api/own-policy
+(marketing)/pricing
+blog/[slug]
+account
+search
+private-info
+feed.xml
+api/data
+lab/one
+lab/two
+actions/test
+.
+a/./b
+a//b
+a/b/
+(g)
+(g)/(h)/x
+(bad group
+(a b)
+()
+(x-y_1)
+(café)
+..
+a/..
+...
+....
+a b
+café
+[id]
+[id]/[id]
+[id]/x/[id]
+[...slug]
+[...slug]/more
+[...slug]/a b
+a b/[...slug]/x
+[[...slug]]
+[[...slug]]/x
+[x]/[...y]
+[x]/[[...x]]
+[1x]
+[]
+[x
+x]
+[...]
+[[...]]
+[[x]]
+[..x]
+[....x]
+[x-y]
+[_]
+[_1]
+[...a]]
+a.b
+.well-known
+-
+_
+(g)/[a]/(h)/[b]
+[a]/(g)/[a]
+a/[[...b]]/(g)
+[...a]/(g)
+(g)/[...a]/(h)/b
+api/v1.2/[id]
+/app/x	/app
+/app	/app
+/app/	/app
+/app//x/./y/	/app/
+/other/x	/app
+/app/x	/app/x/y
+rel/x	rel
+rel	rel
+/app/x	app
+app/x	/app
+/app/(g)/[id]	/app
+/app/..	/app
+/appx/y	/app
+/	/

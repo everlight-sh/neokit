@@ -1,0 +1,216 @@
+#--- no input
+handler="h"
+#--- input type without input
+handler="h"
+input_type="T"
+#--- empty schema
+handler="h"
+input_type="T"
+[input]
+#--- inline empty schema
+handler="h"
+input_type="T"
+input={}
+#--- defaults
+handler="h"
+input_type="T"
+[input]
+name="text"
+n="int"
+flag="bool"
+#--- csrf false
+handler="h"
+input_type="T"
+csrf=false
+[input]
+name="text"
+#--- csrf true
+handler="h"
+input_type="T"
+csrf=true
+[input]
+name="text"
+#--- optional fields
+handler="save"
+input_type="Form"
+[input]
+a={type="text",required=false}
+b={type="int",required=false,min=-5}
+c={type="bool",required=false}
+#--- bool ignores bounds
+handler="h"
+input_type="T"
+[input]
+x={type="bool",min="z",max=[]}
+#--- text limits
+handler="h"
+input_type="T"
+[input]
+t={type="text",min=0,max=1048576}
+#--- int limits
+handler="h"
+input_type="T"
+[input]
+i={type="int",min=-9223372036854775808,max=9223372036854775807}
+#--- equal bounds
+handler="h"
+input_type="T"
+[input]
+i={type="int",min=7,max=7}
+t={type="text",min=3,max=3}
+#--- only max
+handler="h"
+input_type="T"
+[input]
+t={type="text",max=9}
+i={type="int",max=-1}
+#--- subtables
+handler="h"
+input_type="T"
+[input.title]
+type="text"
+min=2
+[input.count]
+type="int"
+#--- dotted keys
+handler="h"
+input_type="T"
+[input]
+title.type="text"
+title.max=10
+ok="bool"
+#--- identifier names
+handler="h"
+input_type="T_1"
+[input]
+_x="text"
+a1="int"
+Z="bool"
+#--- input not table
+handler="h"
+input_type="T"
+input="x"
+#--- input array
+handler="h"
+input_type="T"
+input=[]
+#--- input array of tables
+handler="h"
+input_type="T"
+[[input]]
+x="text"
+#--- missing input_type
+handler="h"
+[input]
+x="text"
+#--- empty input_type
+handler="h"
+input_type=""
+[input]
+x="text"
+#--- bad input_type
+handler="h"
+input_type="not valid"
+[input]
+#--- input_type with newline
+handler="h"
+input_type="T\n"
+[input]
+#--- bad field name
+handler="h"
+input_type="T"
+[input]
+"bad name"="text"
+#--- digit field name
+handler="h"
+input_type="T"
+[input]
+1x="text"
+#--- unknown kind
+handler="h"
+input_type="T"
+[input]
+x="float"
+#--- integer kind
+handler="h"
+input_type="T"
+[input]
+x=1
+#--- no type
+handler="h"
+input_type="T"
+[input]
+x={required=true}
+#--- list type
+handler="h"
+input_type="T"
+[input]
+x={type=["text"]}
+#--- array field
+handler="h"
+input_type="T"
+[input]
+x=["text"]
+#--- required text
+handler="h"
+input_type="T"
+[input]
+x={type="text",required="yes"}
+#--- required integer
+handler="h"
+input_type="T"
+[input]
+x={type="int",required=1}
+#--- negative text min
+handler="h"
+input_type="T"
+[input]
+x={type="text",min=-1}
+#--- text max too large
+handler="h"
+input_type="T"
+[input]
+x={type="text",max=1048577}
+#--- inverted bounds
+handler="h"
+input_type="T"
+[input]
+x={type="int",min=5,max=4}
+#--- float min
+handler="h"
+input_type="T"
+[input]
+x={type="int",min=1.5}
+#--- boolean max
+handler="h"
+input_type="T"
+[input]
+x={type="int",max=true}
+#--- text min above default max
+handler="h"
+input_type="T"
+[input]
+x={type="text",min=5000}
+#--- second field fails
+handler="h"
+input_type="T"
+[input]
+a="text"
+b="nope"
+#--- csrf text
+handler="h"
+input_type="T"
+csrf="no"
+[input]
+x="text"
+#--- field error before csrf
+handler="h"
+input_type="T"
+csrf="no"
+[input]
+x="nope"
+#--- unicode field name
+handler="h"
+input_type="T"
+[input]
+"café"="text"

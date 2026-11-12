@@ -1,0 +1,186 @@
+; NeoKit's route rules, ported from compiler/routes.py: app folders become
+; URL patterns, export paths are checked and matched against them, and
+; routes are ordered by precedence and compared by shape. Each public route_
+; function mirrors the Python function of the same name; a Python BuildError
+; is Err(message) with the same text.
+;
+; routes.py's regular expressions are rewritten as scanners with the same
+; matching. Text is UTF-8 bytes; every class here is ASCII, and a non-ASCII
+; byte never matches one, as with Python's str patterns.
+import "std:json"
+import "std:result"
+import "text.neo"
+import "toml.neo"
+
+; ---- canonical_path ----
+
+private fn route_dot_part(borrow part:Arr u8 _) -> bool = text_equal(part,".") || text_equal(part,"..")
+private fn route_any_dot(borrow parts:Arr Arr u8 _ _) -> bool
+  = loop (i:i64{i>=0}=0, found=false) while !found && i<len(parts) next (i+1, route_dot_part(parts[i])) yield found
+; canonical_path(path) for a str: CANONICAL.fullmatch ('/' then
+; [A-Za-z0-9_./-]*), no '//', no trailing '/' except for "/" itself, and no
+; '.' or '..' part.
+fn route_canonical_path(borrow path:Arr u8 _) -> bool
+  = text_byte(path,0)==47 && text_only(path,"A-Za-z0-9_./-") && !text_contains(path,"//")
+    && (text_equal(path,"/") || !text_ends(path,"/")) && !route_any_dot(text_split(path,"/"))
+; canonical_path(value) for a TOML value: anything but a str is not canonical.
+fn route_canonical_value(borrow value:Json) -> bool = toml_is_text(value) && route_canonical_path(toml_text(value))
+
+; ---- route_path ----
+
+; GROUP.fullmatch(part): a (group) folder, which does not appear in URLs.
+fn route_is_group(borrow part:Arr u8 _) -> bool
+  = len(part)>=3 && text_byte(part,0)==40 && text_byte(part,len(part)-1)==41
+    && text_only(text_slice(part,1,len(part)-1),"A-Za-z0-9_-")
+; SEGMENT.fullmatch(part): ok for a literal [A-Za-z0-9_.-]+ segment (name "")
+; or a [name], [...name] or [[...name]] parameter (its name).
+type RouteSegment = { ok:bool, name:Arr u8 _ }
+private fn route_param(borrow part:Arr u8 _, borrow open:Arr u8 _, borrow close:Arr u8 _) -> RouteSegment
+  = let name=text_slice(part,len(open),len(part)-len(close)) in
+    if len(part)>len(open)+len(close) && text_starts(part,open) && text_ends(part,close) && text_is_identifier(name)
+    then RouteSegment { ok=true, name=name } else RouteSegment { ok=false, name=text_empty() }
+fn route_segment(borrow part:Arr u8 _) -> RouteSegment
+  = if len(part)>0 && text_only(part,"A-Za-z0-9_.-") then RouteSegment { ok=true, name=text_empty() } else
+    let one=route_param(part,"[","]") in if one.ok then one else
+    let many=route_param(part,"[...","]") in if many.ok then many else
+    route_param(part,"[[...","]]")
+
+; PurePosixPath(text).parts after the anchor: "/"-separated, without empty
+; and "." parts ("" and "." give none).
+fn route_path_parts(borrow text:Arr u8 _) -> Arr Arr u8 _ _
+  = let words=text_split(text,"/") in
+    loop (out=text_words(), i:i64{i>=0}=0) while i<len(words)
+      next (if len(words[i])==0 || text_equal(words[i],".") then out else push(out,words[i]), i+1) yield out
+
+type RouteWalk = { names:Arr Arr u8 _ _, err:Arr u8 _ }
+private fn route_walk(move w:RouteWalk, borrow parts:Arr Arr u8 _ _, i:i64) -> RouteWalk
+  = let part=text_word(parts,i) in let segment=route_segment(part) in
+    if !segment.ok || route_dot_part(part) then w with { err=concat("Unsupported route segment: ",part) } else
+    let names=if len(segment.name)>0 then push(w.names,segment.name) else w.names in
+    if (text_starts(part,"[...") || text_starts(part,"[[...")) && i!=len(parts)-1
+    then RouteWalk { names=names, err="Catch-all parameters must be the final route segment" }
+    else RouteWalk { names=names, err=text_empty() }
+; route_path's work on the folder's parts relative to the base.
+fn route_path_of_parts(borrow all:Arr Arr u8 _ _) -> Result<Arr u8 _,Arr u8 _>
+  = let parts=loop (out=text_words(), i:i64{i>=0}=0) while i<len(all)
+      next (if route_is_group(all[i]) then out else push(out,all[i]), i+1) yield out in
+    let walked=loop (w=RouteWalk { names=text_words(), err=text_empty() }, i=0) while len(w.err)==0 && i<len(parts)
+      next (route_walk(w,parts,i), i+1) yield w in
+    if len(walked.err)>0 then Err::<Arr u8 _,Arr u8 _>(walked.err)
+    else if !text_distinct(walked.names) then Err::<Arr u8 _,Arr u8 _>("Route parameter names must be unique")
+    else Ok::<Arr u8 _,Arr u8 _>(concat("/",text_join(parts,"/")))
+; route_path(base/relative, base): relative is the folder below the app/
+; directory ("" for app/ itself), "/"-separated.
+fn route_path_relative(borrow relative:Arr u8 _) -> Result<Arr u8 _,Arr u8 _> = route_path_of_parts(route_path_parts(relative))
+private fn route_prefix(borrow parts:Arr Arr u8 _ _, borrow base:Arr Arr u8 _ _) -> bool
+  = len(base)<=len(parts) && loop (i:i64{i>=0}=0, ok=true) while ok && i<len(base) next (i+1, text_equal(text_word(parts,i),base[i])) yield ok
+private fn route_shown(borrow path:Arr u8 _) -> Arr u8 _
+  = let parts=text_join(route_path_parts(path),"/") in
+    if text_starts(path,"/") then concat("/",parts) else if len(parts)==0 then "." else parts
+; route_path(folder, base) for two absolute (or two relative) paths, which
+; are compared part by part as Path.relative_to does. A folder outside base
+; is Python's ValueError, worded as Python 3.12 words it.
+fn route_path(borrow folder:Arr u8 _, borrow base:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = let parts=route_path_parts(folder) in let under=route_path_parts(base) in
+    if text_starts(folder,"/")!=text_starts(base,"/") || !route_prefix(parts,under)
+    then Err::<Arr u8 _,Arr u8 _>(concat(text_repr(route_shown(folder))," is not in the subpath of ",text_repr(route_shown(base))))
+    else route_path_of_parts(loop (out=text_words(), i=len(under)) while i<len(parts) next (push(out,text_word(parts,i)), i+1) yield out)
+
+; ---- matches and precedence ----
+
+; How matches() and precedence() read a pattern part: 3 for [[...x]], 2 for
+; [...x], 1 for anything else starting with '[', 0 for a literal.
+fn route_part_rank(borrow part:Arr u8 _) -> i64
+  = if text_starts(part,"[[...") then 3 else if text_starts(part,"[...") then 2 else if text_starts(part,"[") then 1 else 0
+private fn route_any(borrow reach:Arr bool _, end:i64) -> bool
+  = loop (i:i64{i>=0}=0, found=false) while !found && i<=end && i<len(reach) next (i+1, reach[i]) yield found
+private fn route_at(borrow reach:Arr bool _, i:i64) -> bool = i>=0 && i<len(reach) && reach[i]
+; Whether the compiled pattern's first parts can end after k path segments,
+; given where they could end before this part (reach).
+private fn route_reach(borrow reach:Arr bool _, borrow segments:Arr Arr u8 _ _, borrow part:Arr u8 _, k:i64) -> bool
+  = let rank=route_part_rank(part) in
+    if rank==3 then route_any(reach,k)
+    else if k<1 then false
+    else if rank==2 then route_any(reach,k-1)
+    else if rank==1 then route_at(reach,k-1)
+    else route_at(reach,k-1) && text_equal(text_word(segments,k-1),part)
+; matches(pattern, path): path is canonical and matches the pattern's
+; fullmatch regex ('/' + escaped literal, '/[^/]+' for [x], '(?:/[^/]+)+' for
+; [...x], '(?:/[^/]+)*' for [[...x]]; '/' when the pattern has no parts).
+fn route_matches(borrow pattern:Arr u8 _, borrow path:Arr u8 _) -> bool
+  = if !route_canonical_path(path) then false else
+    let split=text_split(text_strip_chars(pattern,"/"),"/") in
+    let parts=loop (out=text_words(), i:i64{i>=0}=0) while i<len(split)
+      next (if len(split[i])==0 then out else push(out,split[i]), i+1) yield out in
+    if len(parts)==0 then text_equal(path,"/") else
+    if text_equal(path,"/") then false else
+    let segments=text_split(text_from(path,1),"/") in
+    let start=arr(k in 0..len(segments)+1) k==0 in
+    let done=loop (reach=start, i:i64{i>=0}=0) while i<len(parts)
+      next (arr(k in 0..len(segments)+1) route_reach(reach,segments,parts[i],k), i+1) yield reach in
+    route_at(done,len(segments))
+
+; precedence(path)[0]: the rank of every part of path.split('/').
+fn route_ranks(borrow path:Arr u8 _) -> Arr i64 _
+  = let parts=text_split(path,"/") in arr(i in 0..len(parts)) route_part_rank(text_word(parts,i))
+; A byte string whose order is the order of the precedence(path) tuples:
+; the ranks as bytes 1..4, a 0 byte, then the path.
+fn route_precedence_key(borrow path:Arr u8 _) -> Arr u8 _
+  = let ranks=route_ranks(path) in
+    concat(push(arr(i in 0..len(ranks)) check i>=0 && i<len(ranks) in u8(ranks[i]+1),u8(0)),path)
+; precedence(a) < precedence(b).
+fn route_precedence_less(borrow a:Arr u8 _, borrow b:Arr u8 _) -> bool
+  = text_less(route_precedence_key(a),route_precedence_key(b))
+; The stable sort of paths by precedence: sorted(range(len(paths)),
+; key=lambda i: precedence(paths[i])).
+fn route_precedence_order(borrow paths:Arr Arr u8 _ _) -> Arr i64 _
+  = text_sort_order(arr(i in 0..len(paths)) route_precedence_key(text_word(paths,i)))
+
+; ---- shape ----
+
+; The first ']' at or after start, or -1.
+private fn route_close(borrow text:Arr u8 _, start:i64) -> i64
+  = loop (i=start, found= -1) while found<0 && i>=0 && i<len(text) next (i+1, if text_byte(text,i)==93 then i else -1) yield found
+type RouteSub = { out:Arr u8 _, i:i64 }
+; One step of re.sub for mode 1 '\[(?!\[|\.\.\.)[^]]+\]' -> '[]',
+; 2 '\[\.\.\.[^]]+\]' -> '[...]' or 3 '\[\[\.\.\.[^]]+\]\]' -> '[[...]]'.
+; [^]]+ stops at the first ']', so each match is decided there.
+private fn route_sub_step(move s:RouteSub, borrow text:Arr u8 _, mode:i64) -> RouteSub
+  = let i=s.i in
+    let start=if mode==1 then (if text_byte(text,i)==91 && text_byte(text,i+1)!=91 && !bytes_match_at(text,i+1,"...") then i+1 else -1)
+      else if mode==2 then (if bytes_match_at(text,i,"[...") then i+4 else -1)
+      else (if bytes_match_at(text,i,"[[...") then i+5 else -1) in
+    let close=if start<0 then -1 else route_close(text,start) in
+    if close>start && (mode!=3 || text_byte(text,close+1)==93) then
+      RouteSub { out=concat(s.out,if mode==1 then "[]" else if mode==2 then "[...]" else "[[...]]"), i=if mode==3 then close+2 else close+1 }
+    else RouteSub { out=push(s.out,u8(text_byte(text,i))), i=i+1 }
+private fn route_sub(borrow text:Arr u8 _, mode:i64) -> Arr u8 _
+  = let done=loop (s=RouteSub { out=text_empty(), i=0 }) while s.i<len(text) next (route_sub_step(s,text,mode)) yield s in done.out
+; shape(path): parameter names erased, so routes that differ only in them
+; compare equal.
+fn route_shape(borrow path:Arr u8 _) -> Arr u8 _ = route_sub(route_sub(route_sub(path,1),2),3)
+
+; ---- methods ----
+
+fn route_is_method(borrow name:Arr u8 _) -> bool
+  = text_equal(name,"GET") || text_equal(name,"HEAD") || text_equal(name,"POST") || text_equal(name,"PUT")
+    || text_equal(name,"PATCH") || text_equal(name,"DELETE") || text_equal(name,"OPTIONS")
+private fn route_methods_check(borrow value:Arr Arr u8 _ _, borrow path:Arr u8 _) -> Result<Arr Arr u8 _ _,Arr u8 _>
+  = let known=loop (i:i64{i>=0}=0, ok=true) while ok && i<len(value) next (i+1, route_is_method(value[i])) yield ok in
+    if len(value)==0 || !known || !text_distinct(value)
+    then Err::<Arr Arr u8 _ _,Arr u8 _>(concat(path,": methods must be a nonempty list of distinct HTTP methods"))
+    else if text_member(value,"GET") && !text_member(value,"HEAD") then Ok::<Arr Arr u8 _ _,Arr u8 _>(push(value,"HEAD"))
+    else Ok::<Arr Arr u8 _ _,Arr u8 _>(value)
+; methods(config, path) with config.get('methods', fallback): build.py's
+; typed actions default to ["POST"]. path is the route.toml path the error
+; names. A non-text element is not a method (Python raises TypeError for an
+; array or table element instead).
+fn route_methods_or(borrow config:Json, borrow path:Arr u8 _, borrow fallback:Arr Arr u8 _ _) -> Result<Arr Arr u8 _ _,Arr u8 _>
+  = let found=toml_get_array(config,"methods") in
+    if !found.present then route_methods_check(fallback,path) else
+    let texts=toml_get_texts(config,"methods") in
+    if !found.ok || !texts.ok then Err::<Arr Arr u8 _ _,Arr u8 _>(concat(path,": methods must be a nonempty list of distinct HTTP methods"))
+    else route_methods_check(texts.values,path)
+; methods(config, path): the allowed methods, with HEAD added after GET.
+fn route_methods(borrow config:Json, borrow path:Arr u8 _) -> Result<Arr Arr u8 _ _,Arr u8 _>
+  = route_methods_or(config,path,push(text_words(),"GET"))

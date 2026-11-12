@@ -1,0 +1,280 @@
+=== examples/blog/app/about/page.toml
+props: 
+static: <meta name="description" content="Independent thoughts on design, engineering, and the everyday.">
+dynamic: 
+=== examples/blog/app/journal/[slug]/page.toml
+props: 
+static: <meta name="description" content="Independent thoughts on design, engineering, and the everyday.">
+dynamic: 
+=== examples/blog/app/page.toml
+props: 
+static: <meta name="description" content="Independent thoughts on design, engineering, and the everyday.">
+dynamic: 
+=== examples/dashboard/app/dashboard/page.toml
+props: 
+static: 
+dynamic: 
+=== examples/dashboard/app/page.toml
+props: 
+static: 
+dynamic: 
+=== examples/features/app/async-page/page.toml
+props: 
+static: <meta name="description" content="Typed routes &amp; native pages">
+dynamic: 
+=== examples/features/app/cached/page.toml
+props: 
+static: <meta name="description" content="Typed routes &amp; native pages">
+dynamic: 
+=== examples/features/app/docs/[[...slug]]/page.toml
+props: 
+static: <meta name="description" content="Typed routes &amp; native pages">
+dynamic: 
+=== examples/features/app/org/[org]/items/[id]/page.toml
+props: 
+static: <meta name="description" content="Typed routes &amp; native pages">
+dynamic: 
+=== examples/features/app/page.toml
+props: 
+static: <meta name="description" content="Typed routes &amp; native pages">
+dynamic: 
+=== examples/saas/app/activity/page.toml
+props: 
+static: <meta name="description" content="A native NeoKit SaaS dashboard with server-rendered charts and a searchable customer dataset.">
+dynamic: 
+=== examples/saas/app/customers/page.toml
+props: 
+static: <meta name="description" content="A native NeoKit SaaS dashboard with server-rendered charts and a searchable customer dataset.">
+dynamic: 
+=== examples/saas/app/page.toml
+props: 
+static: <meta name="description" content="A native NeoKit SaaS dashboard with server-rendered charts and a searchable customer dataset.">
+dynamic: 
+=== examples/ssr-site/app/page.toml
+props: 
+static: <meta name="description" content="Spaces for a slower, better everyday. A native NeoKit SSR example.">
+dynamic: 
+=== examples/ssr-site/app/studio/page.toml
+props: 
+static: <meta name="description" content="Spaces for a slower, better everyday. A native NeoKit SSR example.">
+dynamic: 
+=== examples/studio/app/about/page.toml
+props: 
+static: 
+dynamic: 
+=== examples/studio/app/greet/page.toml
+props: 
+static: 
+dynamic: 
+=== examples/studio/app/notes/[slug]/page.toml
+props: 
+static: 
+dynamic: 
+=== examples/studio/app/page.toml
+props: 
+static: 
+dynamic: 
+=== examples/studio/app/stress/page.toml
+props: 
+static: 
+dynamic: 
+=== tests/catalog_fixture/app/interactive/page.toml
+props: 
+static: 
+dynamic: 
+=== tests/catalog_fixture/app/large/page.toml
+props: 
+static: 
+dynamic: 
+=== tests/catalog_fixture/app/page.toml
+props: 
+static: 
+dynamic: 
+=== tests/realtime_fixture/app/page.toml
+props: 
+static: 
+dynamic: 
+=== tests/realtime_limits_fixture/app/page.toml
+props: 
+static: 
+dynamic: 
+=== ts:core-audit_features/app/(marketing)/pricing/page.toml
+props: 
+static: <meta name="description" content="Audit site">
+dynamic: 
+=== ts:core-audit_features/app/account/page.toml
+props: 
+static: <meta name="description" content="Audit site">
+dynamic: 
+=== ts:core-audit_features/app/blog/[slug]/page.toml
+props: 
+static: <meta name="description" content="Audit site">
+dynamic: 
+=== ts:core-audit_features/app/page.toml
+props: description=summary, jsonld=jsonld
+static: 
+dynamic: "<meta name=\"description\" content=\"" | html_escape(props.summary) | "\">" | "<script type=\"application/ld+json\">" | neokit_json_script(props.jsonld) | "</script>" | jsonld
+=== ts:core-audit_features/app/private-info/page.toml
+props: 
+static: <meta name="description" content="Audit site">
+dynamic: 
+=== ts:core-audit_features/app/search/page.toml
+props: 
+static: <meta name="description" content="Audit site">
+dynamic: 
+=== ts:core-consumer/app/page.toml
+props: 
+static: 
+dynamic: 
+=== ts:core-scaffold/app/page.toml
+props: 
+static: 
+dynamic: 
+=== ts:extended-dev_css/app/page.toml
+props: 
+static: 
+dynamic: 
+=== ts:tools-browser_fixture/app/lab/one/page.toml
+props: 
+static: <meta name="description" content="Page one description">
+dynamic: 
+=== ts:tools-browser_fixture/app/lab/two/page.toml
+props: 
+static: <meta name="description" content="Page two description">
+dynamic: 
+=== site only
+props: 
+static: <meta name="description" content="Edge &lt;site&gt; &amp; &quot;more&quot;"><meta name="robots" content="index"><meta property="og:title" content="42"><meta property="og:image" content="[&#x27;a&#x27;, 1, True, {&#x27;k&#x27;: &#x27;v&#x27;}]"><link rel="canonical" href="https://edge.test/x?a=1&amp;b=&#x27;q&#x27;">
+dynamic: 
+=== page overrides and skip
+props: robots=r
+static: <meta name="description" content="Page desc"><meta property="og:title" content="42"><meta property="og:description" content="False"><meta property="og:image" content="[&#x27;a&#x27;, 1, True, {&#x27;k&#x27;: &#x27;v&#x27;}]"><link rel="canonical" href="https://edge.test/x?a=1&amp;b=&#x27;q&#x27;">
+dynamic: "<meta name=\"robots\" content=\"" | html_escape(props.r) | "\">"
+=== og values
+props: 
+static: <meta property="og:title" content="T &lt;1&gt;"><meta property="og:description" content="-7"><meta property="og:image" content="{&#x27;a&#x27;: [1, &quot;b&#x27;c&quot;], &#x27;d&#x27;: False}">
+dynamic: 
+=== og quotes repr
+props: 
+static: <meta property="og:title" content="[&quot;it&#x27;s&quot;, &#x27;say &quot;hi&quot;&#x27;, &#x27;both \&#x27;&quot;&#x27;]">
+dynamic: 
+=== og unicode repr
+props: 
+static: <meta property="og:title" content="[&#x27;café&#x27;, &#x27;\x07&#x27;, &#x27;\xa0&#x27;, &#x27;\u2028&#x27;]">
+dynamic: 
+=== escape all
+props: 
+static: <meta name="description" content="&amp; &lt; &gt; &quot; &#x27;">
+dynamic: 
+=== canonical empty
+props: 
+static: 
+dynamic: 
+=== canonical zero
+props: 
+static: 
+dynamic: 
+=== canonical false
+props: 
+static: 
+dynamic: 
+=== canonical empty list
+props: 
+static: 
+dynamic: 
+=== canonical number
+props: 
+static: error: Canonical metadata requires an HTTP URL
+dynamic: 
+=== canonical ftp
+props: 
+static: error: Canonical metadata requires an HTTP URL
+dynamic: 
+=== canonical http
+props: 
+static: <link rel="canonical" href="http://x.test/&lt;a&gt;">
+dynamic: 
+=== canonical skipped
+props: canonical=u
+static: 
+dynamic: error: [metadata.props] canonical needs an absolute [site] url
+=== robots number
+props: 
+static: error: Metadata robots must be text
+dynamic: 
+=== description list
+props: 
+static: error: Metadata description must be text
+dynamic: 
+=== description list skipped
+props: description=d
+static: 
+dynamic: "<meta name=\"description\" content=\"" | html_escape(props.d) | "\">"
+=== props key ignored
+props: description=d
+static: 
+dynamic: "<meta name=\"description\" content=\"" | html_escape(props.d) | "\">"
+=== site props
+props: 
+static: 
+dynamic: 
+=== title is not metadata
+props: 
+static: 
+dynamic: 
+=== props not table
+props: error: [metadata.props] must be a table of metadata field = prop name
+static: 
+dynamic: error: [metadata.props] must be a table of metadata field = prop name
+=== props empty
+props: 
+static: 
+dynamic: 
+=== dynamic home
+props: description=summary, jsonld=jsonld
+static: <meta name="robots" content="index"><meta property="og:title" content="42"><meta property="og:image" content="[&#x27;a&#x27;, 1, True, {&#x27;k&#x27;: &#x27;v&#x27;}]"><link rel="canonical" href="https://edge.test/x?a=1&amp;b=&#x27;q&#x27;">
+dynamic: "<meta name=\"description\" content=\"" | html_escape(props.summary) | "\">" | "<script type=\"application/ld+json\">" | neokit_json_script(props.jsonld) | "</script>" | jsonld
+=== dynamic all
+props: og_title=t, og_description=t, og_image=u, canonical=u, robots=t
+static: <meta name="description" content="Edge &lt;site&gt; &amp; &quot;more&quot;">
+dynamic: "<meta property=\"og:title\" content=\"" | html_escape(props.t) | "\">" | "<meta property=\"og:description\" content=\"" | html_escape(props.t) | "\">" | "<meta property=\"og:image\" content=\"https://edge.test" | html_escape(props.u.value) | "\">" | "<link rel=\"canonical\" href=\"https://edge.test" | html_escape(props.u.value) | "\">" | "<meta name=\"robots\" content=\"" | html_escape(props.t) | "\">"
+=== dynamic origin escaped
+props: og_image=u
+static: 
+dynamic: "<meta property=\"og:image\" content=\"https://a.test/p?a=1&amp;b=2" | html_escape(props.u.value) | "\">"
+=== dynamic no origin
+props: og_title=t, og_image=u
+static: 
+dynamic: error: [metadata.props] og_image needs an absolute [site] url
+=== dynamic canonical no origin
+props: canonical=u
+static: 
+dynamic: error: [metadata.props] canonical needs an absolute [site] url
+=== dynamic unsupported
+props: title=t
+static: <meta name="description" content="Edge &lt;site&gt; &amp; &quot;more&quot;"><meta name="robots" content="index"><meta property="og:title" content="42"><meta property="og:image" content="[&#x27;a&#x27;, 1, True, {&#x27;k&#x27;: &#x27;v&#x27;}]"><link rel="canonical" href="https://edge.test/x?a=1&amp;b=&#x27;q&#x27;">
+dynamic: error: [metadata.props] supports description, robots, og_title, og_description, og_image, canonical, jsonld
+=== dynamic wrong kind
+props: og_image=t
+static: <meta name="description" content="Edge &lt;site&gt; &amp; &quot;more&quot;"><meta name="robots" content="index"><meta property="og:title" content="42"><link rel="canonical" href="https://edge.test/x?a=1&amp;b=&#x27;q&#x27;">
+dynamic: error: [metadata.props] og_image must name a url prop of the page template
+=== dynamic prop not text
+props: og_image=<not text>
+static: <meta name="description" content="Edge &lt;site&gt; &amp; &quot;more&quot;"><meta name="robots" content="index"><meta property="og:title" content="42"><link rel="canonical" href="https://edge.test/x?a=1&amp;b=&#x27;q&#x27;">
+dynamic: error: [metadata.props] og_image must name a url prop of the page template
+=== dynamic missing prop
+props: description=missing
+static: <meta name="robots" content="index"><meta property="og:title" content="42"><meta property="og:image" content="[&#x27;a&#x27;, 1, True, {&#x27;k&#x27;: &#x27;v&#x27;}]"><link rel="canonical" href="https://edge.test/x?a=1&amp;b=&#x27;q&#x27;">
+dynamic: error: [metadata.props] description must name a text prop of the page template
+=== dynamic list prop
+props: description=items
+static: <meta name="robots" content="index"><meta property="og:title" content="42"><meta property="og:image" content="[&#x27;a&#x27;, 1, True, {&#x27;k&#x27;: &#x27;v&#x27;}]"><link rel="canonical" href="https://edge.test/x?a=1&amp;b=&#x27;q&#x27;">
+dynamic: error: [metadata.props] description must name a text prop of the page template
+=== dynamic second fails
+props: description=t, title=t
+static: <meta name="robots" content="index"><meta property="og:title" content="42"><meta property="og:image" content="[&#x27;a&#x27;, 1, True, {&#x27;k&#x27;: &#x27;v&#x27;}]"><link rel="canonical" href="https://edge.test/x?a=1&amp;b=&#x27;q&#x27;">
+dynamic: error: [metadata.props] supports description, robots, og_title, og_description, og_image, canonical, jsonld
+=== dynamic jsonld url
+props: jsonld=u
+static: <meta name="description" content="Edge &lt;site&gt; &amp; &quot;more&quot;"><meta name="robots" content="index"><meta property="og:title" content="42"><meta property="og:image" content="[&#x27;a&#x27;, 1, True, {&#x27;k&#x27;: &#x27;v&#x27;}]"><link rel="canonical" href="https://edge.test/x?a=1&amp;b=&#x27;q&#x27;">
+dynamic: error: [metadata.props] jsonld must name a text prop of the page template

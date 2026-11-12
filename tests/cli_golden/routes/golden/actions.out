@@ -1,0 +1,148 @@
+=== examples/dashboard/app/actions/tasks/route.toml
+None
+=== examples/dashboard/app/api/tasks/[id]/route.toml
+None
+=== examples/dashboard/app/api/tasks/route.toml
+None
+=== examples/dashboard/app/login/route.toml
+None
+=== examples/dashboard/app/logout/route.toml
+None
+=== examples/dashboard/app/oauth/callback/route.toml
+None
+=== examples/dashboard/app/oauth/route.toml
+None
+=== examples/features/app/actions/typed/route.toml
+effect fn Action_0123456789ab(request:WebRequest) -> WebResponse = let input=web_input(request) in if !input.ok then web_status(web_json("{\"error\":\"Invalid request body\"}"),400) else let field_title=web_input_text(input,"title",1,50,true) in let field_count=web_input_int(input,"count",0,100,true) in let field_enabled=web_input_bool(input,"enabled",true) in if !(field_title.ok && field_count.ok && field_enabled.ok) then web_status(web_json("{\"error\":\"Invalid action fields\"}"),422) else feature_typed(request,TypedInput {title=field_title.value,count=field_count.value,enabled=field_enabled.value})
+=== examples/features/app/api/[id]/route.toml
+None
+=== examples/features/app/async/route.toml
+None
+=== examples/features/app/async-api/route.toml
+None
+=== examples/features/app/async-stats/route.toml
+None
+=== examples/features/app/invalidate/route.toml
+None
+=== examples/features/app/stream/route.toml
+None
+=== examples/saas/app/api/events/route.toml
+None
+=== examples/saas/app/api/export-customers/route.toml
+None
+=== examples/saas/app/api/metrics/route.toml
+None
+=== examples/studio/app/api/status/route.toml
+None
+=== tests/realtime_fixture/app/feed/[slug]/route.toml
+None
+=== tests/realtime_fixture/app/feed/route.toml
+None
+=== tests/realtime_fixture/app/feed/snapshot/route.toml
+None
+=== tests/realtime_fixture/app/publish/route.toml
+None
+=== tests/realtime_fixture/app/publish-other/route.toml
+None
+=== tests/realtime_fixture/app/stats/route.toml
+None
+=== tests/realtime_fixture/app/wait/route.toml
+None
+=== tests/realtime_limits_fixture/app/feed/route.toml
+None
+=== tests/realtime_limits_fixture/app/publish/route.toml
+None
+=== tests/realtime_limits_fixture/app/stats/route.toml
+None
+=== ts:core-audit_features/app/api/own-policy/route.toml
+None
+=== ts:core-audit_features/app/feed.xml/route.toml
+None
+=== ts:core-audit_features/app/api/data/route.toml
+None
+=== ts:tools-browser_fixture/app/actions/test/route.toml
+effect fn Action_0123456789ab(request:WebRequest) -> WebResponse = if !web_same_origin(request,env_get("NEOKIT_ORIGIN").value) then web_reply(403,"Invalid action origin","text/plain") else let input=web_input(request) in if !input.ok then web_status(web_json("{\"error\":\"Invalid request body\"}"),400) else let field_title=web_input_text(input,"title",1,100,true) in let field_count=web_input_int(input,"count",0,100,true) in let field_enabled=web_input_bool(input,"enabled",true) in if !(field_title.ok && field_count.ok && field_enabled.ok) then web_status(web_json("{\"error\":\"Invalid action fields\"}"),422) else lab_action(request,LabInput {title=field_title.value,count=field_count.value,enabled=field_enabled.value})
+=== no input
+None
+=== input type without input
+None
+=== empty schema
+effect fn Action_0123456789ab(request:WebRequest) -> WebResponse = if !web_same_origin(request,env_get("NEOKIT_ORIGIN").value) then web_reply(403,"Invalid action origin","text/plain") else let input=web_input(request) in if !input.ok then web_status(web_json("{\"error\":\"Invalid request body\"}"),400) else if !(true) then web_status(web_json("{\"error\":\"Invalid action fields\"}"),422) else h(request,T {})
+=== inline empty schema
+effect fn Action_0123456789ab(request:WebRequest) -> WebResponse = if !web_same_origin(request,env_get("NEOKIT_ORIGIN").value) then web_reply(403,"Invalid action origin","text/plain") else let input=web_input(request) in if !input.ok then web_status(web_json("{\"error\":\"Invalid request body\"}"),400) else if !(true) then web_status(web_json("{\"error\":\"Invalid action fields\"}"),422) else h(request,T {})
+=== defaults
+effect fn Action_0123456789ab(request:WebRequest) -> WebResponse = if !web_same_origin(request,env_get("NEOKIT_ORIGIN").value) then web_reply(403,"Invalid action origin","text/plain") else let input=web_input(request) in if !input.ok then web_status(web_json("{\"error\":\"Invalid request body\"}"),400) else let field_name=web_input_text(input,"name",1,4096,true) in let field_n=web_input_int(input,"n",-9223372036854775808,9223372036854775807,true) in let field_flag=web_input_bool(input,"flag",true) in if !(field_name.ok && field_n.ok && field_flag.ok) then web_status(web_json("{\"error\":\"Invalid action fields\"}"),422) else h(request,T {name=field_name.value,n=field_n.value,flag=field_flag.value})
+=== csrf false
+effect fn Action_0123456789ab(request:WebRequest) -> WebResponse = let input=web_input(request) in if !input.ok then web_status(web_json("{\"error\":\"Invalid request body\"}"),400) else let field_name=web_input_text(input,"name",1,4096,true) in if !(field_name.ok) then web_status(web_json("{\"error\":\"Invalid action fields\"}"),422) else h(request,T {name=field_name.value})
+=== csrf true
+effect fn Action_0123456789ab(request:WebRequest) -> WebResponse = if !web_same_origin(request,env_get("NEOKIT_ORIGIN").value) then web_reply(403,"Invalid action origin","text/plain") else let input=web_input(request) in if !input.ok then web_status(web_json("{\"error\":\"Invalid request body\"}"),400) else let field_name=web_input_text(input,"name",1,4096,true) in if !(field_name.ok) then web_status(web_json("{\"error\":\"Invalid action fields\"}"),422) else h(request,T {name=field_name.value})
+=== optional fields
+effect fn Action_0123456789ab(request:WebRequest) -> WebResponse = if !web_same_origin(request,env_get("NEOKIT_ORIGIN").value) then web_reply(403,"Invalid action origin","text/plain") else let input=web_input(request) in if !input.ok then web_status(web_json("{\"error\":\"Invalid request body\"}"),400) else let field_a=web_input_text(input,"a",1,4096,false) in let field_b=web_input_int(input,"b",-5,9223372036854775807,false) in let field_c=web_input_bool(input,"c",false) in if !(field_a.ok && field_b.ok && field_c.ok) then web_status(web_json("{\"error\":\"Invalid action fields\"}"),422) else save(request,Form {a=field_a.value,b=field_b.value,c=field_c.value})
+=== bool ignores bounds
+effect fn Action_0123456789ab(request:WebRequest) -> WebResponse = if !web_same_origin(request,env_get("NEOKIT_ORIGIN").value) then web_reply(403,"Invalid action origin","text/plain") else let input=web_input(request) in if !input.ok then web_status(web_json("{\"error\":\"Invalid request body\"}"),400) else let field_x=web_input_bool(input,"x",true) in if !(field_x.ok) then web_status(web_json("{\"error\":\"Invalid action fields\"}"),422) else h(request,T {x=field_x.value})
+=== text limits
+effect fn Action_0123456789ab(request:WebRequest) -> WebResponse = if !web_same_origin(request,env_get("NEOKIT_ORIGIN").value) then web_reply(403,"Invalid action origin","text/plain") else let input=web_input(request) in if !input.ok then web_status(web_json("{\"error\":\"Invalid request body\"}"),400) else let field_t=web_input_text(input,"t",0,1048576,true) in if !(field_t.ok) then web_status(web_json("{\"error\":\"Invalid action fields\"}"),422) else h(request,T {t=field_t.value})
+=== int limits
+effect fn Action_0123456789ab(request:WebRequest) -> WebResponse = if !web_same_origin(request,env_get("NEOKIT_ORIGIN").value) then web_reply(403,"Invalid action origin","text/plain") else let input=web_input(request) in if !input.ok then web_status(web_json("{\"error\":\"Invalid request body\"}"),400) else let field_i=web_input_int(input,"i",-9223372036854775808,9223372036854775807,true) in if !(field_i.ok) then web_status(web_json("{\"error\":\"Invalid action fields\"}"),422) else h(request,T {i=field_i.value})
+=== equal bounds
+effect fn Action_0123456789ab(request:WebRequest) -> WebResponse = if !web_same_origin(request,env_get("NEOKIT_ORIGIN").value) then web_reply(403,"Invalid action origin","text/plain") else let input=web_input(request) in if !input.ok then web_status(web_json("{\"error\":\"Invalid request body\"}"),400) else let field_i=web_input_int(input,"i",7,7,true) in let field_t=web_input_text(input,"t",3,3,true) in if !(field_i.ok && field_t.ok) then web_status(web_json("{\"error\":\"Invalid action fields\"}"),422) else h(request,T {i=field_i.value,t=field_t.value})
+=== only max
+effect fn Action_0123456789ab(request:WebRequest) -> WebResponse = if !web_same_origin(request,env_get("NEOKIT_ORIGIN").value) then web_reply(403,"Invalid action origin","text/plain") else let input=web_input(request) in if !input.ok then web_status(web_json("{\"error\":\"Invalid request body\"}"),400) else let field_t=web_input_text(input,"t",1,9,true) in let field_i=web_input_int(input,"i",-9223372036854775808,-1,true) in if !(field_t.ok && field_i.ok) then web_status(web_json("{\"error\":\"Invalid action fields\"}"),422) else h(request,T {t=field_t.value,i=field_i.value})
+=== subtables
+effect fn Action_0123456789ab(request:WebRequest) -> WebResponse = if !web_same_origin(request,env_get("NEOKIT_ORIGIN").value) then web_reply(403,"Invalid action origin","text/plain") else let input=web_input(request) in if !input.ok then web_status(web_json("{\"error\":\"Invalid request body\"}"),400) else let field_title=web_input_text(input,"title",2,4096,true) in let field_count=web_input_int(input,"count",-9223372036854775808,9223372036854775807,true) in if !(field_title.ok && field_count.ok) then web_status(web_json("{\"error\":\"Invalid action fields\"}"),422) else h(request,T {title=field_title.value,count=field_count.value})
+=== dotted keys
+effect fn Action_0123456789ab(request:WebRequest) -> WebResponse = if !web_same_origin(request,env_get("NEOKIT_ORIGIN").value) then web_reply(403,"Invalid action origin","text/plain") else let input=web_input(request) in if !input.ok then web_status(web_json("{\"error\":\"Invalid request body\"}"),400) else let field_title=web_input_text(input,"title",1,10,true) in let field_ok=web_input_bool(input,"ok",true) in if !(field_title.ok && field_ok.ok) then web_status(web_json("{\"error\":\"Invalid action fields\"}"),422) else h(request,T {title=field_title.value,ok=field_ok.value})
+=== identifier names
+effect fn Action_0123456789ab(request:WebRequest) -> WebResponse = if !web_same_origin(request,env_get("NEOKIT_ORIGIN").value) then web_reply(403,"Invalid action origin","text/plain") else let input=web_input(request) in if !input.ok then web_status(web_json("{\"error\":\"Invalid request body\"}"),400) else let field__x=web_input_text(input,"_x",1,4096,true) in let field_a1=web_input_int(input,"a1",-9223372036854775808,9223372036854775807,true) in let field_Z=web_input_bool(input,"Z",true) in if !(field__x.ok && field_a1.ok && field_Z.ok) then web_status(web_json("{\"error\":\"Invalid action fields\"}"),422) else h(request,T_1 {_x=field__x.value,a1=field_a1.value,Z=field_Z.value})
+=== input not table
+error: Typed actions require input_type and an [input] field schema
+=== input array
+error: Typed actions require input_type and an [input] field schema
+=== input array of tables
+error: Typed actions require input_type and an [input] field schema
+=== missing input_type
+error: Typed actions require input_type and an [input] field schema
+=== empty input_type
+error: Typed actions require input_type and an [input] field schema
+=== bad input_type
+error: Typed actions require input_type and an [input] field schema
+=== input_type with newline
+error: Typed actions require input_type and an [input] field schema
+=== bad field name
+error: Action field names must be Neo identifiers
+=== digit field name
+error: Action field names must be Neo identifiers
+=== unknown kind
+error: Unsupported action field type: x
+=== integer kind
+error: Unsupported action field type: x
+=== no type
+error: Unsupported action field type: x
+=== list type
+error: Unsupported action field type: x
+=== array field
+error: Unsupported action field type: x
+=== required text
+error: Action required must be a boolean
+=== required integer
+error: Action required must be a boolean
+=== negative text min
+error: Invalid bounds for x
+=== text max too large
+error: Invalid bounds for x
+=== inverted bounds
+error: Invalid bounds for x
+=== float min
+error: Invalid bounds for x
+=== boolean max
+error: Invalid bounds for x
+=== text min above default max
+error: Invalid bounds for x
+=== second field fails
+error: Unsupported action field type: b
+=== csrf text
+error: Typed action csrf must be a boolean
+=== field error before csrf
+error: Unsupported action field type: x
+=== unicode field name
+error: Action field names must be Neo identifiers

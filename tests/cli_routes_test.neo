@@ -1,0 +1,77 @@
+; Unit tests for cli/routes.neo, ported from tests/test_features.py
+; (test_route_shape_matching_and_precedence and
+; test_canonical_paths_groups_and_dotted_segments) with the exact
+; BuildError texts; tests/cli_golden/routes compares every function with
+; compiler/routes.py on the repository's apps.
+import "std:json"
+import "std:result"
+import "../cli/routes.neo"
+
+fn same(actual:Arr u8 _, expected:Arr u8 _) -> bool = text_equal(actual,expected)
+fn folder(borrow relative:Arr u8 _) -> Arr u8 _ = match route_path(concat("/app/",relative),"/app") { Ok(value) => value, Err(message) => concat("error: ",message) }
+fn ranks(borrow path:Arr u8 _) -> Arr u8 _ = let r=route_ranks(path) in text_join(arr(i in 0..len(r)) text_int(if i>=0 && i<len(r) then r[i] else -1),",")
+fn config(borrow text:Arr u8 _) -> Json = match toml_load("route.toml",text) { Ok(value) => value, Err(message) => json_none().value }
+fn allowed(borrow text:Arr u8 _) -> Arr u8 _
+  = match route_methods(config(text),"app/api/route.toml") { Ok(value) => text_join(value,","), Err(message) => concat("error: ",message) }
+
+fn test_route_shape_matching_and_precedence() -> bool
+  = same(route_shape("/org/[org]/items/[id]"),route_shape("/org/[company]/items/[item]"))
+    && same(route_shape("/docs/[[...slug]]"),route_shape("/docs/[[...path]]"))
+    && route_matches("/docs/[[...slug]]","/docs") && route_matches("/docs/[[...slug]]","/docs/a/b")
+    && !route_matches("/docs/[...slug]","/docs") && !route_matches("/docs/[[...slug]]","/docs//a")
+    && route_precedence_less("/docs/new","/docs/[id]") && route_precedence_less("/docs/[id]","/docs/[...slug]")
+    && same(folder("[id]/[id]"),"error: Route parameter names must be unique")
+    && same(folder("[...slug]/more"),"error: Catch-all parameters must be the final route segment")
+
+fn test_canonical_paths_groups_and_dotted_segments() -> bool
+  = route_canonical_path("/") && route_canonical_path("/a") && route_canonical_path("/a/b-c_d")
+    && route_canonical_path("/feed.xml") && route_canonical_path("/.well-known/security.txt")
+    && !route_canonical_path("") && !route_canonical_path("a") && !route_canonical_path("/a/") && !route_canonical_path("//a")
+    && !route_canonical_path("/a//b") && !route_canonical_path("/a/../b") && !route_canonical_path("/./a")
+    && !route_canonical_path("/a b") && !route_canonical_path("/a?b") && !route_canonical_value(json_none().value)
+    && !route_canonical_value(json_parse("1").value) && route_canonical_value(json_parse("\"/a\"").value)
+    && same(folder("(marketing)/about"),"/about") && same(folder("(shop)/(group)"),"/")
+    && same(folder("feed.xml"),"/feed.xml") && route_matches("/blog/[slug]","/blog/hello.world")
+    && same(folder(".."),"error: Unsupported route segment: ..") && same(folder("a b"),"error: Unsupported route segment: a b")
+    && same(folder("(bad group"),"error: Unsupported route segment: (bad group")
+
+fn test_route_path_parts_like_pathlib() -> bool
+  = same(folder(""),"/") && same(folder("blog//[slug]/./"),"/blog/[slug]")
+    && same(folder("docs/[[...slug]]"),"/docs/[[...slug]]") && same(folder("a/[x]/[...y]"),"/a/[x]/[...y]")
+    && same(folder("..."),"/...") && same(folder("[...a]/b c"),"error: Catch-all parameters must be the final route segment")
+    && same(folder("a b/[...x]/c"),"error: Unsupported route segment: a b") && same(folder("[x]/[[...x]]"),"error: Route parameter names must be unique")
+    && same(folder("[1x]"),"error: Unsupported route segment: [1x]") && same(folder("[]"),"error: Unsupported route segment: []")
+    && same(folder("café"),"error: Unsupported route segment: café") && same(folder("()"),"error: Unsupported route segment: ()")
+    && same(match route_path_relative("(g)/a") { Ok(value) => value, Err(message) => message },"/a")
+    && same(match route_path("/other/a","/app") { Ok(value) => value, Err(message) => message },"'/other/a' is not in the subpath of '/app'")
+
+fn test_matches_compiles_like_the_regex() -> bool
+  = route_matches("/","/") && route_matches("//","/") && !route_matches("/[[...all]]","/") && route_matches("/[[...all]]","/a/b")
+    && route_matches("/[...all]","/x") && !route_matches("/a","/a/") && !route_matches("/a/[id]","/a")
+    && route_matches("/a/[id]/[...rest]","/a/1/2/3") && !route_matches("/a/[id]/[...rest]","/a/1")
+    && route_matches("/a/[[...x]]/b","/a/b") && route_matches("/a/[[...x]]/b","/a/1/2/b") && !route_matches("/a/[[...x]]/b","/a/1/2")
+    && route_matches("/a.b","/a.b") && !route_matches("/a.b","/axb") && !route_matches("/./a","/a") && !route_matches("/a","/A")
+    && route_matches("a/[x","/a/y") && !route_matches("/a","a")
+
+fn test_precedence_orders_like_tuples() -> bool
+  = let paths=arr(i in 0..6) if i==0 then "/docs/[...slug]" else if i==1 then "/docs/[id]" else if i==2 then "/docs/new"
+      else if i==3 then "/" else if i==4 then "/docs/[[...all]]" else "/docs" in
+    let order=route_precedence_order(paths) in
+    same(text_join(arr(i in 0..len(order)) text_word(paths,if i>=0 && i<len(order) then order[i] else 0),","),"/,/docs,/docs/new,/docs/[id],/docs/[...slug],/docs/[[...all]]")
+    && !route_precedence_less("/a","/a") && route_precedence_less("/a","/a/b") && route_precedence_less("/z","/[a]")
+    && same(ranks("/a/[b]/[...c]"),"0,0,1,2") && same(ranks("/"),"0,0") && same(ranks("/x/[[...y]]"),"0,0,3")
+
+fn test_shape_substitutions() -> bool
+  = same(route_shape("/a/[b]/[...c]"),"/a/[]/[...]") && same(route_shape("/a/[[...c]]"),"/a/[[...]]")
+    && same(route_shape("/a/[]"),"/a/[]") && same(route_shape("/a/[b"),"/a/[b") && same(route_shape("/[a/b]/c"),"/[]/c")
+    && same(route_shape("/[[x]]"),"/[[]]") && same(route_shape("[...]"),"[...]") && same(route_shape("/x[y]z[...w]"),"/x[]z[...]")
+
+fn test_methods() -> bool
+  = same(allowed("handler=\"h\"\n"),"GET,HEAD") && same(allowed("methods=[\"POST\",\"GET\"]\n"),"POST,GET,HEAD")
+    && same(allowed("methods=[\"HEAD\",\"GET\"]\n"),"HEAD,GET") && same(allowed("methods=[\"DELETE\"]\n"),"DELETE")
+    && same(allowed("methods=[]\n"),"error: app/api/route.toml: methods must be a nonempty list of distinct HTTP methods")
+    && same(allowed("methods=\"GET\"\n"),"error: app/api/route.toml: methods must be a nonempty list of distinct HTTP methods")
+    && same(allowed("methods=[\"GET\",\"GET\"]\n"),"error: app/api/route.toml: methods must be a nonempty list of distinct HTTP methods")
+    && same(allowed("methods=[\"get\"]\n"),"error: app/api/route.toml: methods must be a nonempty list of distinct HTTP methods")
+    && same(allowed("methods=[1]\n"),"error: app/api/route.toml: methods must be a nonempty list of distinct HTTP methods")
+    && same(match route_methods_or(config("handler=\"h\"\n"),"x",push(text_words(),"POST")) { Ok(value) => text_join(value,","), Err(message) => message },"POST")

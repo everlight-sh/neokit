@@ -1,0 +1,5 @@
+ok missing image tools are named
+ok public sitemap and robots take precedence
+ok sitemap, robots and origin rules
+ok images are hashed, resized and traversal is rejected
+ok image variants are cached by content
