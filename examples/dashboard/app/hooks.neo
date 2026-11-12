@@ -1,7 +1,7 @@
 import "../model.neo"
 effect fn dashboard_before(request:WebRequest) -> WebResponse
   = if str_starts(request.path,"/dashboard") || str_starts(request.path,"/api/tasks") || str_starts(request.path,"/actions/") || str_equal(request.path,"/logout") then
-      let session=web_session_read(request,dashboard_secret()) in
+      let session=web_session_read(request,dashboard_secret(),dashboard_sessions()) in
       if !session.authenticated || str_equal(session.subject,"anonymous") then
         if str_starts(request.path,"/api/") then web_reply(401,"Unauthorized","text/plain") else web_redirect("/login",303)
       else if !web_csrf(request,session,dashboard_origin()) then web_reply(403,"CSRF validation failed","text/plain") else web_continue()

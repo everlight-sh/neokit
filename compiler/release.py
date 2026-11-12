@@ -15,7 +15,7 @@ import tomllib
 
 from .templates import BuildError
 
-NEO_VERSION = '0.2.2'
+NEO_VERSION = '0.2.5'
 NEO_BINARIES = ('darwin-arm64', 'linux-arm64', 'linux-x86_64')
 
 FRAMEWORK_FILES = (
@@ -84,7 +84,7 @@ def assemble(destination, root, environment, neo_archive=None, neo_sha256=None):
             installed = root.parent/'neo'
             if not (installed/'bin/neoc-linux-arm64').is_file():
                 raise BuildError('Use a released SDK for standalone scaffolding, or build a release with --neo-archive and --neo-sha256')
-            shutil.copytree(installed, neo, ignore=shutil.ignore_patterns('.neo-build', '.axon-build', '__pycache__'))
+            shutil.copytree(installed, neo, ignore=shutil.ignore_patterns('.neo-build', '__pycache__'))
         if ((neo/'VERSION').read_text().strip() != NEO_VERSION or
                 not all((neo/'bin'/f'neoc-{platform}').is_file() for platform in NEO_BINARIES)):
             raise BuildError(f'Expected a multi-platform native Neo {NEO_VERSION} bundle')
@@ -108,7 +108,7 @@ def assemble(destination, root, environment, neo_archive=None, neo_sha256=None):
             relative = Path(package['path'])
             source = (root/relative).resolve()
             target = (framework/relative).resolve()
-            if not target.is_relative_to(stage/'axon-libs'):
+            if not target.is_relative_to(stage/'neo-libs'):
                 raise BuildError(f'Unsupported release dependency location: {relative}')
             copy_sources(source, target)
             for notice in source.glob('LICENSE*'):

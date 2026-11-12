@@ -52,7 +52,7 @@ def fingerprint(app):
     for base in (app, ROOT/'src', ROOT/'compiler', ROOT/'client'):
         for directory, folders, files in os.walk(base):
             folders[:] = [name for name in folders if name not in
-                          ('node_modules', '.git', '.neo-build', '.axon-build', '.neokit', '__pycache__')
+                          ('node_modules', '.git', '.neo-build', '.neokit', '__pycache__')
                           and Path(directory)/name != app/'vendor/neokit-sdk']
             for name in files:
                 path = Path(directory)/name
@@ -153,7 +153,7 @@ def main():
     p.add_argument('--standalone',action='store_true',help='include a relocatable NeoKit SDK in the application')
     p=sub.add_parser('release',help='create a checksummed NeoKit SDK archive')
     p.add_argument('--out',type=Path,required=True)
-    p.add_argument('--neo-archive',type=Path,help='Neo 0.2.2 multi-platform native release archive')
+    p.add_argument('--neo-archive',type=Path,help='Neo 0.2.5 multi-platform native release archive')
     p.add_argument('--neo-sha256',help='expected SHA-256 of the Neo archive')
     sub.add_parser('doctor')
     p=sub.add_parser('revalidate');p.add_argument('--app',type=Path,default=project);p.add_argument('--out',type=Path,default=output.with_name(output.name+'-revalidation'))
@@ -244,7 +244,7 @@ def main():
             dest = args.dest.resolve()
             if dest == out or dest in out.parents or out in dest.parents or dest == ROOT or dest in ROOT.parents or app == dest or app in dest.parents:
                 raise BuildError('Export destination must be separate from source/build directories')
-            previous_export = any((dest/name).is_file() for name in ('.neokit-export', '.axon-web-export'))
+            previous_export = any((dest/name).is_file() for name in ('.neokit-export',))
             if dest.exists() and any(dest.iterdir()) and not previous_export:
                 raise BuildError('Export destination must be empty or a previous NeoKit export')
             # Copy beside the destination, then swap, so a failed copy keeps the previous export.

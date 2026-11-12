@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-- Neo 0.2.2: the runtime is compiled once per machine, and SDK releases expect the 0.2.2 archive.
+- Neo 0.2.5: the runtime is compiled once per machine, and SDK releases expect the 0.2.5 archive. The server now times out slow clients, answers bad requests with 400/413/431, restarts crashed workers and reads trusted `X-Forwarded-For`.
+- Libraries come from neo-libs 0.1.0 (`../neo-libs`, formerly axon-libs); every package is named `neo-*`. NeoKit no longer looks for a toolchain in `../axon`.
+- Sessions: `web_session_read` takes a revocation directory. The dashboard's logout revokes all of a user's sessions, including copied cookies.
+- Login is rate-limited per client address (`web_rate_limit_client`) with an account-wide ceiling. Set `NEO_TRUSTED_PROXIES` behind a proxy.
+- The page cache is bounded to 4,096 slot files, and the revalidation worker sweeps expired entries. Upgrading: empty `NEOKIT_CACHE_DIR`, since files in the old format are never read or removed.
 - Static export renders every page in one process and writes `404.html`, `_redirects` and dotted files such as `feed.xml`.
 - Server builds swap executables atomically. Development serves assets from disk, so CSS and browser edits skip the native rebuild.
 - Routing: `(group)` folders, dotted segments, page `guard`, build-time `paths_fn`, `[[redirects]]` and CORS for API routes.

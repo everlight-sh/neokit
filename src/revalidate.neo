@@ -8,11 +8,13 @@ effect fn main()->unit
   = let cache=neokit_cache() in let token=env_get("NEOKIT_REVALIDATE_TOKEN").value in check len(token)>=32 in
     let configured=env_get("NEOKIT_REVALIDATE_HOST") in let host=if configured.present then configured.value else "127.0.0.1" in
     let configured=env_get("NEOKIT_REVALIDATE_PORT") in let port=if configured.present then int_parse(configured.value).value else 8094 in check port>0 && port<65536 in
-    loop(running=true) while running next(
+    ; Every 300 rounds of 200 ms, about once a minute, expired entries are swept.
+    loop(round=0) while round>=0 next(
+      let swept=if round!=0 then 0 else let clock=time_unix_ms() in if clock.ok then web_cache_sweep(cache,clock.value).value else 0 in
       let jobs=web_cache_dequeue(cache) in
       let processed=if !jobs.ok then 0 else loop(at=0,count=0) while at<len(jobs.value) next(
         let line=str_find(str_slice(jobs.value,at,len(jobs.value)),"\n") in if line.present then at+line.value+1 else len(jobs.value),
         let line=str_find(str_slice(jobs.value,at,len(jobs.value)),"\n") in let path=str_slice(jobs.value,at,if line.present then at+line.value else len(jobs.value)) in
         let response=using arena=new_arena(4) in let result=http_send_headers(arena,http_client(host,port),"GET",path,"",10000,8388608,arr(i in 0..1) HttpHeader {name="X-NeoKit-Revalidate",value=token}) in let closed=http_client_close(result.client) in result.response in
         count+(if response.ok && response.status==200 then 1 else 0)) yield count in
-      let slept=sleep_ms(200) in true) yield noop()
+      let slept=sleep_ms(200) in (round+1)%300) yield noop()

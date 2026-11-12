@@ -6,7 +6,7 @@ services:
       context: ..
       additional_contexts:
         neo: ${NEOKIT_NEO_CONTEXT:-../../neo}
-        neo-libs: ../../axon-libs
+        neo-libs: ../../neo-libs
       args:
         APP: examples/saas
     environment:

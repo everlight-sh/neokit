@@ -1,7 +1,6 @@
 .git/
 build/
 **/.neo-build/
-**/.axon-build/
 **/__pycache__/
 .DS_Store
 **/node_modules/

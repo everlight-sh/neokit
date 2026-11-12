@@ -9,8 +9,13 @@ fn task_bool(value:Json,key:Arr u8 n) -> bool = json_bool(json_get(value,key).va
 fn dashboard_error(code:i64,message:Arr u8 n) -> JsonResult = JsonResult {ok=false,value=json_none().value,error=Error {code=code,message=message,position=0}}
 effect(env) fn dashboard_secret() -> Arr u8 _ = env_get("NEOKIT_SESSION_SECRET").value
 effect(env) fn dashboard_origin() -> Arr u8 _ = env_get("NEOKIT_ORIGIN").value
-effect(env) fn dashboard_database() -> DocumentStore
-  = let directory=env_get("NEOKIT_DATA_DIR").value in document_store(if len(directory)>0 then concat(directory,"/tasks.json") else "")
+; A file or directory under NEOKIT_DATA_DIR, or "" when it is unset; login
+; refuses to run without it.
+effect(env) fn dashboard_path(name:Arr u8 n) -> Arr u8 _
+  = let directory=env_get("NEOKIT_DATA_DIR").value in if len(directory)>0 then concat(directory,"/",name) else ""
+; Per-user revocation times: logout ends every earlier session of that user.
+effect(env) fn dashboard_sessions() -> Arr u8 _ = dashboard_path("sessions")
+effect(env) fn dashboard_database() -> DocumentStore = document_store(dashboard_path("tasks.json"))
 fn dashboard_initial(value:Json) -> JsonResult
   = if value.kind==1 then json_parse("{\"schema\":1,\"tasks\":[]}") else
     if json_int(json_get(value,"schema").value).value!=1 || json_get(value,"tasks").value.kind!=5 then dashboard_error(22,"Unsupported database schema") else JsonResult {ok=true,value=value,error=no_error()}
@@ -36,7 +41,7 @@ fn dashboard_input(request:WebRequest,name:Arr u8 n) -> OptionBytes
       let field=json_get(document.value,name) in let value=json_text(field.value) in if field.present && value.ok then some_bytes(value.value) else none_bytes()
     else web_form(request,name)
 effect fn dashboard_mutate(request:WebRequest,operation:Arr u8 n,id:Arr u8 m) -> WebResponse
-  = let key=dashboard_secret() in let session=web_session_read(request,key) in
+  = let key=dashboard_secret() in let session=web_session_read(request,key,dashboard_sessions()) in
     if !session.authenticated || str_equal(session.subject,"anonymous") then web_reply(401,"Unauthorized","text/plain") else
     if !web_csrf(request,session,dashboard_origin()) then web_reply(403,"CSRF validation failed","text/plain") else
     let title=web_required(dashboard_input(request,"title"),1,200) in
@@ -61,7 +66,7 @@ fn dashboard_row(task:Json,csrf:Arr u8 n) -> WebHtml
       "<form method=\"post\" action=\"/actions/tasks\" data-web-form><input type=\"hidden\" name=\"_csrf\" value=\"",csrf,"\"><input type=\"hidden\" name=\"id\" value=\"",id,"\"><button name=\"operation\" value=\"toggle\">Toggle</button><button name=\"operation\" value=\"delete\">Delete</button></form></li>"))
 type DashboardProps={title:Arr u8 _,subject:Arr u8 _,csrf:Arr u8 _,rows:Arr WebHtml _,failed:bool}
 effect fn dashboard_load(request:WebRequest) -> DashboardProps
-  = let session=web_session_read(request,dashboard_secret()) in let stored=document_read(dashboard_database()) in
+  = let session=web_session_read(request,dashboard_secret(),dashboard_sessions()) in let stored=document_read(dashboard_database()) in
     let state=if !stored.ok && stored.error.code==2 then json_parse("{\"schema\":1,\"tasks\":[]}") else stored in
     let tasks=json_array_values(json_get(state.value,"tasks").value) in
     let rows=loop(i=0,rows=vec_empty::<WebHtml>()) while i<len(tasks) next(i+1,
@@ -73,22 +78,33 @@ fn dashboard_login_form(csrf:Arr u8 n,message:Arr u8 m,social:bool) -> WebRespon
   = web_reply(200,concat("<!doctype html><html><head><title>Sign in · NeoKit Tasks</title><link rel=\"stylesheet\" href=\"/site.css\"></head><body><main><h1>Sign in</h1><p>",html_escape(message),"</p>",if social then "<p><a href=\"/oauth\">Sign in with your identity provider</a></p>" else "","<form method=\"post\" action=\"/login\"><input type=\"hidden\" name=\"_csrf\" value=\"",html_escape(csrf),"\"><label>Username<input name=\"username\" autocomplete=\"username\" required></label><label>Password<input type=\"password\" name=\"password\" autocomplete=\"current-password\" required></label><button>Sign in</button></form></main></body></html>"),"text/html; charset=utf-8")
 effect fn dashboard_login(request:WebRequest) -> WebResponse
   = let key=dashboard_secret() in let origin=dashboard_origin() in let social=len(env_get("NEOKIT_OAUTH_CLIENT_ID").value)>0 in
-    if len(key)<32 || len(origin)==0 || len(env_get("NEOKIT_ADMIN_PASSWORD_HASH").value)==0 then web_reply(503,"Configure session secret, origin and admin password hash","text/plain") else
+    if len(key)<32 || len(origin)==0 || len(env_get("NEOKIT_ADMIN_PASSWORD_HASH").value)==0 || len(dashboard_sessions())==0 then web_reply(503,"Configure session secret, origin, admin password hash and data directory","text/plain") else
     if str_equal(request.method,"GET") || str_equal(request.method,"HEAD") then
-      let current=web_session_read(request,key) in if current.authenticated && !str_equal(current.subject,"anonymous") then web_redirect("/dashboard",303) else
+      let current=web_session_read(request,key,dashboard_sessions()) in if current.authenticated && !str_equal(current.subject,"anonymous") then web_redirect("/dashboard",303) else
       let token=web_session_create("anonymous",key,request.stamp,600000) in if !token.ok then web_reply(503,"Session unavailable","text/plain") else
       let session=web_session_verify(token.value,key,request.stamp) in
       web_session_cookie(dashboard_login_form(session.csrf,"Use your configured account.",social),token.value,600,str_starts(origin,"https://")) else
-    let session=web_session_read(request,key) in if !web_csrf(request,session,origin) then web_reply(403,"CSRF validation failed","text/plain") else
-    let allowed=web_rate_limit(concat(env_get("NEOKIT_DATA_DIR").value,"/login-rate"),request.stamp,20,60000) in if !allowed then web_reply(429,"Try again later","text/plain") else
+    let session=web_session_read(request,key,dashboard_sessions()) in if !web_csrf(request,session,origin) then web_reply(403,"CSRF validation failed","text/plain") else
+    ; Ten attempts a minute per client address (web_client_ip: the peer, or the
+    ; forwarded client behind NEO_TRUSTED_PROXIES), and thirty for the account as a
+    ; ceiling against senders with many addresses. A blocked client is not counted
+    ; against the account.
+    let allowed=if web_rate_limit_client(request,dashboard_path("login-clients"),request.stamp,10,60000)
+      then web_rate_limit(dashboard_path("login-rate"),request.stamp,30,60000) else false in
+    if !allowed then web_with_header(web_reply(429,"Try again later","text/plain"),"Retry-After","60") else
     let username=web_form(request,"username").value in let configured=env_get("NEOKIT_ADMIN_USER") in let password=web_form(request,"password").value in
     if !crypto_equal(username,if configured.present then configured.value else "admin") || !web_password_verify(password,env_get("NEOKIT_ADMIN_PASSWORD_HASH").value) then web_status(dashboard_login_form(session.csrf,"Invalid credentials.",social),401) else
     let token=web_session_create(username,key,request.stamp,3600000) in if !token.ok then web_reply(503,"Session unavailable","text/plain") else
       web_session_cookie(web_redirect("/dashboard",303),token.value,3600,str_starts(origin,"https://"))
 effect fn dashboard_logout(request:WebRequest) -> WebResponse
-  = let session=web_session_read(request,dashboard_secret()) in
+  = let session=web_session_read(request,dashboard_secret(),dashboard_sessions()) in
     if !web_csrf(request,session,dashboard_origin()) then web_reply(403,"CSRF validation failed","text/plain") else
-      web_session_cookie(web_redirect("/login",303),"",0,str_starts(dashboard_origin(),"https://"))
+    let secure=str_starts(dashboard_origin(),"https://") in
+    ; Revoking ends this user's sessions on every device, including copied cookies.
+    ; The shared pre-login "anonymous" subject is never revoked.
+    let revoked=if session.authenticated && !str_equal(session.subject,"anonymous") then web_session_revoke(dashboard_sessions(),session.subject,request.stamp) else int_ok(0) in
+    if !revoked.ok then web_session_cookie(web_reply(503,"Sign-out could not be recorded. Try again.","text/plain"),"",0,secure) else
+      web_session_cookie(web_redirect("/login",303),"",0,secure)
 
 effect fn dashboard_provider()->OAuthProvider
   = let configured=env_get("NEOKIT_OAUTH_SCOPE") in let provider=oauth_provider(env_get("NEOKIT_OAUTH_AUTHORIZE_URL").value,env_get("NEOKIT_OAUTH_TOKEN_URL").value,env_get("NEOKIT_OAUTH_USERINFO_URL").value,env_get("NEOKIT_OAUTH_CLIENT_ID").value,concat(dashboard_origin(),"/oauth/callback"),if configured.present then configured.value else "openid profile") in

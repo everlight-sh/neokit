@@ -39,7 +39,7 @@ def compiler_env():
         return (root/'bin/neoc').is_file() or (root/'.neo-build/bin/neoc').is_file()
 
     launcher = shutil.which('neo')
-    candidates = [ROOT.parent/'neo', ROOT.parent/'axon']
+    candidates = [ROOT.parent/'neo']
     if launcher:
         candidates.append(Path(launcher).resolve().parent)
     default = next((path for path in candidates if native(path)), ROOT.parent/'neo')
@@ -57,7 +57,7 @@ def compiler_command(environment):
 
 def package_context(app):
     path=Path(app).resolve()
-    return next((root for root in (path,*path.parents) if any((root/name).is_file() for name in ('neo.toml','axon.toml'))),ROOT)
+    return next((root for root in (path,*path.parents) if any((root/name).is_file() for name in ('neo.toml',))),ROOT)
 
 
 def cache_identity(app):
@@ -70,7 +70,7 @@ def cache_identity(app):
                 digest.update(executable.read_bytes())
     for base in bases:
         for directory,folders,names in os.walk(base):
-            folders[:]=sorted(folder for folder in folders if folder not in ('node_modules','.git','__pycache__','.neo-build','.axon-build','build','.next','.neokit'))
+            folders[:]=sorted(folder for folder in folders if folder not in ('node_modules','.git','__pycache__','.neo-build','build','.next','.neokit'))
             for name in sorted(names):
                 path=Path(directory)/name
                 if path.suffix in ('.neo','.ax','.view','.toml','.lock','.py'):
@@ -465,7 +465,7 @@ def validate_output(app,out):
     for source in sources:
         if source == out or source in out.parents:
             raise BuildError('Build output must be outside source directories')
-    if out.exists() and any(out.iterdir()) and not any((out/name).is_file() for name in ('.neokit-build', '.axon-web-build')):
+    if out.exists() and any(out.iterdir()) and not any((out/name).is_file() for name in ('.neokit-build',)):
         raise BuildError('Build output must be empty or an existing NeoKit build')
 
 

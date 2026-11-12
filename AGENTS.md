@@ -3,7 +3,7 @@
 This is the separate experimental web framework project, named NeoKit. Keep application/framework code outside the language compiler.
 
 - `./neokit build`, `./neokit serve`, `./neokit export`, `./neokit test` drive the example.
-- `NEO_HOME` selects the external `neoc` checkout; auto-detect `../neo` or `../axon`.
+- `NEO_HOME` selects the external `neoc` checkout; auto-detect `../neo`.
 - Native runtime code stays Neo and C-free. Bun/Python/LLVM are build tools;
   JavaScript executes in the browser. No JS engine runs inside the server.
 - Use Bun for JavaScript tooling and tests.

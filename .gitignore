@@ -1,6 +1,5 @@
 /build/
 **/.neo-build/
-**/.axon-build/
 **/__pycache__/
 *.pyc
 .DS_Store

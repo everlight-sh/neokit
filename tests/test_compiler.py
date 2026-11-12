@@ -29,14 +29,15 @@ class CompilerCheckout(unittest.TestCase):
                 self.assertEqual(env['NEO_ROOT'], str(chosen))
                 self.assertNotIn('NEOC', env)
 
-    def test_auto_detection_prefers_neo_and_supports_existing_axon_directory(self):
+    def test_auto_detection_uses_sibling_neo_only(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            existing = self.checkout(root/'axon')
+            self.checkout(root/'axon')
             with patch('compiler.build.ROOT', root/'neokit'), patch.dict(os.environ, {}, clear=True):
-                self.assertEqual(compiler_env()['NEO_HOME'], str(existing))
-                renamed = self.checkout(root/'neo')
-                self.assertEqual(compiler_env()['NEO_HOME'], str(renamed))
+                with self.assertRaisesRegex(BuildError, 'Set NEO_HOME'):
+                    compiler_env()
+                sibling = self.checkout(root/'neo')
+                self.assertEqual(compiler_env()['NEO_HOME'], str(sibling))
 
     def test_missing_native_compiler_is_rejected_with_actionable_error(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -14,11 +14,13 @@ from tests.features_smoke import call
 
 ROOT=Path(__file__).resolve().parents[1]
 def b64(value):return base64.urlsafe_b64encode(value).decode().rstrip('=')
-def signed(subject,key):
-    csrf=b64(b'other-test-user-csrf-seed-32bytes!')
+def signed(subject,key,issued=None):
+    """A v1 token (no issue time, still accepted) or, with `issued`, a v2 token."""
     # Use exactly 32 bytes, independently of the implementation's CSPRNG.
     csrf=b64(b'0123456789abcdef0123456789abcdef')
-    body=f'v1.{b64(subject.encode())}.{csrf}.{int(time.time()*1000)+3600000}'
+    expiry=int(time.time()*1000)+3600000
+    body=(f'v2.{b64(subject.encode())}.{csrf}.{issued}.{expiry}' if issued is not None
+          else f'v1.{b64(subject.encode())}.{csrf}.{expiry}')
     return body+'.'+b64(hmac.new(key.encode(),body.encode(),hashlib.sha256).digest()),csrf
 
 def main(binary=None):
@@ -73,10 +75,27 @@ def main(binary=None):
             logout=urlencode({'_csrf':csrf})
             status,returned,_=call(port,'/logout','POST',logout,{'Cookie':cookie,'Origin':origin,'Content-Type':'application/x-www-form-urlencoded'})
             assert status==303 and 'Max-Age=0' in returned['Set-Cookie']
-        with running(binary,1,environment) as restarted:
-            status,_,body=call(restarted,'/dashboard',headers={'Cookie':cookie})
+            # Logout revokes the session itself, so a copy of the cookie stops working.
+            assert call(port,'/dashboard',headers={'Cookie':cookie})[0]==303
+            assert call(port,'/api/tasks/'+ids[0],'PATCH','{"title":"after logout"}',headers)[0]==401
+            # One successful login is already counted; ten attempts a minute per client.
+            status,returned,body=call(port,'/login');assert status==200
+            anonymous=returned['Set-Cookie'].split(';')[0]
+            form={'Cookie':anonymous,'Origin':origin,'Content-Type':'application/x-www-form-urlencoded'}
+            wrong=urlencode({'_csrf':re.search(rb'name="_csrf" value="([^"]+)"',body)[1].decode(),'username':'admin','password':'wrong-password'})
+            codes=[call(port,'/login','POST',wrong,form)[0] for _ in range(10)]
+            assert codes==[401]*9+[429],codes
+            status,returned,_=call(port,'/login','POST',wrong,{**form,'X-Forwarded-For':'203.0.113.9'})
+            assert status==429 and returned['Retry-After']=='60',(status,returned)
+        with running(binary,1,{**environment,'NEO_TRUSTED_PROXIES':'127.0.0.1'}) as restarted:
+            assert call(restarted,'/dashboard',headers={'Cookie':cookie})[0]==303
+            fresh,_=signed('admin',key,int(time.time()*1000))
+            status,_,body=call(restarted,'/dashboard',headers={'Cookie':'neokit_session='+fresh})
             assert status==200 and all(identifier.encode() in body for identifier in ids)
-        print('PASS real login/logout, CSRF, escaping, cross-user authorization, 24 concurrent durable writes across two workers and restart persistence')
+            assert call(restarted,'/login','POST',wrong,form)[0]==429
+            assert call(restarted,'/login','POST',wrong,{**form,'X-Forwarded-For':'203.0.113.9'})[0]==401
+        print('PASS real login/logout with session revocation, per-client login limits behind a trusted proxy, CSRF, escaping, '
+              'cross-user authorization, 24 concurrent durable writes across two workers and restart persistence')
 
 if __name__=='__main__':
     import argparse

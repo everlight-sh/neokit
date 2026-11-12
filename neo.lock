@@ -1,27 +1,27 @@
 {
   "format": 1,
   "packages": {
-    "axon-http-server@0.1.0": {
-      "dependencies": {},
-      "dependency_paths": {},
-      "name": "axon-http-server",
-      "path": "../axon-libs/http-server",
-      "sha256": "a9376ac83bff74c0f096590261ff100d51fe7789a88212f4956b8d89ad557c99",
-      "version": "0.1.0"
-    },
     "neo-document-store@0.1.0": {
       "dependencies": {},
       "dependency_paths": {},
       "name": "neo-document-store",
-      "path": "../axon-libs/document-store",
+      "path": "../neo-libs/document-store",
       "sha256": "9a466717c26a7cf131d460c46ba9e8542af23714fe4adcf1cf4e6a33d23d7911",
+      "version": "0.1.0"
+    },
+    "neo-http-server@0.1.0": {
+      "dependencies": {},
+      "dependency_paths": {},
+      "name": "neo-http-server",
+      "path": "../neo-libs/http-server",
+      "sha256": "6736b4aa6d922c17ee07907113af13f2cd91ad84c991f8f9cddc394832ad5df8",
       "version": "0.1.0"
     },
     "neo-jwt@0.1.0": {
       "dependencies": {},
       "dependency_paths": {},
       "name": "neo-jwt",
-      "path": "../axon-libs/jwt",
+      "path": "../neo-libs/jwt",
       "sha256": "a01f9cc95b41be9b800ab7428b028866fa7a1955bd5a1e6507c30da48ae80f52",
       "version": "0.1.0"
     },
@@ -33,7 +33,7 @@
         "jwt": "../jwt"
       },
       "name": "neo-oauth2",
-      "path": "../axon-libs/oauth2",
+      "path": "../neo-libs/oauth2",
       "sha256": "73e87fb68ec82ca8ff5aa45a30b988d848da003a7f6ce4daa2dfc2a357887eea",
       "version": "0.1.0"
     },
@@ -41,7 +41,7 @@
       "dependencies": {},
       "dependency_paths": {},
       "name": "neo-postgres",
-      "path": "../axon-libs/postgres",
+      "path": "../neo-libs/postgres",
       "sha256": "b6c94e19a5df553c1e47c7a38a4526c4a9a505867ff9732bb34b51559dda6803",
       "version": "0.1.0"
     },
@@ -49,34 +49,34 @@
       "dependencies": {},
       "dependency_paths": {},
       "name": "neo-web-cache",
-      "path": "../axon-libs/web-cache",
-      "sha256": "153de041b77117af0d242bd7cd88642925b9878552eafe528a30a688078be1a4",
+      "path": "../neo-libs/web-cache",
+      "sha256": "e1984b18cb8a673ff22f13c7e582981ddda6f0febd80b2682463b5969db1cac7",
       "version": "0.1.0"
     },
     "neo-web-security@0.1.0": {
       "dependencies": {},
       "dependency_paths": {},
       "name": "neo-web-security",
-      "path": "../axon-libs/web-security",
-      "sha256": "7c04c9a5461090e3ee78280b02cf5ff89578def0074d6fd17ab31658da760c90",
+      "path": "../neo-libs/web-security",
+      "sha256": "e63ad2479b644a28b600f105390b53b6ebfa5f91de0758f70f335bd4cd3dedc5",
       "version": "0.1.0"
     },
     "neokit@0.1.0-alpha.1": {
       "dependencies": {
         "document-store": "neo-document-store@0.1.0",
-        "http-server": "axon-http-server@0.1.0",
+        "http-server": "neo-http-server@0.1.0",
         "oauth2": "neo-oauth2@0.1.0",
         "postgres": "neo-postgres@0.1.0",
         "web-cache": "neo-web-cache@0.1.0",
         "web-security": "neo-web-security@0.1.0"
       },
       "dependency_paths": {
-        "document-store": "../axon-libs/document-store",
-        "http-server": "../axon-libs/http-server",
-        "oauth2": "../axon-libs/oauth2",
-        "postgres": "../axon-libs/postgres",
-        "web-cache": "../axon-libs/web-cache",
-        "web-security": "../axon-libs/web-security"
+        "document-store": "../neo-libs/document-store",
+        "http-server": "../neo-libs/http-server",
+        "oauth2": "../neo-libs/oauth2",
+        "postgres": "../neo-libs/postgres",
+        "web-cache": "../neo-libs/web-cache",
+        "web-security": "../neo-libs/web-security"
       },
       "name": "neokit",
       "path": ".",

@@ -6,11 +6,14 @@ services:
       context: ..
       additional_contexts:
         neo: ${NEO_HOME:-../../neo}
-        neo-libs: ../../axon-libs
+        neo-libs: ../../neo-libs
       args:
         APP: examples/dashboard
     environment:
       NEO_THREADS: ${NEO_THREADS:-2}
+      # Only the proxy can reach the app, so its network is trusted to supply
+      # X-Forwarded-For; per-client login limits then see the real client.
+      NEO_TRUSTED_PROXIES: ${NEOKIT_NETWORK:-172.30.94.0/24}
       NEOKIT_DATA_DIR: /data
       NEOKIT_CACHE_DIR: /cache
       NEOKIT_ORIGIN: https://${DOMAIN:?Set your domain}
@@ -51,6 +54,11 @@ services:
       - caddy-config:/config
     stop_grace_period: 35s
     restart: unless-stopped
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${NEOKIT_NETWORK:-172.30.94.0/24}
 volumes:
   app-data:
   app-cache:

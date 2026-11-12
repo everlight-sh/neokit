@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# docker build --build-context neo="$NEO_HOME" --build-context neo-libs=../axon-libs -t neokit .
+# docker build --build-context neo="$NEO_HOME" --build-context neo-libs=../neo-libs -t neokit .
 FROM oven/bun:1.3.13 AS bun-tools
 FROM ubuntu:24.04 AS toolchain
 # Pillow resizes [images]; brotli adds .br variants of embedded assets.
@@ -11,13 +11,13 @@ COPY --from=neo /bin /toolchain/neo/bin
 COPY --from=neo /VERSION /toolchain/neo/VERSION
 COPY --from=neo /runtime /toolchain/neo/runtime
 COPY --from=neo /stdlib /toolchain/neo/stdlib
-COPY --from=neo-libs /http-server /axon-libs/http-server
-COPY --from=neo-libs /web-security /axon-libs/web-security
-COPY --from=neo-libs /web-cache /axon-libs/web-cache
-COPY --from=neo-libs /document-store /axon-libs/document-store
-COPY --from=neo-libs /postgres /axon-libs/postgres
-COPY --from=neo-libs /oauth2 /axon-libs/oauth2
-COPY --from=neo-libs /jwt /axon-libs/jwt
+COPY --from=neo-libs /http-server /neo-libs/http-server
+COPY --from=neo-libs /web-security /neo-libs/web-security
+COPY --from=neo-libs /web-cache /neo-libs/web-cache
+COPY --from=neo-libs /document-store /neo-libs/document-store
+COPY --from=neo-libs /postgres /neo-libs/postgres
+COPY --from=neo-libs /oauth2 /neo-libs/oauth2
+COPY --from=neo-libs /jwt /neo-libs/jwt
 ENV NEO_HOME=/toolchain/neo NEO_THREADS=1
 WORKDIR /web
 # Install packages before copying sources so code edits reuse this layer.

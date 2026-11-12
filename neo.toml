@@ -4,9 +4,9 @@ version = "0.1.0-alpha.1"
 entry = "src/lib.neo"
 
 [dependencies]
-http-server={path="../axon-libs/http-server",version="0.1.0"}
-web-security={path="../axon-libs/web-security",version="0.1.0"}
-web-cache={path="../axon-libs/web-cache",version="0.1.0"}
-document-store={path="../axon-libs/document-store",version="0.1.0"}
-postgres={path="../axon-libs/postgres",version="0.1.0"}
-oauth2={path="../axon-libs/oauth2",version="0.1.0"}
+http-server={path="../neo-libs/http-server",version="0.1.0"}
+web-security={path="../neo-libs/web-security",version="0.1.0"}
+web-cache={path="../neo-libs/web-cache",version="0.1.0"}
+document-store={path="../neo-libs/document-store",version="0.1.0"}
+postgres={path="../neo-libs/postgres",version="0.1.0"}
+oauth2={path="../neo-libs/oauth2",version="0.1.0"}
