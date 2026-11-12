@@ -88,6 +88,51 @@ must match.
 
 Only Linux x86-64 has run these so far; macOS and arm64 need Neo's CI.
 
+## Build, command layer and distribution
+
+The last Python modules are split between two ports that share this contract.
+
+- `cli/host.neo` (`host_`): all file, path and process access (Python
+  `pathlib`/`os`/`shutil`/`subprocess`/`tempfile` semantics, OSError wording).
+  Other modules use it instead of their own copies.
+- `cli/build.neo` (`gen_`) replaces `compiler/build.py`. The framework root
+  (Python's `ROOT`) is an explicit `root` argument, never a global:
+  - `gen_build(root, app, out, target, profile) -> Result<GenBuilt, Arr u8 _>`
+    with `GenBuilt {out, manifest:Json}`; same files and prints as `build()`.
+  - `gen_prepare(root)`, `gen_refresh_assets(root, app, out)`,
+    `gen_build_migration(root, app, out) -> Result<path>`,
+    `gen_native_build(root, source, target, profile, package_root)`,
+    `gen_compiler_env(root) -> Result<env list>`, `gen_compiler_command(env)`.
+  - `cache_identity` hashes the same bases as Python, so it matches while
+    `compiler/` exists; after the Python is deleted, `cli/` takes its place.
+- `cli/release.neo` (`rel_`) replaces `compiler/release.py`: `assemble`,
+  `bundle` (USTAR tar byte-identical to Python's `tarfile` before compression,
+  gzip via `gzip_encode`; `gzip_decode` reads the Neo archive). Installing no
+  longer runs NeoKit code: `deploy/install.sh` is plain sh and checks the
+  SDK's `SHA256SUMS` with `sha256sum -c` or `shasum -a 256 -c`.
+- `cli/scaffold.neo` (`scf_`) replaces `compiler/scaffold.py`.
+- `cli/main.neo` (`cmd_`) replaces `compiler/cli.py`: the same commands,
+  options, defaults, output and exit codes. Errors print `neokit: MESSAGE` to
+  stderr and exit 1; usage errors follow argparse's wording and exit 2.
+- `neokit` becomes a POSIX sh launcher (no Python). It finds the framework
+  root (its own resolved directory) and a Neo toolchain (`NEO_HOME`, else the
+  SDK's `../neo`, else `neo` on PATH), builds `cli/main.neo` on first use into
+  `${XDG_CACHE_HOME:-$HOME/.cache}/neokit/cli/<key>/neokit` (key from the CLI
+  sources and the toolchain; built beside, then renamed into place), and
+  execs it with `NEOKIT_ROOT` set. A cache hit must cost only a few
+  milliseconds. One SDK archive therefore serves every platform Neo supports,
+  and no NeoKit binaries need building per platform.
+
+Parity is checked by `tests/tools/parity.ts` on the box: every app with a
+`web.toml` (examples/*, tests/*_fixture, tests/cli_golden/assets/apps/*) is
+built by the Python reference and by the native build, both with
+`NEO_HOME=/root/neo-dev/neo-feat`, and `generated/`, `manifest.json`,
+`assets/` and `snapshots/` are compared. The Python reference runs with
+`brotli` hidden (a `brotli.py` raising ImportError first on `PYTHONPATH`);
+the box has python3-brotli installed. Gzip literals in generated code are
+compared after decompression, image variants by format and dimensions, and
+`server_bytes` only when neither applies.
+
 ## Tests
 
 - Unit tests: `tests/cli_<module>_test.neo`, zero-argument boolean

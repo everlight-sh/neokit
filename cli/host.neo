@@ -1,0 +1,808 @@
+; The system layer of the native NeoKit CLI: paths, files, directories,
+; processes and the environment, with the semantics compiler/build.py,
+; cli.py, scaffold.py and release.py get from pathlib, os, os.path, shutil,
+; subprocess, tempfile and hashlib.
+;
+; Paths are strings (Arr u8 _). A path argument means what Path(argument)
+; means: the effectful functions normalize it first (host_normalize), and
+; their error messages name the normalized path, as str(Path) does.
+;
+; Python reports a failed system call as OSError, which cli.py prints as
+; `neokit: [Errno 2] No such file or directory: '/path'`. Every effectful
+; function here returns Err with that text (host_os_error), so the command
+; layer prints Err(message) the same way.
+;
+; Known differences from Python, by design or for want of a std: API:
+; - Permissions. std:fs creates directories with mode 0700 (fs_mkdir has no
+;   mode) and has no chmod. host_mkdir therefore makes 0700 directories where
+;   Python makes 0777 & ~umask (usually 0755). New files are created through
+;   fs_atomic_replace_mode with 0666 (host_write_bytes) or the requested mode
+;   (host_write_mode, host_copy_file), so they get Python's permissions,
+;   except that the mode is filtered by the umask where Python's chmod and
+;   copy2 are not. The modification time is not copied (copy2 copies it).
+; - Creating a file goes through a temporary file, an fsync and a rename
+;   (fs_atomic_replace_mode); rewriting an existing file truncates it in
+;   place, as Python does. A dangling symbolic link is replaced rather than
+;   followed.
+; - Directory walks (host_walk, host_rglob) never descend into symbolic
+;   links to directories, like os.walk and Path.rglob by default.
+; - host_copy_tree and host_remove_tree stop at the first error; shutil's
+;   copytree carries on and reports every failure.
+; - Processes get no stdin of their own: host_run closes the child's input
+;   after writing the given bytes, where subprocess.run without input lets
+;   the child read the parent's stdin.
+; - A working directory is entered through /bin/sh (std:process has no cwd
+;   parameter), which also sets PWD and OLDPWD in the child's environment.
+; - ~user and a missing HOME are errors (Python consults the password
+;   database). Text is UTF-8 whatever the locale.
+; - Error texts (host_strerror) are Linux's; macOS numbers its errno values
+;   above 34 differently.
+import "std:option"
+import "std:result"
+import "std:io"
+import "std:fs"
+import "std:process"
+import "std:random"
+import "std:sha256"
+import "text.neo"
+
+; ---------------------------------------------------------------- errors
+
+; os.strerror(code) on Linux (glibc).
+fn host_strerror(code:i64) -> Arr u8 _
+  = if code==1 then "Operation not permitted" else if code==2 then "No such file or directory"
+    else if code==3 then "No such process" else if code==4 then "Interrupted system call"
+    else if code==5 then "Input/output error" else if code==6 then "No such device or address"
+    else if code==7 then "Argument list too long" else if code==8 then "Exec format error"
+    else if code==9 then "Bad file descriptor" else if code==10 then "No child processes"
+    else if code==11 then "Resource temporarily unavailable" else if code==12 then "Cannot allocate memory"
+    else if code==13 then "Permission denied" else if code==14 then "Bad address"
+    else if code==15 then "Block device required" else if code==16 then "Device or resource busy"
+    else if code==17 then "File exists" else if code==18 then "Invalid cross-device link"
+    else if code==19 then "No such device" else if code==20 then "Not a directory"
+    else if code==21 then "Is a directory" else if code==22 then "Invalid argument"
+    else if code==23 then "Too many open files in system" else if code==24 then "Too many open files"
+    else if code==25 then "Inappropriate ioctl for device" else if code==26 then "Text file busy"
+    else if code==27 then "File too large" else if code==28 then "No space left on device"
+    else if code==29 then "Illegal seek" else if code==30 then "Read-only file system"
+    else if code==31 then "Too many links" else if code==32 then "Broken pipe"
+    else if code==36 then "File name too long" else if code==39 then "Directory not empty"
+    else if code==40 then "Too many levels of symbolic links" else if code==95 then "Operation not supported"
+    else if code==122 then "Disk quota exceeded"
+    else concat("Unknown error ",text_int(code))
+; str(OSError(code, os.strerror(code), path)): "[Errno 2] No such file or
+; directory: '/path'", with Python's repr() of the path.
+fn host_os_error(code:i64, borrow path:Arr u8 _) -> Arr u8 _
+  = concat("[Errno ",text_int(code),"] ",host_strerror(code),": ",text_repr(path))
+; The two-path form os.replace, os.rename and os.symlink raise:
+; "[Errno 2] No such file or directory: 'a' -> 'b'".
+fn host_os_error2(code:i64, borrow path:Arr u8 _, borrow other:Arr u8 _) -> Arr u8 _
+  = concat(host_os_error(code,path)," -> ",text_repr(other))
+; An OSError without a file name: "[Errno 2] No such file or directory".
+fn host_errno_text(code:i64) -> Arr u8 _ = concat("[Errno ",text_int(code),"] ",host_strerror(code))
+
+private fn host_ok(borrow value:Arr u8 _) -> Result<Arr u8 _,Arr u8 _> = Ok::<Arr u8 _,Arr u8 _>(value)
+private fn host_err(borrow message:Arr u8 _) -> Result<Arr u8 _,Arr u8 _> = Err::<Arr u8 _,Arr u8 _>(message)
+private fn host_done(value:i64) -> Result<i64,Arr u8 _> = Ok::<i64,Arr u8 _>(value)
+private fn host_fail(borrow message:Arr u8 _) -> Result<i64,Arr u8 _> = Err::<i64,Arr u8 _>(message)
+private fn host_one(borrow word:Arr u8 _) -> Arr Arr u8 _ _ = push(text_words(),word)
+private fn host_drop_last(borrow words:Arr Arr u8 _ _) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=0) while i<len(words)-1 next (push(out,text_word(words,i)), i+1) yield out
+private fn host_take(borrow words:Arr Arr u8 _ _, count:i64) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=0) while i<count && i<len(words) next (push(out,text_word(words,i)), i+1) yield out
+private fn host_skip(borrow words:Arr Arr u8 _ _, count:i64) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=if count<0 then 0 else count) while i<len(words) next (push(out,text_word(words,i)), i+1) yield out
+private fn host_concat_words(borrow a:Arr Arr u8 _ _, borrow b:Arr Arr u8 _ _) -> Arr Arr u8 _ _
+  = loop (out=a, i=0) while i<len(b) next (push(out,text_word(b,i)), i+1) yield out
+
+; ---------------------------------------------------------------- pure paths
+
+; The anchor posixpath.splitroot finds: "/" for one or three or more
+; leading slashes, "//" for exactly two (POSIX leaves its meaning to the
+; system, and pathlib keeps it), "" for a relative path.
+fn host_root(borrow path:Arr u8 _) -> Arr u8 _
+  = if text_byte(path,0)!=47 then text_empty()
+    else if text_byte(path,1)==47 && text_byte(path,2)!=47 then "//" else "/"
+; Path(path)._tail: the components after the anchor, without empty ones
+; and ".". ".." stays: pathlib never collapses it.
+fn host_tail(borrow path:Arr u8 _) -> Arr Arr u8 _ _
+  = let fields=text_split_byte(text_from(path,len(host_root(path))),47) in
+    loop (out=text_words(), i:i64{i>=0}=0) while i<len(fields)
+      next (if len(fields[i])==0 || text_equal(fields[i],".") then out else push(out,fields[i]), i+1) yield out
+private fn host_format(borrow root:Arr u8 _, borrow tail:Arr Arr u8 _ _) -> Arr u8 _
+  = let joined=concat(root,text_join(tail,"/")) in if len(joined)==0 then "." else joined
+; str(Path(path)): "a//b/./c/" is "a/b/c", "" is ".", "///a" is "/a".
+fn host_normalize(borrow path:Arr u8 _) -> Arr u8 _ = host_format(host_root(path),host_tail(path))
+; os.path.join(a, b) for two components: b when it is absolute.
+fn host_posix_join(borrow a:Arr u8 _, borrow b:Arr u8 _) -> Arr u8 _
+  = if text_starts(b,"/") then b else if len(a)==0 || text_ends(a,"/") then concat(a,b) else concat(a,"/",b)
+; str(Path(a) / b).
+fn host_join(borrow a:Arr u8 _, borrow b:Arr u8 _) -> Arr u8 _ = host_normalize(host_posix_join(a,b))
+; Path(path).parts: ('/', 'a', 'b') or ('a', 'b'); () for "." and "".
+fn host_parts(borrow path:Arr u8 _) -> Arr Arr u8 _ _
+  = let root=host_root(path) in if len(root)==0 then host_tail(path) else host_concat_words(host_one(root),host_tail(path))
+; str(Path(path).parent): "/" and "." are their own parents.
+fn host_parent(borrow path:Arr u8 _) -> Arr u8 _ = host_format(host_root(path),host_drop_last(host_tail(path)))
+; [str(p) for p in Path(path).parents], nearest first.
+fn host_parents(borrow path:Arr u8 _) -> Arr Arr u8 _ _
+  = let root=host_root(path) in let tail=host_tail(path) in
+    loop (out=text_words(), k=len(tail)-1) while k>=0 next (push(out,host_format(root,host_take(tail,k))), k-1) yield out
+; Path(path).name: the last component, "" for "/", "." and "".
+fn host_name(borrow path:Arr u8 _) -> Arr u8 _ = let tail=host_tail(path) in text_word(tail,len(tail)-1)
+private fn host_dot(borrow name:Arr u8 _) -> i64
+  = let i=text_rfind(name,".") in if i>0 && i<len(name)-1 then i else -1
+; Path(path).suffix (Python 3.12): ".gz" for "a.tar.gz", "" for ".bashrc"
+; and for "x.".
+fn host_suffix(borrow path:Arr u8 _) -> Arr u8 _
+  = let name=host_name(path) in let i=host_dot(name) in if i<0 then text_empty() else text_from(name,i)
+; Path(path).stem: the name without its suffix.
+fn host_stem(borrow path:Arr u8 _) -> Arr u8 _
+  = let name=host_name(path) in let i=host_dot(name) in if i<0 then name else text_slice(name,0,i)
+; repr(PosixPath(path)), as pathlib's ValueErrors print it.
+fn host_path_repr(borrow path:Arr u8 _) -> Arr u8 _ = concat("PosixPath(",text_repr(host_normalize(path)),")")
+; str(Path(path).with_name(name)), or Python's ValueError text.
+fn host_with_name(borrow path:Arr u8 _, borrow name:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = let tail=host_tail(path) in
+    if len(tail)==0 then host_err(concat(host_path_repr(path)," has an empty name"))
+    else if len(name)==0 || text_contains(name,"/") || text_equal(name,".") then host_err(concat("Invalid name ",text_repr(name)))
+    else host_ok(host_format(host_root(path),push(host_drop_last(tail),name)))
+; Path(path).is_absolute().
+fn host_is_absolute(borrow path:Arr u8 _) -> bool = text_starts(path,"/")
+; Path(a) == Path(b).
+fn host_path_equal(borrow a:Arr u8 _, borrow b:Arr u8 _) -> bool = text_equal(host_normalize(a),host_normalize(b))
+private fn host_prefix(borrow words:Arr Arr u8 _ _, borrow prefix:Arr Arr u8 _ _) -> bool
+  = len(prefix)<=len(words) && loop (i=0, ok=true) while ok && i<len(prefix) next (i+1, text_equal(text_word(words,i),text_word(prefix,i))) yield ok
+; Path(path).is_relative_to(other): other is path or one of its parents,
+; compared component by component ("a/x" is not relative to "a-b", and
+; "a/../b" is relative to "a": pathlib does not resolve "..").
+fn host_is_relative_to(borrow path:Arr u8 _, borrow other:Arr u8 _) -> bool
+  = text_equal(host_root(path),host_root(other)) && host_prefix(host_tail(path),host_tail(other))
+; str(Path(path).relative_to(other)), or Python 3.12's ValueError text.
+fn host_relative_to(borrow path:Arr u8 _, borrow other:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = if host_is_relative_to(path,other) then host_ok(host_format(text_empty(),host_skip(host_tail(path),len(host_tail(other)))))
+    else host_err(concat(text_repr(host_normalize(path))," is not in the subpath of ",text_repr(host_normalize(other))))
+
+; os.path.normpath(path): like host_normalize, and "x/.." collapses too
+; (lexically, so through symbolic links); ".." at the root is dropped.
+fn host_normpath(borrow path:Arr u8 _) -> Arr u8 _
+  = if len(path)==0 then "." else
+    let root=host_root(path) in
+    let fields=text_split_byte(text_from(path,len(root)),47) in
+    let comps=loop (out=text_words(), i:i64{i>=0}=0) while i<len(fields)
+      next (let c=fields[i] in
+            if len(c)==0 || text_equal(c,".") then out
+            else if !text_equal(c,"..") || (len(root)==0 && len(out)==0) || text_equal(text_word(out,len(out)-1),"..") then push(out,c)
+            else if len(out)>0 then host_drop_last(out) else out, i+1) yield out in
+    host_format(root,comps)
+; os.path.abspath(path) with cwd as the working directory.
+fn host_abspath_at(borrow path:Arr u8 _, borrow cwd:Arr u8 _) -> Arr u8 _
+  = host_normpath(if text_starts(path,"/") then path else host_posix_join(cwd,path))
+private fn host_components(borrow path:Arr u8 _) -> Arr Arr u8 _ _
+  = let fields=text_split_byte(path,47) in
+    loop (out=text_words(), i:i64{i>=0}=0) while i<len(fields) next (if len(fields[i])==0 then out else push(out,fields[i]), i+1) yield out
+; os.path.relpath(path, start) with cwd as the working directory, or
+; Python's ValueError text for an empty path.
+fn host_relpath_at(borrow path:Arr u8 _, borrow start:Arr u8 _, borrow cwd:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = if len(path)==0 then host_err("no path specified") else
+    let from=host_components(host_abspath_at(start,cwd)) in let to=host_components(host_abspath_at(path,cwd)) in
+    let common=loop (i=0) while i<len(from) && i<len(to) && text_equal(text_word(from,i),text_word(to,i)) next (i+1) yield i in
+    let ups=loop (out=text_words(), i=common) while i<len(from) next (push(out,".."), i+1) yield out in
+    let parts=host_concat_words(ups,host_skip(to,common)) in
+    host_ok(if len(parts)==0 then "." else text_join(parts,"/"))
+; Path(path).expanduser() with home as the home directory (Python reads
+; HOME). "~user" is an error here; Python looks the user up.
+fn host_expanduser_with(borrow path:Arr u8 _, borrow home:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = let tail=host_tail(path) in let first=text_word(tail,0) in
+    if len(host_root(path))>0 || !text_starts(first,"~") then host_ok(host_normalize(path))
+    else if !text_equal(first,"~") then host_err("Could not determine home directory.") else
+    let trimmed=text_rstrip_chars(home,"/") in
+    let directory=if len(trimmed)==0 then "/" else trimmed in
+    if text_starts(directory,"~") then host_err("Could not determine home directory.")
+    else host_ok(host_format(host_root(directory),host_concat_words(host_tail(directory),host_skip(tail,1))))
+
+; ---- ordering ----
+
+; The sort key of a path: Python orders Path objects by their components,
+; which is the byte order of the text with "/" below every other byte.
+; It differs from str order wherever a component is a prefix of another
+; and a byte below "/" follows it: sorted(["a-b/x", "a/x"]) gives "a/x"
+; first for paths ("a" < "a-b") but "a-b/x" first for str ("-" < "/").
+; Likewise "a.b" sorts after "a/x" as a path and before it as a str.
+fn host_path_key(borrow path:Arr u8 _) -> Arr u8 _
+  = let text=host_normalize(path) in arr(i in 0..len(text)) check i>=0 && i<len(text) in if text[i]==u8(47) then u8(0) else text[i]
+; Path(a) < Path(b).
+fn host_path_less(borrow a:Arr u8 _, borrow b:Arr u8 _) -> bool = text_less(host_path_key(a),host_path_key(b))
+; The stable order sorted() gives a list of Path objects, as indices.
+fn host_path_order(borrow paths:Arr Arr u8 _ _) -> Arr i64 _
+  = text_sort_order(loop (keys=text_words(), i=0) while i<len(paths) next (push(keys,host_path_key(text_word(paths,i))), i+1) yield keys)
+; sorted(paths) for Path objects (the strings are returned as given).
+fn host_sort_paths(borrow paths:Arr Arr u8 _ _) -> Arr Arr u8 _ _
+  = let order=host_path_order(paths) in
+    loop (out=text_words(), i:i64{i>=0}=0) while i<len(order) next (push(out,text_word(paths,order[i])), i+1) yield out
+
+; ---- glob patterns ----
+
+type HostClass = { end:i64, hit:bool }
+; The [...] set at pattern[at] (at is just past "[") against code: end is
+; just past "]", or -1 when the set does not close (then "[" is literal).
+private fn host_class(borrow pattern:Arr u8 _, at:i64, code:i64) -> HostClass
+  = let negate=text_byte(pattern,at)==33 in
+    let first=if negate then at+1 else at in
+    let close=loop (j=if text_byte(pattern,first)==93 then first+1 else first) while j<len(pattern) && text_byte(pattern,j)!=93 next (j+1) yield j in
+    if close>=len(pattern) then HostClass { end= -1, hit=false } else
+    let hit=loop (k=first, found=false) while !found && k<close
+      next (let low=text_code_at(pattern,k) in let w=text_char_width(pattern,k) in
+            if text_byte(pattern,k+w)==45 && k+w+1<close then k+w+1+text_char_width(pattern,k+w+1) else k+w,
+            let low=text_code_at(pattern,k) in let w=text_char_width(pattern,k) in
+            if text_byte(pattern,k+w)==45 && k+w+1<close then code>=low && code<=text_code_at(pattern,k+w+1) else code==low) yield found in
+    HostClass { end=close+1, hit=if negate then !hit else hit }
+type HostMatch = { p:i64, n:i64, star:i64, mark:i64, ok:bool, done:bool }
+private fn host_match_step(borrow pattern:Arr u8 _, borrow name:Arr u8 _, move s:HostMatch) -> HostMatch
+  = let c=text_byte(pattern,s.p) in
+    if s.n>=len(name) then
+      (if c==42 then s with { p=s.p+1 } else s with { ok=s.p>=len(pattern), done=true })
+    else if c==42 then s with { p=s.p+1, star=s.p+1, mark=s.n }
+    else let code=text_code_at(name,s.n) in let width=text_char_width(name,s.n) in
+      let set=if c==91 then host_class(pattern,s.p+1,code) else HostClass { end= -1, hit=false } in
+      let single=c==63 || (c==91 && set.end>=0 && set.hit)
+        || (s.p<len(pattern) && !(c==91 && set.end>=0) && code==text_code_at(pattern,s.p)) in
+      let step=if c==63 then 1 else if c==91 && set.end>=0 then set.end-s.p else text_char_width(pattern,s.p) in
+      if single then s with { p=s.p+step, n=s.n+width }
+      else if s.star>=0 then s with { p=s.star, n=s.mark+text_char_width(name,s.mark), mark=s.mark+text_char_width(name,s.mark) }
+      else s with { ok=false, done=true }
+; fnmatch.fnmatchcase(name, pattern), which pathlib's glob applies to each
+; name: "*" (any text, dotfiles included), "?" (one character), [seq],
+; [!seq] and a-z ranges in sets. Python's rules for odd sets (reversed
+; ranges, "-" at the edges) are not all reproduced.
+fn host_glob_match(borrow pattern:Arr u8 _, borrow name:Arr u8 _) -> bool
+  = let s=loop (s=HostMatch { p=0, n=0, star= -1, mark=0, ok=false, done=false }) while !s.done next (host_match_step(pattern,name,s)) yield s in s.ok
+
+; ---- text ----
+
+type HostUtf8 = { ok:bool, start:i64, end:i64, reason:Arr u8 _ }
+private fn host_cont(borrow data:Arr u8 _, i:i64, low:i64, high:i64) -> bool
+  = let b=text_byte(data,i) in b>=low && b<=high
+; The UTF-8 sequence at i as CPython's decoder sees it: end is past the
+; bytes it rejects together when ok is false.
+private fn host_utf8_at(borrow data:Arr u8 _, i:i64) -> HostUtf8
+  = let a=text_byte(data,i) in let n=len(data) in
+    let bad=HostUtf8 { ok=false, start=i, end=i+1, reason="invalid start byte" } in
+    if a<128 then HostUtf8 { ok=true, start=i, end=i+1, reason=text_empty() }
+    else if a<194 || a>244 then bad else
+    let need=if a<224 then 2 else if a<240 then 3 else 4 in
+    let low=if a==224 then 160 else if a==240 then 144 else 128 in
+    let high=if a==237 then 159 else if a==244 then 143 else 191 in
+    let second=host_cont(data,i+1,low,high) in
+    let third=need<3 || host_cont(data,i+2,128,191) in
+    let fourth=need<4 || host_cont(data,i+3,128,191) in
+    let count=if !second then 1 else if !third then 2 else if !fourth then 3 else need in
+    if count==need then HostUtf8 { ok=true, start=i, end=i+need, reason=text_empty() }
+    else if i+count>=n then HostUtf8 { ok=false, start=i, end=n, reason="unexpected end of data" }
+    else HostUtf8 { ok=false, start=i, end=i+count, reason="invalid continuation byte" }
+; "" when data is valid UTF-8, else str() of the UnicodeDecodeError
+; bytes.decode('utf-8') raises: "'utf-8' codec can't decode byte 0xff in
+; position 3: invalid start byte".
+fn host_utf8_error(borrow data:Arr u8 _) -> Arr u8 _
+  = let at=loop (s=HostUtf8 { ok=true, start=0, end=0, reason=text_empty() }) while s.ok && s.end<len(data) next (host_utf8_at(data,s.end)) yield s in
+    if at.ok then text_empty()
+    else if at.end-at.start==1 then concat("'utf-8' codec can't decode byte 0x",text_hex(text_byte(data,at.start),2)," in position ",text_int(at.start),": ",at.reason)
+    else concat("'utf-8' codec can't decode bytes in position ",text_int(at.start),"-",text_int(at.end-1),": ",at.reason)
+
+; hashlib's hexdigest() of raw digest bytes.
+fn host_hex(borrow digest:Arr u8 _) -> Arr u8 _
+  = loop (o=text_empty(), i=0) while i<len(digest) next (concat(o,text_hex(text_byte(digest,i),2)), i+1) yield o
+; hashlib.sha256(data).hexdigest().
+fn host_sha256_hex(borrow data:Arr u8 _) -> Arr u8 _ = host_hex(sha256(data))
+
+; ---- environment lists ----
+
+; Environments are "NAME=value" lists, as env_list() returns and
+; process_start takes. These helpers treat one like the dict build.py
+; makes of os.environ: the first entry of a name wins.
+private fn host_env_at(borrow env:Arr Arr u8 _ _, borrow name:Arr u8 _) -> i64
+  = let prefix=concat(name,"=") in
+    loop (i=0, found= -1) while found<0 && i<len(env) next (i+1, if text_starts(text_word(env,i),prefix) then i else -1) yield found
+; env.get(name).
+fn host_env_get(borrow env:Arr Arr u8 _ _, borrow name:Arr u8 _) -> OptionBytes
+  = let at=host_env_at(env,name) in if at<0 then none_bytes() else some_bytes(text_from(text_word(env,at),len(name)+1))
+; env[name]=value: replaces the first entry in place (and drops later ones
+; with the same name) or appends one.
+fn host_env_set(borrow env:Arr Arr u8 _ _, borrow name:Arr u8 _, borrow value:Arr u8 _) -> Arr Arr u8 _ _
+  = let at=host_env_at(env,name) in let prefix=concat(name,"=") in let entry=concat(prefix,value) in
+    if at<0 then push(env,entry) else
+    loop (out=text_words(), i=0) while i<len(env)
+      next (if i==at then push(out,entry) else if text_starts(text_word(env,i),prefix) then out else push(out,text_word(env,i)), i+1) yield out
+; env.setdefault(name, value).
+fn host_env_setdefault(borrow env:Arr Arr u8 _ _, borrow name:Arr u8 _, borrow value:Arr u8 _) -> Arr Arr u8 _ _
+  = if host_env_at(env,name)>=0 then env else push(env,concat(name,"=",value))
+; env.pop(name, None).
+fn host_env_remove(borrow env:Arr Arr u8 _ _, borrow name:Arr u8 _) -> Arr Arr u8 _ _
+  = let prefix=concat(name,"=") in
+    loop (out=text_words(), i=0) while i<len(env) next (if text_starts(text_word(env,i),prefix) then out else push(out,text_word(env,i)), i+1) yield out
+
+; ---------------------------------------------------------------- the working directory
+
+; The path a system call gets for Path(path).
+private fn host_fs(borrow path:Arr u8 _) -> Arr u8 _ = host_normalize(path)
+; os.getcwd().
+effect(fs) fn host_cwd() -> Result<Arr u8 _,Arr u8 _>
+  = let cwd=fs_cwd() in if cwd.ok then host_ok(cwd.value) else host_err(host_errno_text(cwd.error.code))
+; os.path.abspath(path).
+effect(fs) fn host_abspath(borrow path:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = if text_starts(path,"/") then host_ok(host_normpath(path)) else
+    let cwd=host_cwd()? in host_ok(host_abspath_at(path,cwd))
+; os.path.relpath(path, start).
+effect(fs) fn host_relpath(borrow path:Arr u8 _, borrow start:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = if text_starts(path,"/") && text_starts(start,"/") then host_relpath_at(path,start,"/") else
+    let cwd=host_cwd()? in host_relpath_at(path,start,cwd)
+
+type HostSeen = { link:Arr u8 _, resolved:bool, target:Arr u8 _ }
+type HostReal = { path:Arr u8 _, rest:Arr u8 _, seen:Arr HostSeen _, ok:bool, done:bool }
+private fn host_no_seen() -> Arr HostSeen _ = arr(i in 0..0) HostSeen { link=text_empty(), resolved=false, target=text_empty() }
+private fn host_seen_at(borrow seen:Arr HostSeen _, borrow link:Arr u8 _) -> i64
+  = loop (i:i64{i>=0}=0, found= -1) while found<0 && i<len(seen) next (i+1, if text_equal(seen[i].link,link) then i else -1) yield found
+private fn host_seen_set(borrow seen:Arr HostSeen _, borrow link:Arr u8 _, borrow target:Arr u8 _) -> Arr HostSeen _
+  = let at=host_seen_at(seen,link) in let entry=HostSeen { link=link, resolved=true, target=target } in
+    if at>=0 && at<len(seen) then set(seen,at,entry) else push(seen,entry)
+; posixpath.split(path): (head without trailing slashes unless all
+; slashes, tail).
+type HostSplit = { head:Arr u8 _, tail:Arr u8 _ }
+private fn host_split(borrow path:Arr u8 _) -> HostSplit
+  = let i=text_rfind(path,"/")+1 in let head=text_slice(path,0,i) in
+    let slashes=len(text_strip_chars(head,"/"))==0 in
+    HostSplit { head=if len(head)>0 && !slashes then text_rstrip_chars(head,"/") else head, tail=text_from(path,i) }
+; One component of posixpath._joinrealpath (Python 3.12).
+private effect(fs) fn host_real_step(move s:HostReal) -> HostReal
+  = let part=text_partition(s.rest,"/") in let name=part.before in let rest=part.after in
+    if len(name)==0 || text_equal(name,".") then s with { rest=rest }
+    else if text_equal(name,"..") then
+      (if len(s.path)==0 then s with { path="..", rest=rest } else
+       let up=host_split(s.path) in
+       s with { path=if text_equal(up.tail,"..") then host_posix_join(host_posix_join(up.head,".."),"..") else up.head, rest=rest })
+    else let candidate=host_posix_join(s.path,name) in
+      let stat=fs_stat(candidate,false) in
+      if !stat.ok || stat.kind!=fs_kind_symlink() then s with { path=candidate, rest=rest } else
+      let at=host_seen_at(s.seen,candidate) in
+      if at>=0 && at<len(s.seen) then
+        (if s.seen[at].resolved then s with { path=s.seen[at].target, rest=rest }
+         else HostReal { path=host_posix_join(candidate,rest), rest=text_empty(), seen=s.seen, ok=false, done=true })
+      else let link=fs_readlink(candidate) in
+        let inner=host_join_real(s.path,if link.ok then link.value else text_empty(),push(s.seen,HostSeen { link=candidate, resolved=false, target=text_empty() })) in
+        if !inner.ok then HostReal { path=host_posix_join(inner.path,rest), rest=text_empty(), seen=inner.seen, ok=false, done=true }
+        else HostReal { path=inner.path, rest=rest, seen=host_seen_set(inner.seen,candidate,inner.path), ok=true, done=false }
+; posixpath._joinrealpath(path, rest, strict=False, seen).
+private effect(fs) fn host_join_real(borrow path:Arr u8 _, borrow rest:Arr u8 _, move seen:Arr HostSeen _) -> HostReal
+  = let absolute=text_starts(rest,"/") in
+    let start=HostReal { path=if absolute then "/" else path, rest=if absolute then text_from(rest,1) else rest, seen=seen, ok=true, done=false } in
+    loop (s=start) while !s.done && len(s.rest)>0 next (host_real_step(s)) yield s
+; os.path.realpath(path) (strict=False): symbolic links in the part of
+; the path that exists are resolved, ".." is applied to the resolved
+; prefix, and the rest is appended as given.
+effect(fs) fn host_realpath(borrow path:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = let real=host_join_real(text_empty(),path,host_no_seen()) in host_abspath(real.path)
+; str(Path(path).resolve()): absolute, with symbolic links resolved where
+; the path exists; a symbolic link loop is Python's RuntimeError text.
+effect(fs) fn host_resolve(borrow path:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = let real=host_realpath(host_fs(path))? in
+    let stat=fs_stat(real,true) in
+    if !stat.ok && stat.error.code==40 then host_err(concat("Symlink loop from ",text_repr(real))) else host_ok(real)
+
+; Path.home(): HOME as os.path.expanduser('~') uses it.
+effect(env) fn host_home() -> Result<Arr u8 _,Arr u8 _>
+  = let home=env_get("HOME") in
+    if !home.present then host_err("Could not determine home directory.") else host_expanduser_with("~",home.value)
+; Path(path).expanduser().
+effect(env) fn host_expanduser(borrow path:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = let home=env_get("HOME") in
+    if text_starts(host_normalize(path),"~") && !home.present then host_err("Could not determine home directory.")
+    else host_expanduser_with(path,if home.present then home.value else text_empty())
+; Path(os.environ.get('XDG_CACHE_HOME', Path.home()/'.cache')): an empty
+; XDG_CACHE_HOME is ".", as in Python.
+effect(env) fn host_cache_home() -> Result<Arr u8 _,Arr u8 _>
+  = let configured=env_get("XDG_CACHE_HOME") in
+    if configured.present then host_ok(host_normalize(configured.value)) else
+    let home=host_home()? in host_ok(host_join(home,".cache"))
+
+; ---------------------------------------------------------------- file queries
+
+; Path(path).exists(), is_file(), is_dir() (all following symbolic links;
+; False on any error) and is_symlink().
+effect(fs) fn host_exists(borrow path:Arr u8 _) -> bool = fs_stat(host_fs(path),true).ok
+; os.path.lexists(path): true for a dangling symbolic link too.
+effect(fs) fn host_lexists(borrow path:Arr u8 _) -> bool = fs_stat(host_fs(path),false).ok
+effect(fs) fn host_is_file(borrow path:Arr u8 _) -> bool = let stat=fs_stat(host_fs(path),true) in stat.ok && stat.kind==fs_kind_file()
+effect(fs) fn host_is_dir(borrow path:Arr u8 _) -> bool = let stat=fs_stat(host_fs(path),true) in stat.ok && stat.kind==fs_kind_directory()
+effect(fs) fn host_is_symlink(borrow path:Arr u8 _) -> bool = let stat=fs_stat(host_fs(path),false) in stat.ok && stat.kind==fs_kind_symlink()
+private effect(fs) fn host_stat(borrow path:Arr u8 _) -> FsStat = fs_stat(host_fs(path),true)
+; Path(path).stat().st_size.
+effect(fs) fn host_size(borrow path:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let stat=host_stat(path) in if stat.ok then host_done(stat.size) else host_fail(host_os_error(stat.error.code,host_fs(path)))
+; Path(path).stat().st_mtime_ns.
+effect(fs) fn host_mtime_ns(borrow path:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let stat=host_stat(path) in if stat.ok then host_done(stat.mtime_ns) else host_fail(host_os_error(stat.error.code,host_fs(path)))
+; Path(path).stat().st_mode & 0o7777.
+effect(fs) fn host_mode(borrow path:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let stat=host_stat(path) in if stat.ok then host_done(stat.mode) else host_fail(host_os_error(stat.error.code,host_fs(path)))
+; Path(path).stat().st_mode & 0o100: the owner's execute bit (False when
+; the path does not exist), as release.py tests it for archive modes.
+effect(fs) fn host_is_executable(borrow path:Arr u8 _) -> bool = let stat=host_stat(path) in stat.ok && bit_and(stat.mode,64)!=0
+
+; ---------------------------------------------------------------- reading and writing
+
+private effect(fs) fn host_read_chunks(fd:i64) -> BytesResult
+  = loop (chunk=file_read_chunk(fd,65536), out=text_empty()) while chunk.ok && len(chunk.value)>0
+      next (file_read_chunk(fd,65536), concat(out,chunk.value)) yield if chunk.ok then bytes_ok(out) else chunk
+; Path(path).read_bytes(), of any size.
+effect(fs) fn host_read_bytes(borrow path:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = let p=host_fs(path) in
+    let opened=file_open(p,0) in
+    if !opened.ok then host_err(host_os_error(opened.error.code,p)) else
+    let stat=fs_stat(p,true) in
+    let read=if stat.ok && stat.size>0 then file_read_sized(opened.value,stat.size,stat.size+67108864) else host_read_chunks(opened.value) in
+    let closed=file_close(opened.value) in
+    if read.ok then host_ok(read.value) else host_err(host_os_error(read.error.code,p))
+; Path(path).read_text(): UTF-8 (strict: invalid bytes are the
+; UnicodeDecodeError text) with universal newlines (\r\n and \r read as \n).
+effect(fs) fn host_read_text(borrow path:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = let data=host_read_bytes(path)? in
+    let bad=host_utf8_error(data) in
+    if len(bad)>0 then host_err(bad) else host_ok(text_universal_newlines(data))
+
+private effect(fs) fn host_overwrite(borrow p:Arr u8 _, borrow data:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let opened=file_open(p,1) in
+    if !opened.ok then host_fail(host_os_error(opened.error.code,p)) else
+    let written=file_write(opened.value,data) in let closed=file_close(opened.value) in
+    if !written.ok then host_fail(host_os_error(written.error.code,p))
+    else if !closed.ok then host_fail(host_os_error(closed.error.code,p)) else host_done(len(data))
+private effect(fs,process) fn host_create(borrow p:Arr u8 _, borrow data:Arr u8 _, mode:i64) -> Result<i64,Arr u8 _>
+  = let written=fs_atomic_replace_mode(p,data,mode) in
+    if written.ok then host_done(len(data)) else host_fail(host_os_error(written.error.code,p))
+; Path(path).write_bytes(data): an existing file (or the file a symbolic
+; link names) is truncated and rewritten, keeping its mode; a new one is
+; created with mode 0666 & ~umask. Returns the byte count.
+effect(fs,process) fn host_write_bytes(borrow path:Arr u8 _, borrow data:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let p=host_fs(path) in
+    if fs_stat(p,true).ok then host_overwrite(p,data) else host_create(p,data,438)
+; Path(path).write_text(text): text is written as is (UTF-8, and Python
+; translates no newlines on POSIX).
+effect(fs,process) fn host_write_text(borrow path:Arr u8 _, borrow text:Arr u8 _) -> Result<i64,Arr u8 _> = host_write_bytes(path,text)
+; Path(path).write_bytes(data) followed by Path(path).chmod(mode), as
+; scaffold.py writes its launcher (0o755): the file is replaced with one of
+; mode & ~umask.
+effect(fs,process) fn host_write_mode(borrow path:Arr u8 _, borrow data:Arr u8 _, mode:i64) -> Result<i64,Arr u8 _>
+  = host_create(host_fs(path),data,bit_and(mode,4095))
+; shutil.copy2(source, target): the content and permission bits (filtered
+; by the umask; see the file comment), into target/name(source) when
+; target is a directory. Symbolic links are followed. Returns the target.
+effect(fs,process) fn host_copy_file(borrow source:Arr u8 _, borrow target:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = let from=host_fs(source) in
+    let to=if host_is_dir(target) then host_join(target,host_name(source)) else host_fs(target) in
+    let data=host_read_bytes(from)? in
+    let mode=host_mode(from)? in
+    let written=host_create(to,data,mode)? in host_ok(to)
+; os.replace(old, new) (os.rename is the same on POSIX).
+effect(fs) fn host_rename(borrow old:Arr u8 _, borrow new:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let a=host_fs(old) in let b=host_fs(new) in let moved=fs_rename(a,b) in
+    if moved.ok then host_done(0) else host_fail(host_os_error2(moved.error.code,a,b))
+; Path(path).symlink_to(target): a link at path holding target as given.
+effect(fs) fn host_symlink(borrow target:Arr u8 _, borrow path:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let p=host_fs(path) in let made=fs_symlink(target,p) in
+    if made.ok then host_done(0) else host_fail(host_os_error2(made.error.code,target,p))
+; Path(path).unlink(missing_ok): removes a file or a symbolic link.
+effect(fs) fn host_remove_file(borrow path:Arr u8 _, missing_ok:bool) -> Result<i64,Arr u8 _>
+  = let p=host_fs(path) in let gone=fs_remove(p) in
+    if gone.ok || (missing_ok && gone.error.code==2) then host_done(0) else host_fail(host_os_error(gone.error.code,p))
+; Path(path).rmdir(): removes an empty directory.
+effect(fs) fn host_rmdir(borrow path:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let p=host_fs(path) in let gone=fs_rmdir(p) in
+    if gone.ok then host_done(0) else host_fail(host_os_error(gone.error.code,p))
+
+; ---------------------------------------------------------------- directories
+
+; Path(path).mkdir(parents=parents, exist_ok=exist_ok). std:fs makes the
+; directory with mode 0700 (Python: 0777 & ~umask).
+effect(fs) fn host_mkdir(borrow path:Arr u8 _, parents:bool, exist_ok:bool) -> Result<i64,Arr u8 _>
+  = let p=host_fs(path) in let made=fs_mkdir(p) in
+    if made.ok then host_done(0) else
+    let code=made.error.code in
+    if code==2 && parents && !text_equal(host_parent(p),p) then
+      (let up=host_mkdir(host_parent(p),true,true)? in host_mkdir(p,false,exist_ok))
+    else if code!=2 && exist_ok && host_is_dir(p) then host_done(0)
+    else host_fail(host_os_error(code,p))
+; Path(path).mkdir(parents=True, exist_ok=True).
+effect(fs) fn host_mkdirs(borrow path:Arr u8 _) -> Result<i64,Arr u8 _> = host_mkdir(path,true,true)
+
+; sorted(os.listdir(path)): the names, in byte order.
+effect(fs) fn host_listdir(borrow path:Arr u8 _) -> Result<Arr Arr u8 _ _,Arr u8 _>
+  = let p=host_fs(path) in let listed=fs_list(p) in
+    if !listed.ok then Err::<Arr Arr u8 _ _,Arr u8 _>(host_os_error(listed.error.code,p)) else
+    Ok::<Arr Arr u8 _ _,Arr u8 _>(text_sort(loop (out=text_words(), i:i64{i>=0}=0) while i<len(listed.entries)
+      next (push(out,listed.entries[i].name), i+1) yield out))
+
+; The entry kind with symbolic links followed (-1 for a dangling one).
+private effect(fs) fn host_kind(borrow path:Arr u8 _, kind:i64) -> i64
+  = if kind!=fs_kind_symlink() then kind else let stat=fs_stat(path,true) in if stat.ok then stat.kind else -1
+; pathlib's _select_children: the children of each directory whose name
+; matches, keeping only directories (links followed) when dir_only.
+private effect(fs) fn host_children(borrow parents:Arr Arr u8 _ _, borrow pattern:Arr u8 _, dir_only:bool) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=0) while i<len(parents)
+      next (let parent=text_word(parents,i) in let listed=fs_list(host_fs(parent)) in
+            loop (o=out, j:i64{j>=0}=0) while listed.ok && j<len(listed.entries)
+              next (let name=listed.entries[j].name in let child=host_join(parent,name) in
+                    if host_glob_match(pattern,name) && (!dir_only || host_kind(child,listed.entries[j].kind)==fs_kind_directory()) then push(o,child) else o,
+                    j+1) yield o,
+            i+1) yield out
+; pathlib's _select_recursive with directories only: path and every
+; directory below it. Symbolic links to directories are not entered.
+private effect(fs) fn host_subtree(move out:Arr Arr u8 _ _, borrow path:Arr u8 _) -> Arr Arr u8 _ _
+  = let listed=fs_list(host_fs(path)) in
+    loop (o=push(out,path), j:i64{j>=0}=0) while listed.ok && j<len(listed.entries)
+      next (if listed.entries[j].kind==fs_kind_directory() then host_subtree(o,host_join(path,listed.entries[j].name)) else o, j+1) yield o
+; sorted(Path(directory).glob(pattern)): pattern is relative, its
+; components are glob patterns ("*.css", "*/bin"), "**" matches any depth
+; of real directories and a trailing "/" keeps directories only. Missing
+; or unreadable directories give no matches, as in Python.
+effect(fs) fn host_glob(borrow directory:Arr u8 _, borrow pattern:Arr u8 _) -> Arr Arr u8 _ _
+  = let parts=host_tail(pattern) in
+    let trailing=text_ends(pattern,"/") in
+    if len(parts)==0 || text_starts(pattern,"/") then text_words() else
+    let start=if host_is_dir(directory) then host_one(host_normalize(directory)) else text_words() in
+    let found=loop (paths=start, k=0) while k<len(parts)
+      next (let part=text_word(parts,k) in let last=k==len(parts)-1 && !trailing in
+            if text_equal(part,"..") then loop (o=text_words(), i=0) while i<len(paths) next (push(o,host_join(text_word(paths,i),"..")), i+1) yield o
+            else if text_equal(part,"**") then loop (o=text_words(), i=0) while i<len(paths) next (host_subtree(o,text_word(paths,i)), i+1) yield o
+            else host_children(paths,part,!last), k+1) yield paths in
+    host_sort_paths(found)
+; sorted(Path(directory).rglob(pattern)): every match at any depth below
+; directory (directory itself excluded unless pattern can match it).
+effect(fs) fn host_rglob(borrow directory:Arr u8 _, borrow pattern:Arr u8 _) -> Arr Arr u8 _ _
+  = host_glob(directory,concat("**/",pattern))
+
+; One directory os.walk visits: its path (os.path.join of the walk's top
+; and the folder names), its subdirectories and its other entries.
+type HostWalk = { path:Arr u8 _, folders:Arr Arr u8 _ _, names:Arr Arr u8 _ _ }
+type HostWalkSkip = { names:Arr Arr u8 _ _, hidden:bool, paths:Arr Arr u8 _ _ }
+type HostWalkSplit = { folders:Arr Arr u8 _ _, names:Arr Arr u8 _ _ }
+private fn host_no_walk() -> Arr HostWalk _ = arr(i in 0..0) HostWalk { path=text_empty(), folders=text_words(), names=text_words() }
+private fn host_walk_skips(borrow skip:HostWalkSkip, borrow top:Arr u8 _, borrow name:Arr u8 _) -> bool
+  = text_member(skip.names,name) || (skip.hidden && text_starts(name,"."))
+    || loop (i=0, found=false) while !found && i<len(skip.paths)
+         next (i+1, host_path_equal(host_posix_join(top,name),text_word(skip.paths,i))) yield found
+private effect(fs) fn host_walk_from(move out:Arr HostWalk _, borrow top:Arr u8 _, borrow skip:HostWalkSkip) -> Arr HostWalk _
+  = let listed=fs_list(top) in
+    if !listed.ok then out else
+    let split=loop (s=HostWalkSplit { folders=text_words(), names=text_words() }, j:i64{j>=0}=0) while j<len(listed.entries)
+      next (let name=listed.entries[j].name in
+            if host_kind(host_posix_join(top,name),listed.entries[j].kind)==fs_kind_directory()
+            then (if host_walk_skips(skip,top,name) then s else s with { folders=push(s.folders,name) })
+            else s with { names=push(s.names,name) }, j+1) yield s in
+    let folders=text_sort(split.folders) in
+    let visited=push(out,HostWalk { path=top, folders=folders, names=text_sort(split.names) }) in
+    loop (o=visited, i:i64{i>=0}=0) while i<len(folders)
+      next (let child=host_posix_join(top,folders[i]) in
+            if fs_stat(child,false).kind==fs_kind_symlink() then o else host_walk_from(o,child,skip), i+1) yield o
+; os.walk(top) top-down, with each folders list filtered and sorted before
+; the walk descends, as build.py and release.py do with
+; `folders[:] = sorted(...)`: subdirectories named in skip.names, starting
+; with "." when skip.hidden, or equal (as paths) to one of skip.paths are
+; left out. names are sorted too. Symbolic links to directories are listed
+; among the folders but never entered (os.walk's followlinks=False), and a
+; directory that cannot be listed is skipped silently (onerror=None).
+effect(fs) fn host_walk_skipping(borrow top:Arr u8 _, borrow skip:HostWalkSkip) -> Arr HostWalk _
+  = host_walk_from(host_no_walk(),top,skip)
+; host_walk_skipping without path exclusions.
+effect(fs) fn host_walk(borrow top:Arr u8 _, borrow skip_names:Arr Arr u8 _ _, skip_hidden:bool) -> Arr HostWalk _
+  = host_walk_from(host_no_walk(),top,HostWalkSkip { names=skip_names, hidden=skip_hidden, paths=text_words() })
+
+; shutil.rmtree(path): never follows symbolic links (a link inside the tree
+; is unlinked; a link as path is an error).
+effect(fs) fn host_remove_tree(borrow path:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let p=host_fs(path) in let stat=fs_stat(p,false) in
+    if !stat.ok then host_fail(host_os_error(stat.error.code,p))
+    else if stat.kind==fs_kind_symlink() then host_fail("Cannot call rmtree on a symbolic link")
+    else if stat.kind!=fs_kind_directory() then host_fail(host_os_error(20,p))
+    else host_remove_dir(p)
+private effect(fs) fn host_remove_dir(borrow p:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let listed=fs_list(p) in
+    if !listed.ok then host_fail(host_os_error(listed.error.code,p)) else
+    let failed=loop (err=text_empty(), j:i64{j>=0}=0) while len(err)==0 && j<len(listed.entries)
+      next (let child=host_join(p,listed.entries[j].name) in
+            if listed.entries[j].kind==fs_kind_directory() then (match host_remove_dir(child) { Ok(count) => text_empty(), Err(message) => message })
+            else (let gone=fs_remove(child) in if gone.ok then text_empty() else host_os_error(gone.error.code,child)), j+1) yield err in
+    if len(failed)>0 then host_fail(failed) else
+    let gone=fs_rmdir(p) in if gone.ok then host_done(0) else host_fail(host_os_error(gone.error.code,p))
+
+private fn host_skipped(borrow patterns:Arr Arr u8 _ _, borrow name:Arr u8 _) -> bool
+  = loop (i=0, found=false) while !found && i<len(patterns) next (i+1, host_glob_match(text_word(patterns,i),name)) yield found
+; One failed entry as str(shutil.Error([(src, dst, why)])).
+private fn host_copy_error(borrow source:Arr u8 _, borrow target:Arr u8 _, borrow why:Arr u8 _) -> Arr u8 _
+  = if text_starts(why,"[(") then why else concat("[(",text_repr(source),", ",text_repr(target),", ",text_repr(why),")]")
+private effect(fs,process) fn host_copy_entry(borrow source:Arr u8 _, borrow target:Arr u8 _, kind:i64, borrow skip:Arr Arr u8 _ _, exist_ok:bool) -> Arr u8 _
+  = if host_kind(source,kind)==fs_kind_directory() then
+      (match host_copy_tree(source,target,skip,exist_ok) { Ok(count) => text_empty(), Err(message) => host_copy_error(source,target,message) })
+    else (match host_copy_file(source,target) { Ok(done) => text_empty(), Err(message) => host_copy_error(source,target,message) })
+; shutil.copytree(source, target, ignore=shutil.ignore_patterns(*skip),
+; dirs_exist_ok=exist_ok): symbolic links are followed (their content is
+; copied), files keep their permission bits (see host_copy_file), and
+; directories are made with host_mkdir. It stops at the first failure.
+effect(fs,process) fn host_copy_tree(borrow source:Arr u8 _, borrow target:Arr u8 _, borrow skip:Arr Arr u8 _ _, exist_ok:bool) -> Result<i64,Arr u8 _>
+  = let from=host_fs(source) in let to=host_fs(target) in
+    let listed=fs_list(from) in
+    if !listed.ok then host_fail(host_os_error(listed.error.code,from)) else
+    let made=host_mkdir(to,true,exist_ok)? in
+    let failed=loop (err=text_empty(), j:i64{j>=0}=0) while len(err)==0 && j<len(listed.entries)
+      next (let name=listed.entries[j].name in
+            if host_skipped(skip,name) then err else host_copy_entry(host_join(from,name),host_join(to,name),listed.entries[j].kind,skip,exist_ok), j+1) yield err in
+    if len(failed)>0 then host_fail(failed) else host_done(0)
+
+; The directory tempfile.gettempdir() picks: TMPDIR, TEMP or TMP when set
+; to a directory, else /tmp, /var/tmp, /usr/tmp, else the working
+; directory. (Python also checks that it can create a file there.)
+effect(fs,env) fn host_tempdir() -> Result<Arr u8 _,Arr u8 _>
+  = let candidates=arr(i in 0..6) if i==0 then "TMPDIR" else if i==1 then "TEMP" else if i==2 then "TMP" else if i==3 then "/tmp" else if i==4 then "/var/tmp" else "/usr/tmp" in
+    let found=loop (i=0, found=text_empty()) while len(found)==0 && i<6
+      next (i+1, let name=text_word(candidates,i) in
+            let value=if i<3 then env_get(name) else some_bytes(name) in
+            if value.present && len(value.value)>0 && host_is_dir(value.value) then value.value else text_empty()) yield found in
+    if len(found)>0 then host_abspath(found) else host_cwd()
+; One of tempfile's 37 name characters, abcdefghijklmnopqrstuvwxyz0123456789_.
+private fn host_temp_letter(byte:i64) -> u8
+  = let k=(if byte<0 then 0 else byte)%37 in u8(if k<26 then 97+k else if k<36 then 22+k else 95)
+type HostTemp = { attempt:i64, done:bool, path:Arr u8 _, err:Arr u8 _ }
+private effect(fs,process) fn host_temp_step(move s:HostTemp, borrow parent:Arr u8 _, borrow prefix:Arr u8 _) -> HostTemp
+  = let entropy=random_bytes(8) in
+    if !entropy.ok then s with { done=true, err=host_errno_text(entropy.error.code) } else
+    let name=host_posix_join(parent,concat(prefix,arr(i in 0..8) host_temp_letter(text_byte(entropy.value,i)))) in
+    let made=fs_mkdir(name) in
+    if made.ok then s with { done=true, path=name }
+    else if made.error.code==17 then s with { attempt=s.attempt+1 }
+    else s with { done=true, err=host_os_error(made.error.code,name) }
+private effect(fs,env) fn host_temp_parent(borrow directory:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = if len(directory)>0 then host_ok(directory) else host_tempdir()
+; tempfile.mkdtemp(prefix=prefix, dir=directory): a new directory named
+; prefix and eight random [a-z0-9_] characters, mode 0700, retried on
+; EEXIST; directory "" is gettempdir(). Returns its absolute path.
+; tempfile.TemporaryDirectory is this and host_remove_tree afterwards.
+effect(fs,env,process) fn host_mkdtemp(borrow prefix:Arr u8 _, borrow directory:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = let parent=host_temp_parent(directory)? in
+    let s=loop (s=HostTemp { attempt=0, done=false, path=text_empty(), err=text_empty() }) while !s.done && s.attempt<10000
+      next (host_temp_step(s,parent,prefix)) yield s in
+    if len(s.path)>0 then host_abspath(s.path)
+    else if len(s.err)>0 then host_err(s.err)
+    else host_err("[Errno 17] No usable temporary directory name found")
+
+; ---------------------------------------------------------------- processes
+
+; shutil.which(name, path=search): name itself when it holds a "/",
+; else the first search directory (":"-separated; an empty entry is the
+; working directory) where it is an executable non-directory. "" for None,
+; and for an empty search, as in Python. The result is relative when the
+; directory is.
+effect(fs) fn host_which_in(borrow name:Arr u8 _, borrow search:Arr u8 _) -> Arr u8 _
+  = let found=host_split(name) in
+    let dirs=if len(found.head)>0 then host_one(found.head) else if len(search)==0 then text_words() else text_split_byte(search,58) in
+    loop (i=0, seen=text_words(), hit=text_empty()) while len(hit)==0 && i<len(dirs)
+      next (i+1, push(seen,text_word(dirs,i)),
+            let directory=text_word(dirs,i) in
+            let candidate=host_posix_join(directory,found.tail) in
+            if text_member(seen,directory) then text_empty()
+            else if host_exists(candidate) && fs_executable(if len(candidate)==0 then "." else candidate) && !host_is_dir(candidate) then candidate else text_empty())
+      yield hit
+; shutil.which(name): PATH, or /bin:/usr/bin when PATH is unset.
+effect(fs,env) fn host_which(borrow name:Arr u8 _) -> Arr u8 _
+  = let search=env_get("PATH") in host_which_in(name,if search.present then search.value else "/bin:/usr/bin")
+
+; A finished child process. ok is false when it could not be started, and
+; error is then Python's OSError text. code is the exit status, or
+; 128+signal when a signal (signal, else 0) ended it; output and errors
+; are its stdout and stderr.
+type HostRun = { ok:bool, code:i64, signal:i64, output:Arr u8 _, errors:Arr u8 _, error:Arr u8 _ }
+private fn host_run_failed(borrow message:Arr u8 _) -> HostRun
+  = HostRun { ok=false, code= -1, signal=0, output=text_empty(), errors=text_empty(), error=message }
+type HostProgram = { path:Arr u8 _, code:i64 }
+; The errno execve gives for one candidate: 0 when it can run.
+private effect(fs) fn host_exec_check(borrow path:Arr u8 _) -> i64
+  = let stat=fs_stat(path,true) in
+    if !stat.ok then stat.error.code
+    else if stat.kind!=fs_kind_file() || !fs_executable(path) then 13 else 0
+; subprocess's program lookup: a name with a "/" is taken relative to the
+; child's working directory, else each PATH entry of the child's
+; environment (os.defpath when unset) is tried in turn. code is the errno
+; Python reports: the first one other than ENOENT and ENOTDIR, else ENOENT.
+private effect(fs) fn host_program(borrow name:Arr u8 _, borrow environment:Arr Arr u8 _ _, borrow cwd:Arr u8 _) -> HostProgram
+  = if text_contains(name,"/") then
+      let path=host_abspath_at(name,cwd) in HostProgram { path=path, code=host_exec_check(path) }
+    else
+      let search=host_env_get(environment,"PATH") in
+      let dirs=text_split_byte(if search.present then search.value else "/bin:/usr/bin",58) in
+      loop (i=0, found=HostProgram { path=text_empty(), code= -1 }) while i<len(dirs) && (found.code!=0 || len(found.path)==0)
+        next (i+1, let path=host_abspath_at(host_posix_join(text_word(dirs,i),name),cwd) in let code=host_exec_check(path) in
+              if code==0 then HostProgram { path=path, code=0 }
+              else if found.code<0 && code!=2 && code!=20 then HostProgram { path=text_empty(), code=code }
+              else found)
+        yield if len(found.path)>0 then found else HostProgram { path=text_empty(), code=if found.code<0 then 2 else found.code }
+; The program and arguments process_start gets: the program itself, or
+; /bin/sh entering cwd first.
+private fn host_launch_args(borrow program:Arr u8 _, borrow argv:Arr Arr u8 _ _, borrow cwd:Arr u8 _) -> Arr Arr u8 _ _
+  = let rest=host_skip(argv,1) in
+    if len(cwd)==0 then rest else
+    host_concat_words(push(push(push(push(push(text_words(),"-c"),"cd -- \"$1\" && shift && exec \"$@\""),"sh"),cwd),program),rest)
+type HostLaunch = { ok:bool, path:Arr u8 _, args:Arr Arr u8 _ _, error:Arr u8 _ }
+; Where and how argv runs: Python's errors for a missing working directory
+; (checked first, as the child's chdir comes before exec) or program.
+private effect(fs) fn host_launch(borrow argv:Arr Arr u8 _ _, borrow environment:Arr Arr u8 _ _, borrow cwd:Arr u8 _) -> HostLaunch
+  = let fail=HostLaunch { ok=false, path=text_empty(), args=text_words(), error=text_empty() } in
+    if len(argv)==0 then fail with { error="list index out of range" } else
+    let current=fs_cwd() in
+    if !current.ok then fail with { error=host_errno_text(current.error.code) } else
+    let directory=if len(cwd)==0 then text_empty() else host_abspath_at(cwd,current.value) in
+    let entered=if len(directory)==0 then fs_stat(current.value,true) else fs_stat(directory,true) in
+    if len(directory)>0 && !entered.ok then fail with { error=host_os_error(entered.error.code,cwd) }
+    else if len(directory)>0 && entered.kind!=fs_kind_directory() then fail with { error=host_os_error(20,cwd) } else
+    let program=host_program(text_word(argv,0),environment,if len(directory)>0 then directory else current.value) in
+    if program.code!=0 then fail with { error=host_os_error(program.code,text_word(argv,0)) }
+    else HostLaunch { ok=true, path=if len(directory)>0 then "/bin/sh" else program.path,
+      args=host_launch_args(program.path,argv,directory), error=text_empty() }
+
+type HostPoll = { run:HostRun, sent:i64, closed:bool, pending:bool }
+private effect(process,fs,time) fn host_poll(process:Process, borrow input:Arr u8 _, move state:HostPoll) -> HostPoll
+  = let wrote=if state.closed || state.sent>=len(input) then int_ok(0) else process_try_write(process,input,state.sent) in
+    let sent=if wrote.ok then state.sent+wrote.value else if wrote.error.code==11 || wrote.error.code==4 then state.sent else len(input) in
+    let closed=if state.closed || sent<len(input) then state.closed else let shut=process_close_input(process) in true in
+    let status=process_status(process) in
+    let out=process_try_read(process,1,65536) in let err=process_try_read(process,2,65536) in
+    let got=(out.ok && len(out.value)>0) || (err.ok && len(err.value)>0) || sent>state.sent in
+    let paused=if status.running && !got then sleep_ms(2) else int_ok(0) in
+    HostPoll { run=HostRun { ok=status.ok, code=if !status.ok then -1 else if status.signal!=0 then 128+status.signal else status.exit_code,
+        signal=if status.ok then status.signal else 0,
+        output=if out.ok then concat(state.run.output,out.value) else state.run.output,
+        errors=if err.ok then concat(state.run.errors,err.value) else state.run.errors,
+        error=if status.ok then text_empty() else host_errno_text(status.error.code) },
+      sent=sent, closed=closed, pending=status.ok && (status.running || got) }
+; subprocess.run(argv, env=environment, cwd=cwd, input=input,
+; capture_output=True): runs argv (argv[0] looked up as subprocess does),
+; writes input to its stdin and closes it, and collects stdout and stderr
+; until it exits. cwd "" keeps this process's working directory.
+effect(fs,env,process,time) fn host_run_with(borrow argv:Arr Arr u8 _ _, borrow environment:Arr Arr u8 _ _, borrow cwd:Arr u8 _, borrow input:Arr u8 _) -> HostRun
+  = let launch=host_launch(argv,environment,cwd) in
+    if !launch.ok then host_run_failed(launch.error) else
+    using child=process_start(launch.path,launch.args,environment) in
+    let start=HostPoll { run=host_run_failed(text_empty()), sent=0, closed=false, pending=true } in
+    let done=loop (p=start) while p.pending next (host_poll(child,input,p)) yield p in
+    done.run
+; subprocess.run(argv, capture_output=True) with this process's environment.
+effect(fs,env,process,time) fn host_run(borrow argv:Arr Arr u8 _ _) -> HostRun = host_run_with(argv,env_list(),text_empty(),text_empty())
+; subprocess.run(argv, env=environment, cwd=cwd) without capturing: the
+; child shares this process's stdin, stdout and stderr. output and errors
+; stay empty.
+effect(fs,env,process,time) fn host_run_inherit(borrow argv:Arr Arr u8 _ _, borrow environment:Arr Arr u8 _ _, borrow cwd:Arr u8 _) -> HostRun
+  = let launch=host_launch(argv,environment,cwd) in
+    if !launch.ok then host_run_failed(launch.error) else
+    using child=process_start_inherit(launch.path,launch.args,environment) in
+    let status=loop (status=process_status(child), waits=0) while status.ok && status.running
+      next (let paused=sleep_ms(if waits<50 then 2 else 20) in process_status(child), waits+1) yield status in
+    HostRun { ok=status.ok, code=if !status.ok then -1 else if status.signal!=0 then 128+status.signal else status.exit_code,
+      signal=if status.ok then status.signal else 0, output=text_empty(), errors=text_empty(),
+      error=if status.ok then text_empty() else host_errno_text(status.error.code) }
+
+; repr(signal.Signals(number)) on Linux, or "" for a number that is not one.
+fn host_signal_repr(number:i64) -> Arr u8 _
+  = let name=if number==1 then "SIGHUP" else if number==2 then "SIGINT" else if number==3 then "SIGQUIT" else if number==4 then "SIGILL"
+      else if number==5 then "SIGTRAP" else if number==6 then "SIGABRT" else if number==7 then "SIGBUS" else if number==8 then "SIGFPE"
+      else if number==9 then "SIGKILL" else if number==10 then "SIGUSR1" else if number==11 then "SIGSEGV" else if number==12 then "SIGUSR2"
+      else if number==13 then "SIGPIPE" else if number==14 then "SIGALRM" else if number==15 then "SIGTERM" else if number==16 then "SIGSTKFLT"
+      else if number==17 then "SIGCHLD" else if number==18 then "SIGCONT" else if number==19 then "SIGSTOP" else if number==20 then "SIGTSTP"
+      else if number==21 then "SIGTTIN" else if number==22 then "SIGTTOU" else if number==23 then "SIGURG" else if number==24 then "SIGXCPU"
+      else if number==25 then "SIGXFSZ" else if number==26 then "SIGVTALRM" else if number==27 then "SIGPROF" else if number==28 then "SIGWINCH"
+      else if number==29 then "SIGIO" else if number==30 then "SIGPWR" else if number==31 then "SIGSYS" else if number==34 then "SIGRTMIN"
+      else if number==64 then "SIGRTMAX" else "" in
+    if len(name)==0 then text_empty() else concat("<Signals.",name,": ",text_int(number),">")
+; str(subprocess.CalledProcessError) for a run of argv that failed, as
+; cli.py prints it after check=True: "Command '['bun', 'x']' returned
+; non-zero exit status 1." or "... died with <Signals.SIGKILL: 9>.".
+fn host_process_error(borrow argv:Arr Arr u8 _ _, borrow run:HostRun) -> Arr u8 _
+  = let command=concat("Command '",text_repr_list(argv),"'") in
+    if run.signal>0 then
+      (let shown=host_signal_repr(run.signal) in
+       if len(shown)>0 then concat(command," died with ",shown,".") else concat(command," died with unknown signal ",text_int(run.signal),"."))
+    else concat(command," returned non-zero exit status ",text_int(run.code),".")

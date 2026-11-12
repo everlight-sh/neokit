@@ -82,9 +82,9 @@ fn test_compression_rules() -> bool
 fn test_image_helpers_match_python() -> bool
   = same(meta_image_cache_name("abc",640,"webp","vips-8.15.1"),"9f2f19a73b048bca953958d73a74d138caf8d844939ffc431b687fae913c8c4b.webp")
     && meta_round_div(2000,100)==20 && meta_round_div(25,2)==12 && meta_round_div(27,2)==14 && meta_round_div(26,4)==6 && meta_round_div(1,3)==0
-    && same(meta_stem("/a/photo.png"),"photo") && same(meta_stem("/a/b.c.png"),"b.c") && same(meta_stem("/a/.png"),".png")
-    && same(meta_stem("/a/x."),"x.") && same(meta_stem("noext"),"noext")
-    && same(meta_sha256_hex(""),"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+    && same(host_stem("/a/photo.png"),"photo") && same(host_stem("/a/b.c.png"),"b.c") && same(host_stem("/a/.png"),".png")
+    && same(host_stem("/a/x."),"x.") && same(host_stem("noext"),"noext")
+    && same(host_sha256_hex(""),"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
 
 effect fn fs_test_missing_image_tools_are_named() -> bool
   = same(match meta_image_tools_in("") { Ok(tools) => tools.vips, Err(message) => message },"Responsive images require vips (libvips) on PATH in the build environment")
@@ -113,11 +113,11 @@ fn png(width:i64, height:i64, red:i64, green:i64, blue:i64) -> Arr u8 _
       png_chunk("IHDR",concat(be32(width),be32(height),arr(i in 0..5) u8(if i==0 then 8 else if i==1 then 2 else 0))),
       png_chunk("IDAT",zlib_encode(rows,6).value),png_chunk("IEND",""))
 effect fn app_with(borrow name:Arr u8 _, borrow image:Arr u8 _) -> Arr u8 _
-  = let app=scratch(name) in let made=meta_mkdirs(concat(app,"/public")) in
+  = let app=scratch(name) in let made=host_mkdirs(concat(app,"/public")) in
     let written=if len(image)>0 then fs_write(concat(app,"/public/photo.png"),image) else int_ok(0) in app
 fn variant_url(borrow image:MetaImage, i:i64) -> Arr u8 _
   = if i<0 || i>=len(image.variants) then text_empty() else
-    concat("/_web/images/photo-",text_int(image.variants[i].width),"-",text_slice(meta_sha256_hex(image.variants[i].data),0,12),".",image.variants[i].format)
+    concat("/_web/images/photo-",text_int(image.variants[i].width),"-",text_slice(host_sha256_hex(image.variants[i].data),0,12),".",image.variants[i].format)
 fn file_at(borrow assets:MetaAssets, borrow url:Arr u8 _) -> Arr u8 _
   = loop (i:i64{i>=0}=0, found=text_empty()) while i<len(assets.files) next (i+1, if text_equal(assets.files[i].key,url) then assets.files[i].value else found) yield found
 fn binding(borrow assets:MetaAssets, borrow key:Arr u8 _) -> Arr u8 _

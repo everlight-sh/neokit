@@ -1,0 +1,7 @@
+ok walk, glob and listdir match Python
+ok resolve follows symbolic links like Python
+ok read_text and OSError texts
+ok writes, copies and removal
+ok mkdtemp names and modes
+ok processes run like subprocess
+ok home and cache directories

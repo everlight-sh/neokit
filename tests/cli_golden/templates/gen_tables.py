@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Regenerate the Unicode and HTML entity tables at the end of cli/templates.neo.
+"""Regenerate the Unicode and HTML entity tables at the end of cli/text.neo.
 
-The template compiler's reference behavior comes from Python's re, str and
-html modules, so the tables are taken from the Python that produces the
-goldens (the test box's 3.12, Unicode 15.0). Run it from the repository root:
+The template compiler's reference behavior (and text.neo's repr, lower and
+html.unescape) comes from Python's re, str and html modules, so the tables
+are taken from the Python that produces the goldens (the test box's 3.12,
+Unicode 15.0). Run it from the repository root:
 
     python3 tests/cli_golden/templates/gen_tables.py
 
@@ -17,7 +18,7 @@ import unicodedata
 import _sre
 
 ROOT = Path(__file__).resolve().parents[3]
-TARGET = ROOT/'cli/templates.neo'
+TARGET = ROOT/'cli/text.neo'
 BEGIN = '; ---- BEGIN GENERATED TABLES'
 END = '; ---- END GENERATED TABLES'
 
@@ -72,15 +73,15 @@ def entity_table():
 def main():
     word = re.compile(r'\w')
     tables = [
-        ('tpl_word_table', 'Python re \\w for str patterns: str.isalnum() and "_".',
+        ('text_word_table', 'Python re \\w for str patterns: str.isalnum() and "_".',
          runs(lambda c: word.match(chr(c)) is not None)),
-        ('tpl_digit_table', 'Python re \\d for str patterns: str.isdecimal().',
+        ('text_digit_table', 'Python re \\d for str patterns: str.isdecimal().',
          runs(lambda c: chr(c).isdecimal())),
-        ('tpl_unprintable_table', 'Code points for which str.isprintable() is false (repr escapes them).',
+        ('text_unprintable_table', 'Code points for which str.isprintable() is false (repr escapes them).',
          runs(lambda c: not chr(c).isprintable())),
-        ('tpl_case_table', 'code, simple lowercase (str.lower without special casing), re.IGNORECASE fold; 3 bytes each.',
+        ('text_case_table', 'code, simple lowercase (str.lower without special casing), re.IGNORECASE fold; 3 bytes each.',
          case_table()),
-        ('tpl_entity_table', 'html.entities.html5 sorted by name: name length, name, value length, UTF-8 value.',
+        ('text_entity_table', 'html.entities.html5 sorted by name: name length, name, value length, UTF-8 value.',
          entity_table()),
     ]
     lines = [BEGIN+' (tests/cli_golden/templates/gen_tables.py, Python '

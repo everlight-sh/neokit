@@ -1,0 +1,8 @@
+# The effectful cases of tests/cli_host_test.neo; generate.py writes their
+# expected values into that file from Python.
+# Run with the Neo 0.2.6 branch build: neo test tests/cli_golden/host/host.neo.toml
+
+[[test]]
+name = "host effectful unit cases"
+file = "effects.neo"
+stdout-file = "golden/effects.out"

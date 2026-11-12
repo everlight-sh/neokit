@@ -128,3 +128,17 @@ fn test_repr_list_and_tuple() -> bool
 fn test_universal_newlines() -> bool
   = same(text_universal_newlines("a\r\nb\rc\n"),"a\nb\nc\n") && same(text_universal_newlines("plain\n"),"plain\n")
     && same(text_universal_newlines("\r\r\n"),"\n\n")
+
+; Expected values from Python 3.12 (Unicode 15.0) on the test box.
+fn test_unicode_classes_case_and_unescape() -> bool
+  = same(text_repr("\xcd\xb8"),"'\\u0378'") && same(text_repr("\xcd\xb7"),"'\xcd\xb7'") && same(text_repr("\xf0\x9f\x98\x80"),"'\xf0\x9f\x98\x80'")
+    && same(text_repr("\xc2\xad"),"'\\xad'") && same(text_repr("\xf3\xa0\x84\x80"),"'\xf3\xa0\x84\x80'") && same(text_repr("\xe2\x80\xa8"),"'\\u2028'")
+    && same(text_lower_unicode("\xc3\x80\xc3\x89\xc4\xb0\xce\xa3X"),"\xc3\xa0\xc3\xa9i\xcc\x87\xcf\x83x")
+    && same(text_lower_unicode("\xe2\x84\xaa\xe1\xba\x9eA"),"k\xc3\x9fa")
+    && same(text_html_unescape("&amp;&lt;&#65;&#x42;&notit;&#128;&#0;&bogus;&"),"&<AB\xc2\xacit;\xe2\x82\xac\xef\xbf\xbd&bogus;&")
+    && same(text_html_unescape("&ampx &#xD800; &#1114112; &AMP &#x110000;"),"&x \xef\xbf\xbd \xef\xbf\xbd & \xef\xbf\xbd")
+    && text_is_word_char(233) && !text_is_decimal(233) && text_is_word_char(1632) && text_is_decimal(1632)
+    && text_is_word_char(189) && !text_is_decimal(189) && text_is_word_char(8544) && text_is_word_char(95) && !text_is_word_char(45)
+    && text_fold_code(383)==115 && text_fold_code(8490)==107 && text_fold_code(962)==962
+    && text_lower_code(304)==105 && text_lower_code(7838)==223
+    && text_hex_value(70)==15 && text_hex_value(102)==15 && text_hex_value(103)== -1

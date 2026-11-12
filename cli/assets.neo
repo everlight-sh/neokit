@@ -25,9 +25,9 @@ import "std:result"
 import "std:io"
 import "std:fs"
 import "std:process"
-import "std:sha256"
 import "std:deflate"
 import "text.neo"
+import "host.neo"
 import "toml.neo"
 
 ; One entry of a Python dict with str keys: a generated file (URL to bytes)
@@ -68,11 +68,6 @@ private fn meta_literal(borrow text:Arr u8 _) -> Arr u8 _
             else if b==34 then concat(o,"\\\"") else if b==92 then concat(o,"\\\\")
             else if b>=32 && b<127 then push(o,u8(b)) else concat(o,"\\x",text_hex(b,2)), i+1) yield o in
     push(body,u8(34))
-; hashlib's hexdigest() of raw digest bytes.
-fn meta_hex(borrow digest:Arr u8 _) -> Arr u8 _
-  = loop (o=text_empty(), i=0) while i<len(digest) next (concat(o,text_hex(text_byte(digest,i),2)), i+1) yield o
-; hashlib.sha256(data).hexdigest().
-fn meta_sha256_hex(borrow data:Arr u8 _) -> Arr u8 _ = meta_hex(sha256(data))
 
 ; Python repr() of a TOML value, or None for a float (not implemented).
 private fn meta_repr(borrow value:Json) -> Option<Arr u8 _>
@@ -234,57 +229,17 @@ fn meta_compressed(borrow data:Arr u8 _) -> OptionBytes
 ; so never a variant (Python without its optional brotli module).
 fn meta_brotli_compressed(borrow data:Arr u8 _, borrow gzipped:OptionBytes) -> OptionBytes = none_bytes()
 
-; ---- files and processes ----
-
-effect(fs) fn meta_is_file(borrow path:Arr u8 _) -> bool
-  = let stat=fs_stat(path,true) in stat.ok && stat.kind==fs_kind_file()
-; Path.read_bytes(), without std:io's 16 MiB limit.
-effect(fs) fn meta_read_all(borrow path:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
-  = let opened=file_open(path,0) in
-    if !opened.ok then meta_err(concat("Cannot read ",path,": ",opened.error.message)) else
-    let read=loop (chunk=file_read_chunk(opened.value,65536), out=text_empty()) while chunk.ok && len(chunk.value)>0
-      next (file_read_chunk(opened.value,65536), concat(out,chunk.value)) yield if chunk.ok then bytes_ok(out) else chunk in
-    let closed=file_close(opened.value) in
-    if read.ok then meta_ok(read.value) else meta_err(concat("Cannot read ",path,": ",read.error.message))
-; Path.mkdir(parents=True, exist_ok=True).
-effect(fs) fn meta_mkdirs(borrow path:Arr u8 _) -> bool
-  = let parts=text_split(path,"/") in
-    let made=loop (at=if text_starts(path,"/") then "" else ".", i:i64{i>=0}=0) while i<len(parts)
-      next (if len(parts[i])==0 then at else let step=concat(at,"/",parts[i]) in let made=fs_mkdir(step) in step, i+1) yield at in
-    let stat=fs_stat(path,true) in stat.ok && stat.kind==fs_kind_directory()
-
-; A finished child process: exit code (128+signal when killed), stdout and stderr.
-type MetaRun = { ok:bool, code:i64, output:Arr u8 _, errors:Arr u8 _ }
-type MetaPoll = { run:MetaRun, pending:bool }
-private effect(process,fs,time) fn meta_poll(process:Process, move state:MetaPoll) -> MetaPoll
-  = let status=process_status(process) in
-    let out=process_try_read(process,1,65536) in let err=process_try_read(process,2,65536) in
-    let got=(out.ok && len(out.value)>0) || (err.ok && len(err.value)>0) in
-    let paused=if status.running && !got then sleep_ms(2) else int_ok(0) in
-    MetaPoll { run=MetaRun { ok=status.ok, code=if !status.ok then 127 else if status.signal!=0 then 128+status.signal else status.exit_code,
-        output=if out.ok then concat(state.run.output,out.value) else state.run.output,
-        errors=if err.ok then concat(state.run.errors,err.value) else state.run.errors },
-      pending=status.ok && (status.running || got) }
-; Run tool (an absolute path) with args and this process's environment, and
-; wait for it.
-effect(fs,env,process,time) fn meta_run(borrow tool:Arr u8 _, borrow args:Arr Arr u8 _ _) -> MetaRun
-  = using child=process_start(tool,args,env_list()) in
-    let done=loop (p=MetaPoll { run=MetaRun { ok=false, code=127, output=text_empty(), errors=text_empty() }, pending=true })
-      while p.pending next (meta_poll(child,p)) yield p in
-    done.run
-
 ; ---- image tools ----
 
-private effect(fs) fn meta_tool_in(borrow directory:Arr u8 _, borrow name:Arr u8 _) -> Arr u8 _
-  = if len(directory)==0 then text_empty() else
-    let candidate=concat(directory,"/",name) in
-    if !meta_is_file(candidate) || !fs_executable(candidate) then text_empty()
-    else if text_starts(candidate,"/") then candidate
-    else let cwd=fs_cwd() in if cwd.ok then concat(cwd.value,"/",candidate) else text_empty()
-; The first executable name in a PATH-style list of directories, or "".
-effect(fs) fn meta_find_tool(borrow name:Arr u8 _, borrow search:Arr u8 _) -> Arr u8 _
+; The first executable name in a PATH-style list of directories, as an
+; absolute path, or "". shutil.which (host_which_in), except that empty
+; entries are skipped instead of meaning the working directory.
+private effect(fs) fn meta_find_tool(borrow name:Arr u8 _, borrow search:Arr u8 _) -> Arr u8 _
   = let dirs=text_split(search,":") in
-    loop (i:i64{i>=0}=0, found=text_empty()) while len(found)==0 && i<len(dirs) next (i+1, meta_tool_in(dirs[i],name)) yield found
+    let kept=loop (o=text_empty(), i:i64{i>=0}=0) while i<len(dirs)
+      next (if len(dirs[i])==0 then o else if len(o)==0 then dirs[i] else concat(o,":",dirs[i]), i+1) yield o in
+    let found=host_which_in(name,kept) in
+    if len(found)==0 then found else match host_abspath(found) { Ok(path) => path, Err(message) => text_empty() }
 private fn meta_missing(borrow tool:Arr u8 _) -> Arr u8 _
   = concat("Responsive images require ",tool," (libvips) on PATH in the build environment")
 private fn meta_one(borrow word:Arr u8 _) -> Arr Arr u8 _ _ = push(text_words(),word)
@@ -296,7 +251,7 @@ effect(fs,env,process,time) fn meta_image_tools_in(borrow search:Arr u8 _) -> Re
     if len(vips)==0 then Err::<MetaTools,Arr u8 _>(meta_missing("vips")) else
     let header=meta_find_tool("vipsheader",search) in
     if len(header)==0 then Err::<MetaTools,Arr u8 _>(meta_missing("vipsheader")) else
-    let version=meta_run(vips,meta_one("--version")) in
+    let version=host_run(push(meta_one(vips),"--version")) in
     if !version.ok || version.code!=0 || len(text_strip(version.output))==0
     then Err::<MetaTools,Arr u8 _>(concat(vips," --version failed: ",text_strip(version.errors)))
     else Ok::<MetaTools,Arr u8 _>(MetaTools { vips=vips, header=header, version=text_strip(version.output) })
@@ -311,7 +266,7 @@ private fn meta_field(borrow lines:Arr Arr u8 _ _, borrow name:Arr u8 _) -> i64
 ; The stored width and height of an image file and its EXIF orientation,
 ; as `vipsheader -a` reports them.
 effect(fs,env,process,time) fn meta_image_header(borrow tools:MetaTools, borrow path:Arr u8 _) -> Result<MetaHeader,Arr u8 _>
-  = let run=meta_run(tools.header,push(meta_one("-a"),path)) in
+  = let run=host_run(push(push(meta_one(tools.header),"-a"),path)) in
     let lines=text_splitlines(run.output) in
     let width=meta_field(lines,"width") in let height=meta_field(lines,"height") in let orientation=meta_field(lines,"orientation") in
     if !run.ok || run.code!=0 || width<1 || height<1
@@ -323,7 +278,7 @@ effect(fs,env,process,time) fn meta_image_header(borrow tools:MetaTools, borrow 
 ; The cache file name image_variants uses for one variant:
 ; sha256(f"{digest}:{width}:{format}:82:{version}").hexdigest()+'.'+format.
 fn meta_image_cache_name(borrow digest:Arr u8 _, width:i64, borrow format:Arr u8 _, borrow version:Arr u8 _) -> Arr u8 _
-  = concat(meta_sha256_hex(concat(digest,":",text_int(width),":",format,":82:",version)),".",format)
+  = concat(host_sha256_hex(concat(digest,":",text_int(width),":",format,":82:",version)),".",format)
 ; Python round(num/den) (half to even) for num>=0, den>0.
 fn meta_round_div(num:i64, den:i64) -> i64
   = if den<=0 then 0 else let q=num/den in let r=num-q*den in
@@ -342,18 +297,19 @@ private fn meta_save_options(borrow format:Arr u8 _) -> Arr u8 _ = if text_equal
 private effect(fs,env,process,time) fn meta_variant(borrow tools:MetaTools, borrow path:Arr u8 _, borrow digest:Arr u8 _,
     width:i64, height:i64, borrow format:Arr u8 _, borrow cache:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
   = let name=meta_image_cache_name(digest,width,format,tools.version) in
-    if len(cache)>0 && meta_is_file(concat(cache,"/",name)) then meta_read_all(concat(cache,"/",name)) else
+    if len(cache)>0 && host_is_file(concat(cache,"/",name)) then host_read_bytes(concat(cache,"/",name)) else
     let temporary=env_get("TMPDIR") in
     let directory=if len(cache)>0 then cache else if temporary.present && len(temporary.value)>0 then temporary.value else "/tmp" in
-    if !meta_mkdirs(directory) then meta_err(concat("Cannot create the image cache ",directory)) else
+    let made=match host_mkdirs(directory) { Ok(count) => true, Err(message) => false } in
+    if !made then meta_err(concat("Cannot create the image cache ",directory)) else
     let staged=concat(directory,"/",text_slice(name,0,64),".tmp",text_int(process_id()),".",format) in
-    let run=meta_run(tools.vips,arr(i in 0..8) if i==0 then "thumbnail" else if i==1 then path else if i==2 then concat(staged,meta_save_options(format))
-      else if i==3 then text_int(width) else if i==4 then "--height" else if i==5 then text_int(height) else if i==6 then "--size" else "force") in
+    let run=host_run(arr(i in 0..9) if i==0 then tools.vips else if i==1 then "thumbnail" else if i==2 then path else if i==3 then concat(staged,meta_save_options(format))
+      else if i==4 then text_int(width) else if i==5 then "--height" else if i==6 then text_int(height) else if i==7 then "--size" else "force") in
     if !run.ok || run.code!=0 then
       let removed=fs_remove(staged) in
       meta_err(concat("vips cannot make the ",text_int(width),"px ",format," variant of ",path,": ",text_strip(run.errors)))
     else
-    let content=meta_read_all(staged) in
+    let content=host_read_bytes(staged) in
     let moved=if len(cache)>0 then fs_rename(staged,concat(cache,"/",name)) else fs_remove(staged) in
     content
 type MetaVariants = { variants:Arr MetaVariant _, err:Arr u8 _ }
@@ -372,9 +328,9 @@ private effect(fs,env,process,time) fn meta_variant_step(move s:MetaVariants, bo
 ; cache "" is Python's None.
 effect(fs,env,process,time) fn meta_image_variants(borrow tools:MetaTools, borrow path:Arr u8 _, borrow widths:Arr i64 _,
     borrow formats:Arr Arr u8 _ _, borrow cache:Arr u8 _) -> Result<MetaImage,Arr u8 _>
-  = match meta_read_all(path) {
+  = match host_read_bytes(path) {
       Err(message) => Err::<MetaImage,Arr u8 _>(message),
-      Ok(source) => let digest=meta_sha256_hex(source) in
+      Ok(source) => let digest=host_sha256_hex(source) in
         match meta_image_header(tools,path) {
           Err(message) => Err::<MetaImage,Arr u8 _>(message),
           Ok(header) =>
@@ -393,10 +349,6 @@ effect(fs,env,process,time) fn meta_image_variants(borrow tools:MetaTools, borro
 
 ; ---- generated_assets ----
 
-; Path(name).stem.
-fn meta_stem(borrow path:Arr u8 _) -> Arr u8 _
-  = let name=text_from(path,text_rfind(path,"/")+1) in
-    let dot=text_rfind(name,".") in if dot>0 && dot<len(name)-1 then text_slice(name,0,dot) else name
 private fn meta_sitemap(borrow origin:Arr u8 _, borrow exported:Arr Arr u8 _ _) -> Arr u8 _
   = let paths=text_sort(exported) in
     let entries=loop (o=text_empty(), i:i64{i>=0}=0) while i<len(paths)
@@ -432,7 +384,7 @@ private fn meta_formats_ok(borrow items:Arr Json _) -> bool
 private effect(fs) fn meta_public_file(borrow public:Arr u8 _, borrow source:Arr u8 _) -> Arr u8 _
   = let joined=if text_starts(source,"/") then source else if len(source)==0 then public else concat(public,"/",source) in
     let path=fs_realpath(joined) in let root=fs_realpath(public) in
-    if !path.ok || !root.ok || !meta_is_file(path.value) then text_empty()
+    if !path.ok || !root.ok || !host_is_file(path.value) then text_empty()
     else if text_equal(root.value,"/") || text_starts(path.value,concat(root.value,"/")) then path.value else text_empty()
 type MetaBuild = { files:Arr MetaPair _, bindings:Arr MetaPair _, err:Arr u8 _ }
 private fn meta_url_of(borrow image:MetaImage, width:i64, borrow format:Arr u8 _, borrow urls:Arr Arr u8 _ _) -> Arr u8 _
@@ -442,7 +394,7 @@ private fn meta_url_of(borrow image:MetaImage, width:i64, borrow format:Arr u8 _
 private fn meta_bind(move b:MetaBuild, borrow source:Arr u8 _, borrow image:MetaImage, borrow widths:Arr i64 _,
                      borrow formats:Arr Arr u8 _ _, borrow stem:Arr u8 _) -> MetaBuild
   = let urls=arr(i in 0..len(image.variants)) check i>=0 && i<len(image.variants) in
-      concat("/_web/images/",stem,"-",text_int(image.variants[i].width),"-",text_slice(meta_sha256_hex(image.variants[i].data),0,12),".",image.variants[i].format) in
+      concat("/_web/images/",stem,"-",text_int(image.variants[i].width),"-",text_slice(host_sha256_hex(image.variants[i].data),0,12),".",image.variants[i].format) in
     let files=loop (f=b.files, i:i64{i>=0}=0) while i<len(image.variants) next (meta_put(f,text_word(urls,i),image.variants[i].data), i+1) yield f in
     let requested=loop (d=b.bindings, i:i64{i>=0}=0) while i<len(widths)
       next (let width=widths[i] in let actual=if width<image.original then width else image.original in
@@ -457,7 +409,7 @@ private effect(fs,env,process,time) fn meta_image_step(move b:MetaBuild, borrow 
     if len(path)==0 then b with { err=concat("Image source must be a public file: ",source.text) } else
     match meta_image_variants(tools,path,widths,formats,cache) {
       Err(message) => b with { err=message },
-      Ok(image) => meta_bind(b,source.text,image,widths,formats,meta_stem(path))
+      Ok(image) => meta_bind(b,source.text,image,widths,formats,host_stem(path))
     }
 private effect(fs,env,process,time) fn meta_images(move b:MetaBuild, borrow public:Arr u8 _, borrow images:Json, borrow sources:Arr MetaSource _,
     borrow cache:Arr u8 _) -> MetaBuild
@@ -487,9 +439,9 @@ effect(fs,env,process,time) fn meta_generated_assets(borrow app:Arr u8 _, borrow
       Ok(origin) =>
         let public=concat(app,"/public") in
         if len(origin)>0 && meta_bad_origin(origin) then Err::<MetaAssets,Arr u8 _>("[site] url must be an HTTP origin") else
-        let sitemap=if len(origin)>0 && !meta_is_file(concat(public,"/sitemap.xml"))
+        let sitemap=if len(origin)>0 && !host_is_file(concat(public,"/sitemap.xml"))
           then push(meta_no_pairs(),MetaPair { key="/sitemap.xml", value=meta_sitemap(origin,exported) }) else meta_no_pairs() in
-        let files=if len(origin)>0 && !meta_is_file(concat(public,"/robots.txt"))
+        let files=if len(origin)>0 && !host_is_file(concat(public,"/robots.txt"))
           then push(sitemap,MetaPair { key="/robots.txt", value=concat("User-agent: *\nAllow: /\nSitemap: ",origin,"/sitemap.xml\n") }) else sitemap in
         let images=toml_get_table(config,"images") in
         if !images.ok then Err::<MetaAssets,Arr u8 _>("[images] must be a table") else

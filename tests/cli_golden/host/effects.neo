@@ -1,0 +1,26 @@
+; Runs the effectful cases of tests/cli_host_test.neo (a scratch tree under
+; build/, files, symbolic links, child processes), which `neo test
+; --unit-only` cannot call inside its `check`s, and prints "ok NAME" or
+; "FAIL NAME" for each. A failing case explains itself on stderr. It also
+; prints every pure case that disagrees with Python (nothing when they all
+; agree), which `neo test --unit-only` only reports per test function.
+import "std:io"
+import "../../cli_host_test.neo"
+
+fn outcome(borrow name:Arr u8 _, passed:bool) -> Arr u8 _ = concat(if passed then "ok " else "FAIL ",name,"\n")
+effect fn main() -> unit
+  = let walked=fs_test_walk_glob_and_listdir_match_python() in
+    let resolved=fs_test_resolve_follows_symlinks_like_python() in
+    let read=fs_test_read_text_and_errors() in
+    let written=fs_test_writes_copies_and_removal() in
+    let temp=fs_test_mkdtemp_names_and_modes() in
+    let run=fs_test_processes_run_like_subprocess() in
+    let home=fs_test_home_and_cache_directories() in
+    let printed=print_out(concat(mismatches(""),
+      outcome("walk, glob and listdir match Python",walked),
+      outcome("resolve follows symbolic links like Python",resolved),
+      outcome("read_text and OSError texts",read),
+      outcome("writes, copies and removal",written),
+      outcome("mkdtemp names and modes",temp),
+      outcome("processes run like subprocess",run),
+      outcome("home and cache directories",home))) in noop()

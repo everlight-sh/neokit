@@ -98,12 +98,12 @@ fn is_image(borrow url:Arr u8 _) -> bool = text_starts(url,"/_web/images/")
 fn masked(borrow url:Arr u8 _, borrow data:Arr u8 _) -> Arr u8 _
   = let dot=text_rfind(url,".") in let stem=text_slice(url,0,dot) in
     let digest=text_from(stem,len(stem)-12) in
-    concat(text_slice(stem,0,len(stem)-12),if text_equal(digest,text_slice(meta_sha256_hex(data),0,12)) then "<hash>" else "<badhash>",".",text_from(url,dot+1))
+    concat(text_slice(stem,0,len(stem)-12),if text_equal(digest,text_slice(host_sha256_hex(data),0,12)) then "<hash>" else "<badhash>",".",text_from(url,dot+1))
 effect fn decoded(borrow tools:Result<MetaTools,Arr u8 _>, borrow scratch:Arr u8 _, borrow data:Arr u8 _) -> Arr u8 _
   = match tools {
       Err(message) => message,
       Ok(found) =>
-        let made=meta_mkdirs(scratch) in let path=concat(scratch,"/decoded.img") in let written=fs_write(path,data) in
+        let made=host_mkdirs(scratch) in let path=concat(scratch,"/decoded.img") in let written=fs_write(path,data) in
         let size=match meta_image_header(found,path) { Ok(h) => concat(text_int(h.width),"x",text_int(h.height)), Err(message) => message } in
         let removed=fs_remove(path) in size
     }

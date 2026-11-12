@@ -11,15 +11,13 @@ import "toml.neo"
 ; action_adapter's result: present is false for Python's None (no [input]).
 type ActAdapter = { present:bool, code:Arr u8 _ }
 
-private fn act_hex(move out:Arr u8 _, byte:i64) -> Arr u8 _
-  = push(push(out,u8(if byte/16<10 then 48+byte/16 else 87+byte/16)),u8(if byte%16<10 then 48+byte%16 else 87+byte%16))
 ; templates.literal: a Neo string literal holding value's UTF-8 bytes.
 private fn act_literal(borrow value:Arr u8 _) -> Arr u8 _
   = let body=loop (o=push(text_empty(),u8(34)), i=0) while i<len(value)
       next (let b=text_byte(value,i) in
             if b==10 then concat(o,"\\n") else if b==13 then concat(o,"\\r") else if b==9 then concat(o,"\\t")
             else if b==34 then concat(o,"\\\"") else if b==92 then concat(o,"\\\\")
-            else if b>=32 && b<127 then push(o,u8(b)) else act_hex(concat(o,"\\x"),b),
+            else if b>=32 && b<127 then push(o,u8(b)) else concat(o,"\\x",text_hex(b,2)),
             i+1) yield o in
     push(body,u8(34))
 
