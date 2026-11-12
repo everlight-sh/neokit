@@ -5,3 +5,44 @@ import "std:http_server"
 fn neokit_policy(response:WebResponse,policy:Arr u8 n) -> WebResponse
   = if str_find(http_lower(response.headers),"content-security-policy:").present then response
     else web_with_header(response,"Content-Security-Policy",policy)
+
+; The policy Neo's encoders add to a head that has none: web_encode's buffered
+; responses and std:http_async's streamed heads.
+fn neokit_default_policy() -> Arr u8 _
+  = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'self'; frame-ancestors 'none'"
+
+private type NeokitHead = { at:i64, out:Arr u8 _, found:bool }
+private fn neokit_blank(byte:i64) -> bool = byte==32 || byte==9
+; The header line of head at state.at, appended to state.out. The value of a
+; Content-Security-Policy that is exactly Neo's default becomes policy; the
+; name, the colon and the spaces around the value stay.
+private fn neokit_head_line(state:NeokitHead,borrow head:Arr u8 n,borrow policy:Arr u8 m) -> NeokitHead
+  = let crlf=str_find(str_slice(head,state.at,n),"\r\n") in
+    let end=if crlf.present then state.at+crlf.value else n in
+    let line=str_slice(head,state.at,end) in
+    let colon=str_find(line,":") in
+    let named=colon.present && str_equal(http_lower(str_slice(line,0,colon.value)),"content-security-policy") in
+    let start=if !named then 0 else loop(i=colon.value+1) while neokit_blank(str_byte(line,i)) next(i+1) yield i in
+    let stop=loop(j=len(line)) while j>start && neokit_blank(str_byte(line,j-1)) next(j-1) yield j in
+    let replaced=named && str_equal(str_slice(line,start,stop),neokit_default_policy()) in
+    NeokitHead { at=end+2, out=concat(state.out,if replaced then concat(str_slice(line,0,start),policy,str_slice(line,stop,len(line))) else line,"\r\n"),
+      found=state.found || named }
+private fn neokit_status_line(borrow wire:Arr u8 n) -> bool
+  = str_starts(wire,"HTTP/1.") && str_byte(wire,7)>=48 && str_byte(wire,7)<=57 && str_byte(wire,8)==32
+
+; The site policy for the raw bytes a streamed handler returns (a head and the
+; first chunk, as std:http_async writes them), which neokit_policy cannot see.
+; When the bytes start with an HTTP/1.x status line and a whole head, a
+; Content-Security-Policy whose value is exactly Neo's default gets policy, and
+; a head without one gets policy before its blank line. Every other byte is
+; kept: a handler's own policy, -Report-Only, the body and its chunk framing,
+; and bytes that are not an HTTP head. A policy that is empty or not a valid
+; header value changes nothing.
+fn neokit_stream_policy(wire:Arr u8 n,policy:Arr u8 m) -> Arr u8 _
+  = if m==0 || !web_header_safe(policy) || !neokit_status_line(wire) then wire else
+    let blank=str_find(wire,"\r\n\r\n") in if !blank.present then wire else
+    let head=str_slice(wire,0,blank.value+2) in
+    let status=str_find(head,"\r\n") in
+    let first=if status.present then status.value+2 else len(head) in
+    let lines=loop(s=NeokitHead { at=first, out=str_slice(head,0,first), found=false }) while s.at<len(head) next(neokit_head_line(s,head,policy)) yield s in
+    concat(lines.out,if lines.found then "" else concat("Content-Security-Policy: ",policy,"\r\n"),str_slice(wire,blank.value+2,n))

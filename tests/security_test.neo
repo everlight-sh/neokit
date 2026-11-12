@@ -1,0 +1,85 @@
+; Unit tests for src/security.neo: neokit_stream_policy puts the site policy in
+; the raw head a streamed handler returns. Run by `neo test`.
+import "std:http_async"
+import "../src/security.neo"
+
+fn site() -> Arr u8 _ = "default-src 'self'; img-src 'self' https://cdn.example"
+fn policy_line(value:Arr u8 n) -> Arr u8 _ = concat("Content-Security-Policy: ",value,"\r\n")
+fn neo_line() -> Arr u8 _ = policy_line(neokit_default_policy())
+fn site_line() -> Arr u8 _ = policy_line(site())
+; The header lines of a streamed HTML head as std:http_async writes them,
+; without the blank line, with policy (a whole line, or "") among them.
+fn html_lines(policy:Arr u8 n,extra:Arr u8 m) -> Arr u8 _
+  = concat("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nCache-Control: no-store\r\nDate: Thu, 12 Nov 2026 09:30:00 GMT\r\n",
+      "X-Content-Type-Options: nosniff\r\n",policy,extra,"Transfer-Encoding: chunked\r\nConnection: close\r\n")
+fn chunk() -> Arr u8 _ = "1b\r\n<!doctype html><p>Shell</p>\r\n"
+fn page(policy:Arr u8 n,extra:Arr u8 m) -> Arr u8 _ = concat(html_lines(policy,extra),"\r\n",chunk())
+fn applied(wire:Arr u8 n) -> Arr u8 _ = neokit_stream_policy(wire,site())
+fn kept(wire:Arr u8 n) -> bool = str_equal(applied(wire),wire)
+
+; The constant is the policy Neo's encoders actually write.
+fn test_default_is_the_one_neo_writes() -> bool
+  = str_find(web_encode_at(web_reply(200,"x","text/plain"),false,0),neo_line()).present
+
+fn test_replaces_the_default_in_a_streamed_head() -> bool
+  = str_equal(applied(page(neo_line(),"")),page(site_line(),""))
+
+; An encoded reply (web_stream_page's 503, say) ends as neokit_policy would
+; have encoded it, Date included.
+fn test_replaces_the_default_in_an_encoded_reply() -> bool
+  = let reply=web_reply(503,"Async capacity unavailable","text/plain; charset=utf-8") in
+    let wire=applied(web_encode_close_at(reply,false,1794475800000)) in
+    str_equal(wire,web_encode_close_at(neokit_policy(reply,site()),false,1794475800000))
+    && str_find(wire,"\r\nDate: Thu, 12 Nov 2026 09:30:00 GMT\r\n").present && !str_find(wire,neo_line()).present
+
+; Names match in any case; the name's bytes and the spaces around the value stay.
+fn test_names_match_in_any_case() -> bool
+  = str_equal(applied(page(concat("content-security-policy: ",neokit_default_policy(),"\r\n"),"")),
+      page(concat("content-security-policy: ",site(),"\r\n"),""))
+    && str_equal(applied(page(concat("CONTENT-Security-POLICY:\t ",neokit_default_policy()," \r\n"),"")),
+      page(concat("CONTENT-Security-POLICY:\t ",site()," \r\n"),""))
+
+fn test_keeps_a_custom_policy() -> bool
+  = kept(page(policy_line("default-src 'none'"),""))
+    && kept(page(policy_line(concat(neokit_default_policy(),"; report-uri /csp")),""))
+    && kept(page(policy_line(concat("script-src 'self'; ",neokit_default_policy())),""))
+    && kept(page(policy_line(""),""))
+
+; -Report-Only and other names that merely contain the name are not a policy.
+fn test_keeps_report_only() -> bool
+  = let report=concat("Content-Security-Policy-Report-Only: ",neokit_default_policy(),"\r\n") in
+    let legacy=concat("X-Content-Security-Policy: ",neokit_default_policy(),"\r\n") in
+    str_equal(applied(page(report,legacy)),concat(html_lines(report,legacy),site_line(),"\r\n",chunk()))
+    && str_equal(applied(page(neo_line(),report)),page(site_line(),report))
+    && kept(page(policy_line("default-src 'none'"),report))
+
+; A head without a policy (an event stream's) gets the site's before its blank line.
+fn test_inserts_a_missing_policy() -> bool
+  = let events="HTTP/1.1 200 OK\r\nContent-Type: text/event-stream; charset=utf-8\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nTransfer-Encoding: chunked\r\nConnection: close\r\nX-Accel-Buffering: no\r\n" in
+    let first="d\r\nretry: 1000\n\n\r\n" in
+    str_equal(applied(concat(events,"\r\n",first)),concat(events,site_line(),"\r\n",first))
+    && str_equal(applied(page("","")),concat(html_lines("",""),site_line(),"\r\n",chunk()))
+    && str_equal(applied("HTTP/1.0 204 No Content\r\n\r\n"),concat("HTTP/1.0 204 No Content\r\n",site_line(),"\r\n"))
+
+fn test_replaces_every_default_line() -> bool
+  = str_equal(applied(page(neo_line(),neo_line())),page(site_line(),site_line()))
+
+; Only the head changes: the body and its chunk framing stay byte for byte,
+; even where the body holds a policy line and a blank line of its own.
+fn test_keeps_the_body() -> bool
+  = let body=concat("9b\r\n",neo_line(),"\r\n<p>x</p>\r\n0\r\n\r\n") in
+    str_equal(applied(concat(html_lines(neo_line(),""),"\r\n",body)),concat(html_lines(site_line(),""),"\r\n",body))
+    && str_equal(applied(concat(html_lines("",""),"\r\n",body)),concat(html_lines("",""),site_line(),"\r\n",body))
+    && kept(concat(html_lines(policy_line("default-src 'none'"),""),"\r\n",body))
+
+fn test_keeps_bytes_that_are_not_an_http_head() -> bool
+  = kept("") && kept(chunk()) && kept("<!doctype html><p>Shell</p>")
+    && kept(http_async_finish(web_html(concat("<p>",neo_line(),"</p>"))))
+    && kept(concat("HTTP/2 200\r\n",neo_line(),"\r\n")) && kept(concat("http/1.1 200 OK\r\n",neo_line(),"\r\n"))
+    && kept(concat(" HTTP/1.1 200 OK\r\n",neo_line(),"\r\n")) && kept(concat("HTTP/1.1200 OK\r\n",neo_line(),"\r\n"))
+    && kept(html_lines(neo_line(),"")) && kept("HTTP/1.1 200 OK")
+
+fn test_ignores_an_empty_or_unsafe_policy() -> bool
+  = let wire=page(neo_line(),"") in
+    str_equal(neokit_stream_policy(wire,""),wire) && str_equal(neokit_stream_policy(wire,"default-src 'self'\r\nX-Injected: 1"),wire)
+    && str_equal(neokit_stream_policy(page("",""),"a\nb"),page("",""))

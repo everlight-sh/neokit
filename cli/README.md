@@ -135,6 +135,10 @@ except:
   copied files keep no modification time.
 - A few malformed configurations that crashed the former CLI with a
   traceback are reported as errors.
+- With `[security] csp`, the generated server also puts the policy in the
+  head of streamed responses (`neokit_stream_policy`), their 405 replies
+  and the 503 sent when async capacity runs out, which the former CLI left
+  with Neo's default. Without it, the generated code is the same.
 - `doctor` prints no interpreter line.
 
 The module headers (`host.neo`, `args.neo`, `assets.neo`, `preview.neo`,

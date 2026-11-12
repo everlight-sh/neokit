@@ -80,13 +80,13 @@ Every response carries a `Date` header and, by default, Neo's Content-Security-P
 csp="default-src 'self'; img-src 'self' https://cdn.example"
 ```
 
-A response that sets its own `Content-Security-Policy` keeps it. Exports write the policy to `_headers`, which Netlify and Cloudflare Pages apply. Streamed async pages (`web_stream_page`) carry a `Date` but still send Neo's default policy: the site policy is applied to buffered responses, and a streamed page writes its own headers.
+A response that sets its own `Content-Security-Policy` keeps it. Streamed responses get the site policy too: async pages (`web_stream_page`), other `stream=true` handlers and event streams return a head Neo wrote, and the server replaces Neo's default policy in it, or adds the site policy to a head without one (Neo writes none for event streams). A stream's own policy, `Content-Security-Policy-Report-Only` and the body are left as they are. The 504 and 503 replies Neo's runtime writes when an async page or API misses its deadline or fails before replying still carry Neo's default. Exports write the policy to `_headers`, which Netlify and Cloudflare Pages apply.
 
 A buffered `route.toml` can allow cross-origin requests with `cors=["https://app.example"]` or `cors="*"`, optional `cors_headers=["content-type","authorization"]` and `cors_credentials=true` (not with `*`). NeoKit answers the OPTIONS preflight and adds `Vary: Origin`. Typed actions need `csrf=false` and their own authentication before they can be cross-origin.
 
 Endpoints return `WebResponse`; `methods=["POST","PATCH","DELETE","OPTIONS"]` explicitly selects methods. GET automatically permits HEAD, and mismatches return 405 with Allow. Helpers provide status codes, safe response headers, relative redirects, URLencoded forms, cookies and multipart parsing. Native request framing accepts Content-Length or chunked bodies and answers conflicting framing with 400, headers over 16 KiB with 431 and input over about 16 MiB with 413. Each worker serves up to `NEO_HTTP_CONNECTIONS` connections (1,024 by default) and answers more with 503 and `Retry-After`. Slow clients are disconnected: headers must arrive within `NEO_HTTP_HEADER_TIMEOUT_MS` of the first byte (10 s, then 408), and the server waits at most `NEO_HTTP_BODY_TIMEOUT_MS` between body reads (30 s), `NEO_HTTP_IDLE_TIMEOUT_MS` between keep-alive requests (60 s) and `NEO_HTTP_WRITE_TIMEOUT_MS` between response writes (30 s). A value of 0 disables that timeout. Multipart upload handling is buffered and bounded, rather than a direct-to-storage streaming upload.
 
-`[server] before="guard"`, `after="decorate"` names functions imported from `app/hooks.neo`. A before hook returns `web_continue()` or a response. After hooks decorate buffered responses. Streaming handlers own the bytes and headers after the before hook; buffered after/error hooks cannot rewrite an already-started stream.
+`[server] before="guard"`, `after="decorate"` names functions imported from `app/hooks.neo`. A before hook returns `web_continue()` or a response. After hooks decorate buffered responses. Streaming handlers own the bytes and headers after the before hook, apart from the `[security] csp` policy in their head; buffered after/error hooks cannot rewrite an already-started stream.
 
 ## Templates and actions
 
@@ -208,7 +208,7 @@ The checked-in Compose example runs the dashboard, persistent volumes, a read-on
 
 ## Remaining gaps
 
-Compared with Next.js and Astro, these are not implemented: Markdown/MDX content collections, i18n routing, an on-demand image server, incremental static regeneration of exported pages, edge or serverless adapters, React/Vue/Svelte component islands, HTTP/2, WebSockets and byte-range responses. Streamed async pages ignore `[security] csp`.
+Compared with Next.js and Astro, these are not implemented: Markdown/MDX content collections, i18n routing, an on-demand image server, incremental static regeneration of exported pages, edge or serverless adapters, React/Vue/Svelte component islands, HTTP/2, WebSockets and byte-range responses.
 
 ## Reusable foundations and performance
 

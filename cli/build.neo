@@ -24,6 +24,10 @@
 ;   no Brotli encoder (brotli_compressed never gives a variant), and
 ;   responsive images come from libvips (cli/assets.neo).
 ; - Directory modes come from host_mkdir (cli/host.neo).
+; - With [security] csp, server.neo also applies the policy to streamed
+;   handlers' bytes (neokit_stream_policy), their 405 replies and the async
+;   capacity 503 (gen_policy, gen_stream_policy); without it, server.neo is
+;   unchanged.
 ; - content_type: CONTENT_TYPES first. For other suffixes, gen_mime_table:
 ;   the mimetypes table recorded from the Python reference (last present at
 ;   commit 4757083) and now fixed, as Ubuntu 24.04's /etc/mime.types
@@ -1284,6 +1288,13 @@ private fn gen_prior(borrow all_paths:Arr Arr u8 _ _, borrow url:Arr u8 _) -> Ar
   = loop (out=text_words(), i=0) while i<len(all_paths)
       next (let path=text_word(all_paths,i) in if route_precedence_less(path,url) then push(out,gen_route_condition(path)) else out, i+1) yield out
 private fn gen_methods_text(borrow allowed:Arr Arr u8 _ _) -> Arr u8 _ = tpl_literal(text_join(allowed,", "))
+; [security] csp around generated code: a WebResponse (neokit_policy), or the
+; raw bytes of a streamed handler (neokit_stream_policy). Without csp the code
+; is returned unchanged.
+private fn gen_policy(borrow site:GenSite, borrow response:Arr u8 _) -> Arr u8 _
+  = if site.has_csp then concat("neokit_policy(",response,",",tpl_literal(site.csp),")") else response
+private fn gen_stream_policy(borrow site:GenSite, borrow wire:Arr u8 _) -> Arr u8 _
+  = if site.has_csp then concat("neokit_stream_policy(",wire,",",tpl_literal(site.csp),")") else wire
 type GenServer = { dev:bool, target:Arr u8 _, public_dir:Arr u8 _, assets_dir:Arr u8 _ }
 ; The dispatch line of each redirect, page and API route, before sorting.
 private fn gen_dispatch_routes(borrow server:GenServer, borrow site:GenSite, borrow routes:Arr GenRoute _, borrow apis:GenApis,
@@ -1341,23 +1352,23 @@ private fn gen_server_code(borrow server:GenServer, borrow site:GenSite, borrow 
             if !api.streaming then o else
             let blocked=text_join(push(gen_prior(all_paths,api.url),"str_equal(request.path,\"/healthz\")")," || ") in
             concat(o,"if !head && ",gen_route_condition(api.url)," && !(",blocked,") then (if !",gen_allowed_method(api.allowed),
-              " then web_encode_at(web_method_not_allowed(",gen_methods_text(api.allowed),"),false,request.stamp) else ",api.handler,"(",gen_route_request(api.url,"request"),")) else "), i+1) yield o in
-    let csp=site.csp in
-    let guard_response=if site.has_csp then concat("neokit_policy(guard,",tpl_literal(csp),")") else "guard" in
-    let guard=if len(site.before)>0 then concat("let guard=",site.before,"(request) in if guard.status!=0 then web_encode_at(",guard_response,",head,request.stamp) else ") else text_empty() in
+              " then web_encode_at(",gen_policy(site,concat("web_method_not_allowed(",gen_methods_text(api.allowed),")")),",false,request.stamp) else ",
+              gen_stream_policy(site,concat(api.handler,"(",gen_route_request(api.url,"request"),")")),") else "), i+1) yield o in
+    let guard=if len(site.before)>0 then concat("let guard=",site.before,"(request) in if guard.status!=0 then web_encode_at(",gen_policy(site,"guard"),",head,request.stamp) else ") else text_empty() in
     let base_dispatch="web_dispatch(request,str_equal(web_header(raw,\"x-web-fragment\"),\"1\"))" in
     let after=if len(site.after)>0 then concat(site.after,"(request,",base_dispatch,")") else base_dispatch in
     let errored=if common.server_error then push(ended,"fn web_server_error(response:WebResponse) -> WebResponse = if response.status>=500 then response with {body=text_ServerError(response.status,\"The server could not complete this request.\"),content_type=\"text/html; charset=utf-8\"} else response") else ended in
     let handled=if common.server_error then concat("web_server_error(",after,")") else after in
-    let dispatch=if site.has_csp then concat("neokit_policy(",handled,",",tpl_literal(csp),")") else handled in
+    let dispatch=gen_policy(site,handled) in
     let asyncs=common.apis.asyncs in
     let async_stream_dispatch=loop (o=text_empty(), i=0) while i<len(apis)
       next (let api=gen_api_at(apis,i) in
             if !api.streaming || !gen_async_has(asyncs,api.url) then o else
             let prior=gen_prior(all_paths,api.url) in
             let condition=if len(prior)>0 then concat(gen_route_condition(api.url)," && !(",text_join(prior," || "),")") else gen_route_condition(api.url) in
-            concat(o,"if !head && ",condition," then (if !",gen_allowed_method(api.allowed)," then web_encode_close_at(web_method_not_allowed(",gen_methods_text(api.allowed),
-              "),false,request.stamp) else ",api.handler,"(",gen_route_request(api.url,"request"),")) else "), i+1) yield o in
+            concat(o,"if !head && ",condition," then (if !",gen_allowed_method(api.allowed)," then web_encode_close_at(",
+              gen_policy(site,concat("web_method_not_allowed(",gen_methods_text(api.allowed),")")),",false,request.stamp) else ",
+              gen_stream_policy(site,concat(api.handler,"(",gen_route_request(api.url,"request"),")")),") else "), i+1) yield o in
     let buffered=concat("effect(fs,net,env,time,process) fn web_handle_buffered(raw:Arr u8 n)->Arr u8 _ = let clock=time_unix_ms() in let request=web_request(raw,clock.value) in let head=str_equal(request.method,\"HEAD\") in ",
       guard,async_stream_dispatch,"web_encode_close_at(",dispatch,",head,request.stamp)") in
     let async_order=route_precedence_order(arr(i in 0..len(asyncs)) gen_async_at(asyncs,i).url) in
@@ -1366,7 +1377,8 @@ private fn gen_server_code(borrow server:GenServer, borrow site:GenSite, borrow 
             let prior=push(gen_prior(all_paths,item.url),"str_equal(request.path,\"/healthz\")") in
             let prior_dev=if dev then push(prior,"str_equal(request.path,\"/_neokit/dev\")") else prior in
             let condition=concat(gen_route_condition(item.url)," && !(",text_join(prior_dev," || "),")") in
-            concat(o,"if ",condition," then let timer=deadline_after(",text_int(item.timeout),") in let started=http_response_async(raw,function(web_handle_buffered),timer.value) in if started.ok then started.value else web_encode_at(web_reply(503,\"Async capacity unavailable\",\"text/plain; charset=utf-8\"),head,request.stamp) else "), i+1) yield o in
+            concat(o,"if ",condition," then let timer=deadline_after(",text_int(item.timeout),") in let started=http_response_async(raw,function(web_handle_buffered),timer.value) in if started.ok then started.value else web_encode_at(",
+              gen_policy(site,"web_reply(503,\"Async capacity unavailable\",\"text/plain; charset=utf-8\")"),",head,request.stamp) else "), i+1) yield o in
     let with_buffered=if len(asyncs)>0 then push(errored,buffered) else errored in
     let observed=site.access_log || site.timing in
     let measured=if site.timing then "web_server_timing(wire,start.value,end.value)" else "wire" in
