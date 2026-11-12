@@ -74,6 +74,25 @@ fn text_distinct(borrow words:Arr Arr u8 _ _) -> bool
   = let sorted=text_sort(words) in
     loop (i=1, ok=true) while ok && i<len(sorted) next (i+1, !text_equal(text_word(sorted,i-1),text_word(sorted,i))) yield ok
 
+; ---- Word lists ----
+
+; Python [word].
+fn text_one(borrow word:Arr u8 _) -> Arr Arr u8 _ _ = push(text_words(),word)
+; Python a + b for lists of str.
+fn text_concat_words(borrow a:Arr Arr u8 _ _, borrow b:Arr Arr u8 _ _) -> Arr Arr u8 _ _
+  = loop (out=a, i=0) while i<len(b) next (push(out,text_word(b,i)), i+1) yield out
+; Python words[start:end] for indices that are not negative: end clamps to
+; the list, and end<=start gives [].
+fn text_slice_words(borrow words:Arr Arr u8 _ _, start:i64, end:i64) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=if start<0 then 0 else start) while i<end && i<len(words) next (push(out,text_word(words,i)), i+1) yield out
+; Python words[:count], words[count:] and words[:-1].
+fn text_take_words(borrow words:Arr Arr u8 _ _, count:i64) -> Arr Arr u8 _ _ = text_slice_words(words,0,count)
+fn text_skip_words(borrow words:Arr Arr u8 _ _, count:i64) -> Arr Arr u8 _ _ = text_slice_words(words,count,len(words))
+fn text_drop_last(borrow words:Arr Arr u8 _ _) -> Arr Arr u8 _ _ = text_slice_words(words,0,len(words)-1)
+; words with words[at] replaced by value (a copy when at is outside).
+fn text_put_word(borrow words:Arr Arr u8 _ _, at:i64, borrow value:Arr u8 _) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=0) while i<len(words) next (push(out,if i==at then value else text_word(words,i)), i+1) yield out
+
 ; ---- Searching ----
 
 fn text_starts(borrow text:Arr u8 _, borrow prefix:Arr u8 _) -> bool = bytes_match_at(text,0,prefix)
@@ -180,6 +199,54 @@ fn text_join(borrow parts:Arr Arr u8 _ _, borrow sep:Arr u8 _) -> Arr u8 _
 fn text_repeat(borrow text:Arr u8 _, count:i64) -> Arr u8 _
   = loop (out=text_empty(), i=0) while i<count next (concat(out,text), i+1) yield out
 
+; ---- Wrapping (textwrap, ASCII whitespace) ----
+
+private fn text_wrap_space(code:i64) -> bool = code==32 || (code>=9 && code<=13)
+private fn text_wrap_word_end(borrow text:Arr u8 _, at:i64) -> i64
+  = loop (k=at) while k<len(text) && !text_wrap_space(text_byte(text,k)) next (k+1) yield k
+; textwrap's chunks for ASCII text: runs of spaces, and words split after
+; a hyphen between letters (TextWrapper.wordsep_re's hyphenated words).
+private fn text_wrap_letter(code:i64) -> bool = (code>=65 && code<=90) || (code>=97 && code<=122) || code==95
+private fn text_wrap_hyphen_break(borrow text:Arr u8 _, j:i64) -> bool
+  = let b=text_byte(text,j-1) in let bb=text_byte(text,j-2) in
+    let behind=(text_wrap_letter(bb) && text_wrap_letter(b)) || (text_wrap_letter(text_byte(text,j-3)) && bb==45 && text_wrap_letter(b)) in
+    let a=text_byte(text,j+1) in let aa=text_byte(text,j+2) in
+    behind && text_wrap_letter(a) && (text_wrap_letter(aa) || (aa==45 && text_wrap_letter(text_byte(text,j+3))))
+private fn text_wrap_chunk_end(borrow text:Arr u8 _, at:i64) -> i64
+  = if text_wrap_space(text_byte(text,at)) then loop (k=at) while k<len(text) && text_wrap_space(text_byte(text,k)) next (k+1) yield k else
+    let word=text_wrap_word_end(text,at) in
+    loop (k=at+1, found= -1) while found<0 && k<word next (k+1, if text_byte(text,k)==45 && text_wrap_hyphen_break(text,k) then k+1 else -1) yield (if found>0 then found else word)
+private fn text_wrap_chunks(borrow text:Arr u8 _) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=0) while i<len(text)
+      next (push(out,text_slice(text,i,text_wrap_chunk_end(text,i))), text_wrap_chunk_end(text,i)) yield out
+private fn text_wrap_blank(borrow chunk:Arr u8 _) -> bool
+  = loop (i=0, blank=true) while blank && i<len(chunk) next (i+1, text_wrap_space(text_byte(chunk,i))) yield blank
+; TextWrapper._wrap_chunks, one line per step (break_long_words and
+; break_on_hyphens on, whitespace dropped at line ends).
+type TextWrap = { chunks:Arr Arr u8 _ _, k:i64, lines:Arr Arr u8 _ _ }
+type TextFill = { line:Arr Arr u8 _ _, size:i64, k:i64 }
+private fn text_wrap_step(move s:TextWrap, width:i64) -> TextWrap
+  = let k0=if len(s.lines)>0 && s.k<len(s.chunks) && text_wrap_blank(text_word(s.chunks,s.k)) then s.k+1 else s.k in
+    let fill=loop (f=TextFill { line=text_words(), size=0, k=k0 }) while f.k<len(s.chunks) && f.size+len(text_word(s.chunks,f.k))<=width
+      next (TextFill { line=push(f.line,text_word(s.chunks,f.k)), size=f.size+len(text_word(s.chunks,f.k)), k=f.k+1 }) yield f in
+    let chunk=text_word(s.chunks,fill.k) in
+    let long=fill.k<len(s.chunks) && len(chunk)>width in
+    let space_left=if width<1 then 1 else width-fill.size in
+    let hyphen=if long && len(chunk)>space_left then text_rfind(text_slice(chunk,0,space_left),"-") else -1 in
+    let cut=if hyphen>0 && !text_wrap_only_byte(text_slice(chunk,0,hyphen),45) then hyphen+1 else space_left in
+    let line=if long then push(fill.line,text_slice(chunk,0,cut)) else fill.line in
+    let chunks=if long then text_put_word(s.chunks,fill.k,text_from(chunk,cut)) else s.chunks in
+    let trimmed=if len(line)>0 && text_wrap_blank(text_word(line,len(line)-1))
+      then text_drop_last(line) else line in
+    TextWrap { chunks=chunks, k=fill.k, lines=if len(trimmed)>0 then push(s.lines,text_join(trimmed,"")) else s.lines }
+private fn text_wrap_only_byte(borrow text:Arr u8 _, code:i64) -> bool
+  = loop (i=0, only=true) while only && i<len(text) next (i+1, text_byte(text,i)==code) yield only
+; textwrap.wrap(text, width) after HelpFormatter's whitespace folding.
+fn text_wrap(borrow text:Arr u8 _, width:i64) -> Arr Arr u8 _ _
+  = let folded=text_join(text_split_ws(text)," ") in
+    let done=loop (s=TextWrap { chunks=text_wrap_chunks(folded), k=0, lines=text_words() }) while s.k<len(s.chunks) next (text_wrap_step(s,width)) yield s in
+    done.lines
+
 ; ---- Replacing and case ----
 
 type TextReplace = { out:Arr u8 _, i:i64, done:i64 }
@@ -268,6 +335,27 @@ fn text_hex(value:i64, digits:i64) -> Arr u8 _
     let width=if digits>needed then digits else needed in
     loop (out=text_empty(), k=width-1) while k>=0
       next (push(out,text_hex_digit(bit_and(shift_right(value,k*4),15))), k-1) yield out
+
+; Python int(text) for base 10: surrounding whitespace, a sign, ASCII
+; digits with single underscores between them. A value beyond i64
+; saturates (Python has big integers; NeoKit only range-checks such
+; values). ok is false for Python's ValueError, whose text is
+; text_int_error(text).
+type TextInt = { ok:bool, value:i64 }
+private fn text_int_digits(borrow body:Arr u8 _, negative:bool) -> TextInt
+  = let scan=loop (i=0, value=0, ok=len(body)>0, big=false) while ok && i<len(body)
+      next (i+1,
+            let b=text_byte(body,i) in
+            if b>=48 && b<=57 then (if big || value>(9223372036854775807-(b-48))/10 then value else value*10+(b-48)) else value,
+            let b=text_byte(body,i) in
+            (b>=48 && b<=57) || (b==95 && i>0 && i<len(body)-1 && text_byte(body,i-1)!=95 && text_byte(body,i+1)>=48 && text_byte(body,i+1)<=57),
+            let b=text_byte(body,i) in big || (b>=48 && b<=57 && value>(9223372036854775807-(b-48))/10)) yield TextInt { ok=ok && text_byte(body,0)!=95, value=if big then (if negative then -9223372036854775807 else 9223372036854775807) else if negative then 0-value else value } in
+    scan
+fn text_parse_int(borrow text:Arr u8 _) -> TextInt
+  = let body=text_strip(text) in let sign=text_byte(body,0) in
+    if sign==43 || sign==45 then text_int_digits(text_from(body,1),sign==45) else text_int_digits(body,false)
+; str(ValueError) for int(text).
+fn text_int_error(borrow text:Arr u8 _) -> Arr u8 _ = concat("invalid literal for int() with base 10: ",text_repr(text))
 
 ; ---- Python repr() ----
 

@@ -62,10 +62,7 @@ private fn gen_ok(borrow value:Arr u8 _) -> Result<Arr u8 _,Arr u8 _> = Ok::<Arr
 private fn gen_err(borrow message:Arr u8 _) -> Result<Arr u8 _,Arr u8 _> = Err::<Arr u8 _,Arr u8 _>(message)
 private fn gen_done() -> Result<bool,Arr u8 _> = Ok::<bool,Arr u8 _>(true)
 private fn gen_fail(borrow message:Arr u8 _) -> Result<bool,Arr u8 _> = Err::<bool,Arr u8 _>(message)
-private fn gen_one(borrow word:Arr u8 _) -> Arr Arr u8 _ _ = push(text_words(),word)
 private fn gen_two(borrow a:Arr u8 _, borrow b:Arr u8 _) -> Arr Arr u8 _ _ = push(push(text_words(),a),b)
-private fn gen_join_words(borrow a:Arr Arr u8 _ _, borrow b:Arr Arr u8 _ _) -> Arr Arr u8 _ _
-  = loop (out=a, i=0) while i<len(b) next (push(out,text_word(b,i)), i+1) yield out
 private fn gen_int_at(borrow values:Arr i64 _, i:i64) -> i64 = if i>=0 && i<len(values) then values[i] else 0
 private fn gen_json_at(borrow values:Arr Json _, i:i64) -> Json = if i>=0 && i<len(values) then values[i] else json_none().value
 ; dict.fromkeys(paths): the paths in order, each Path once.
@@ -215,7 +212,7 @@ effect(fs,env) fn gen_compiler_env(borrow root:Arr u8 _) -> Result<Arr Arr u8 _ 
     Ok::<Arr Arr u8 _ _,Arr u8 _>(host_env_remove(host_env_set(host_env_set(env_list(),"NEO_HOME",compiler),"NEO_ROOT",compiler),"NEOC"))
 ; compiler_command(environment): [NEO_HOME/neo].
 fn gen_compiler_command(borrow environment:Arr Arr u8 _ _) -> Arr Arr u8 _ _
-  = gen_one(host_join(host_env_get(environment,"NEO_HOME").value,"neo"))
+  = text_one(host_join(host_env_get(environment,"NEO_HOME").value,"neo"))
 
 ; library_cache(): the prepared-library cache directory; enabled is false
 ; for NEOKIT_LIBRARY_CACHE=off.
@@ -238,13 +235,13 @@ effect(fs,env,process,time) fn gen_native_build(borrow root:Arr u8 _, borrow sou
     let env=host_env_setdefault(base,"NEO_INLINE_BUDGET","100") in
     let staged=host_with_name(target,concat(host_name(target),".next"))? in
     let dev=text_equal(profile,"dev") in
-    let command=gen_join_words(gen_compiler_command(env),gen_two("build",host_normalize(source))) in
-    let options=gen_join_words(command,gen_two("-o",staged)) in
-    let optimized=gen_join_words(gen_join_words(options,gen_two("--opt-level",if dev then "0" else "3")),
+    let command=text_concat_words(gen_compiler_command(env),gen_two("build",host_normalize(source))) in
+    let options=text_concat_words(command,gen_two("-o",staged)) in
+    let optimized=text_concat_words(text_concat_words(options,gen_two("--opt-level",if dev then "0" else "3")),
       gen_two("--package-root",if len(package_root)>0 then host_normalize(package_root) else root)) in
     let flagged=if dev then push(optimized,"--dev") else optimized in
     let cache=gen_library_cache()? in
-    let full=if cache.enabled then gen_join_words(gen_join_words(flagged,gen_two("--library-cache",cache.path)),gen_two("--library-root",host_join(root,"src/lib.neo"))) else flagged in
+    let full=if cache.enabled then text_concat_words(text_concat_words(flagged,gen_two("--library-cache",cache.path)),gen_two("--library-root",host_join(root,"src/lib.neo"))) else flagged in
     let run=host_run_with(full,env,root,text_empty()) in
     if !run.ok then gen_err(run.error) else
     let stdout=text_universal_newlines(run.output) in
@@ -281,7 +278,7 @@ private effect(fs,env,process,time) fn gen_prepare_in(borrow root:Arr u8 _, borr
 effect(fs) fn gen_package_context(borrow root:Arr u8 _, borrow app:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
   = let path=host_resolve(app)? in
     let candidates=push(text_words(),path) in
-    let all=gen_join_words(candidates,host_parents(path)) in
+    let all=text_concat_words(candidates,host_parents(path)) in
     let found=loop (i=0, found=text_empty()) while len(found)==0 && i<len(all)
       next (i+1, if host_is_file(host_join(text_word(all,i),"neo.toml")) then text_word(all,i) else text_empty()) yield found in
     gen_ok(if len(found)>0 then found else root)
@@ -406,7 +403,7 @@ private fn gen_path_problem(borrow config_path:Arr u8 _, borrow route:Arr u8 _, 
 private fn gen_page_paths(borrow config:Json, borrow config_path:Arr u8 _, borrow route:Arr u8 _, dynamic:bool) -> Result<Arr Arr u8 _ _,Arr u8 _>
   = let given=toml_get_texts(config,"paths") in
     if !given.ok then Err::<Arr Arr u8 _ _,Arr u8 _>(concat(config_path,": paths must be a list of URL strings")) else
-    let paths=if given.present then given.values else if dynamic then text_words() else gen_one(route) in
+    let paths=if given.present then given.values else if dynamic then text_words() else text_one(route) in
     let bad=loop (i=0, bad=text_empty()) while len(bad)==0 && i<len(paths) next (i+1, gen_path_problem(config_path,route,text_word(paths,i))) yield bad in
     if len(bad)>0 then Err::<Arr Arr u8 _ _,Arr u8 _>(bad) else Ok::<Arr Arr u8 _ _,Arr u8 _>(paths)
 private fn gen_route_err(borrow message:Arr u8 _) -> Result<GenRoute,Arr u8 _> = Err::<GenRoute,Arr u8 _>(message)
@@ -453,13 +450,13 @@ effect(fs) fn gen_discover(borrow app:Arr u8 _) -> Result<Arr GenRoute _,Arr u8 
 ; The paths a sitemap lists: every path of every route with export=true.
 private fn gen_exported_paths(borrow routes:Arr GenRoute _) -> Arr Arr u8 _ _
   = loop (out=text_words(), i=0) while i<len(routes)
-      next (let route=gen_route_at(routes,i) in if route.exported then gen_join_words(out,route.paths) else out, i+1) yield out
+      next (let route=gen_route_at(routes,i) in if route.exported then text_concat_words(out,route.paths) else out, i+1) yield out
 
 ; ---------------------------------------------------------------- paths_fn
 
 private fn gen_paths_code(borrow root:Arr u8 _, borrow routes:Arr GenRoute _, borrow listed:Arr i64 _) -> Arr u8 _
   = let sources=gen_unique_paths(arr(i in 0..len(listed)) gen_route_at(routes,gen_int_at(listed,i)).source) in
-    let imports=loop (out=gen_one(concat("import ",tpl_literal(host_join(root,"src/lib.neo")))), i=0) while i<len(sources)
+    let imports=loop (out=text_one(concat("import ",tpl_literal(host_join(root,"src/lib.neo")))), i=0) while i<len(sources)
       next (push(out,concat("import ",tpl_literal(text_word(sources,i)))), i+1) yield out in
     let lines=push(imports,"fn neokit_lines(paths:Arr Arr u8 _ n) -> Arr u8 _ = str_concat_parts(arr(i in 0..n) check i>=0 && i<n in concat(paths[i],\"\\n\"))") in
     let calls=loop (out=text_empty(), i=0) while i<len(listed)
@@ -495,7 +492,7 @@ effect(fs,env,process,time) fn gen_resolve_paths(borrow root:Arr u8 _, borrow ro
     let written=host_write_text(source,gen_paths_code(root,routes,listed))? in
     let binary=host_join(out,"paths") in
     let built=gen_native_build(root,source,binary,profile,package_root)? in
-    let run=host_run(gen_one(binary)) in
+    let run=host_run(text_one(binary)) in
     if !run.ok then Err::<Arr GenRoute _,Arr u8 _>(run.error)
     else if run.code!=0 then Err::<Arr GenRoute _,Arr u8 _>(concat("paths_fn failed:\n",host_decode_replace(run.errors))) else
     let invalid=host_utf8_error(run.output) in
@@ -813,7 +810,7 @@ fn gen_site(borrow config:Json, dev:bool) -> Result<GenSite,Arr u8 _>
     let grace=toml_get_int(server.value,"shutdown_grace_ms",30000) in
     if !grace.ok || grace.value<1 || grace.value>120000 then Err::<GenSite,Arr u8 _>("shutdown_grace_ms must be an integer from 1 to 120000") else
     let security=toml_get_table(config,"security") in
-    if !security.ok || !gen_only_keys(security.value,gen_one("csp")) then Err::<GenSite,Arr u8 _>("[security] supports only csp") else
+    if !security.ok || !gen_only_keys(security.value,text_one("csp")) then Err::<GenSite,Arr u8 _>("[security] supports only csp") else
     let csp=toml_get_text(security.value,"csp","") in
     if csp.present && (!csp.ok || len(csp.value)<1 || len(csp.value)>4096 || !gen_ascii_range(csp.value,32))
     then Err::<GenSite,Arr u8 _>("[security] csp must be a Content-Security-Policy value of up to 4096 printable ASCII characters") else
@@ -938,11 +935,11 @@ fn gen_cors_options(borrow config:Json, borrow path:Arr u8 _, streaming:bool) ->
         if streaming then Err::<GenCors,Arr u8 _>(concat(path,": cors is supported on buffered API routes")) else
         let star=toml_is_text(value) && text_equal(toml_text(value),"*") in
         let given=toml_get_texts(config,"cors") in
-        let origins=if star then gen_one("*") else given.values in
+        let origins=if star then text_one("*") else given.values in
         if !(star || given.ok) || len(origins)==0 || len(origins)>32 || (text_member(origins,"*") && len(origins)>1) || !gen_origins_ok(origins)
         then Err::<GenCors,Arr u8 _>(concat(path,": cors must be \"*\" or a list of origins like \"https://app.example\"")) else
         let headers=toml_get_texts(config,"cors_headers") in
-        let names=if headers.present then headers.values else gen_one("content-type") in
+        let names=if headers.present then headers.values else text_one("content-type") in
         if !headers.ok || !gen_header_names(names) then Err::<GenCors,Arr u8 _>(concat(path,": cors_headers must list request header names")) else
         let credentials=toml_get_bool(config,"cors_credentials",false) in
         if !credentials.ok || (credentials.value && gen_wildcard(origins))
@@ -1020,10 +1017,10 @@ private effect(fs) fn gen_api_route(borrow s:GenApis, borrow app:Arr u8 _, borro
     let adapter=concat("Action_",text_slice(host_sha256_hex(url),0,12)) in
     let extra=gen_typed_code(config,adapter,typed)? in
     let called=if typed then adapter else handler.value in
-    let allowed=route_methods_or(config,path,gen_one(if typed then "POST" else "GET"))? in
+    let allowed=route_methods_or(config,path,text_one(if typed then "POST" else "GET"))? in
     if cors.present && text_member(allowed,"OPTIONS") then gen_api_err(concat(at,"cors answers OPTIONS itself; remove it from methods")) else
     let wrapper=concat("Cors_",text_slice(host_sha256_hex(url),0,12)) in
-    Ok::<GenApis,Arr u8 _>(GenApis { code=gen_join_words(imported,extra),
+    Ok::<GenApis,Arr u8 _>(GenApis { code=text_concat_words(imported,extra),
       apis=push(s.apis,GenApi { url=url, handler=if cors.present then wrapper else called,
         allowed=if cors.present then push(allowed,"OPTIONS") else allowed, streaming=streaming }),
       realtime=if realtime.value then push(s.realtime,url) else s.realtime,
@@ -1062,7 +1059,7 @@ private fn gen_ancestors(borrow app:Arr u8 _, borrow folder:Arr u8 _) -> Arr Arr
     let parents=host_parents(folder) in
     let kept=loop (out=text_words(), i=0) while i<len(parents)
       next (let p=text_word(parents,i) in if !host_path_equal(p,base) && host_is_relative_to(p,base) then push(out,p) else out, i+1) yield out in
-    if host_path_equal(folder,base) then kept else gen_join_words(gen_one(folder),kept)
+    if host_path_equal(folder,base) then kept else text_concat_words(text_one(folder),kept)
 ; The render_ function of one page: its document inside the nested and root
 ; layouts, with the page's metadata in <head>.
 private fn gen_render_route(borrow app:Arr u8 _, borrow config:Json, borrow views:GenViews, borrow expressions:Arr TplPair _, borrow route:GenRoute) -> Result<GenRender,Arr u8 _>
@@ -1083,7 +1080,7 @@ private fn gen_render_route(borrow app:Arr u8 _, borrow config:Json, borrow view
     let static_head=meta_metadata(config,route.config,toml_keys(dynamic_keys))? in
     let kinds=arr(i in 0..len(props)) tpl_get(props,text_word(names,i)) in
     let dynamic=meta_dynamic_metadata(config,route.config,names,kinds)? in
-    let head_parts=gen_join_words(if len(static_head)>0 then gen_one(tpl_literal(static_head)) else text_words(),dynamic.parts) in
+    let head_parts=text_concat_words(if len(static_head)>0 then text_one(tpl_literal(static_head)) else text_words(),dynamic.parts) in
     let head=if len(head_parts)>1 then concat("concat(",text_join(head_parts,","),")") else if len(head_parts)==1 then text_word(head_parts,0) else "\"\"" in
     let line=gen_render_line(key,route.loader,args) in
     if tpl_has(views.layout.props,"head") then Ok::<GenRender,Arr u8 _>(GenRender { code=concat(line,gen_wrap(expressions,views.layout,document,head,client),")"), jsonld=dynamic.jsonld })
@@ -1166,7 +1163,7 @@ private effect(fs,env) fn gen_common(borrow root:Arr u8 _, borrow app:Arr u8 _, 
       next (let route=gen_route_at(routes,i) in if route.is_async then gen_async_put(out,route.path,route.async_timeout) else out, i+1) yield out in
     let apis=gen_api_routes(app,GenApis { code=sourced, apis=gen_no_apis(), realtime=text_words(), asyncs=page_asyncs, cors=text_words() })? in
     let code=if len(apis.realtime)>0 then push(apis.code,concat("import ",tpl_literal(host_join(root,"src/realtime.neo")))) else apis.code in
-    let all_paths=gen_join_words(gen_join_words(gen_join_words(gen_route_paths(routes),arr(i in 0..len(apis.apis)) gen_api_at(apis.apis,i).url),gen_keys(bundle.files)),
+    let all_paths=text_concat_words(text_concat_words(text_concat_words(gen_route_paths(routes),arr(i in 0..len(apis.apis)) gen_api_at(apis.apis,i).url),gen_keys(bundle.files)),
       arr(i in 0..len(site.redirects)) gen_redirect_at(site.redirects,i).source) in
     if !text_distinct(all_paths) then Err::<GenCommon,Arr u8 _>("A page/API/asset/redirect route is duplicated")
     else if !text_distinct(arr(i in 0..len(all_paths)) route_shape(text_word(all_paths,i))) then Err::<GenCommon,Arr u8 _>("Ambiguous page/API/asset routes differ only in parameter names") else
@@ -1178,7 +1175,7 @@ private effect(fs,env) fn gen_common(borrow root:Arr u8 _, borrow app:Arr u8 _, 
     then Err::<GenCommon,Arr u8 _>("error.view takes status:int,message:text") else
     let all_templates=if has_server_error then push(templates,error) else templates in
     let compiled=tpl_compile_all(all_templates,views.components,gen_tpl_pairs(bundle.assets))? in
-    let with_views=gen_join_words(push(code,compiled.code),apis.cors) in
+    let with_views=text_concat_words(push(code,compiled.code),apis.cors) in
     let not_found_body=if has_not_found then "text_NotFound()" else "\"Not Found\"" in
     let not_found_type=if has_not_found then gen_html_type() else "text/plain; charset=utf-8" in
     let pages_code=push(push(with_views,concat("fn neokit_not_found() -> WebResponse = web_reply(404,",not_found_body,",",tpl_literal(not_found_type),")")),
@@ -1214,13 +1211,13 @@ private fn gen_export_paths(borrow exports:Arr GenExport _) -> Arr Arr u8 _ _ = 
 ; generated/render.neo for the pages to prerender.
 fn gen_render_code(borrow routes:Arr GenRoute _, borrow exports:Arr GenExport _, not_found:bool) -> Arr u8 _
   = let count=len(exports) in
-    let pages=loop (out=gen_one("import \"common.neo\""), i=0) while i<count
+    let pages=loop (out=text_one("import \"common.neo\""), i=0) while i<count
       next (let item=gen_export_at(exports,i) in let route=gen_route_at(routes,item.route) in
             let request=concat("web_static_request(",tpl_literal(item.path),")") in
             let routed=if route.dynamic then concat("web_routed(",request,",",tpl_literal(route.path),")") else request in
             push(out,concat("effect fn neokit_page_",text_int(i),"() -> Arr u8 _ = render_",route.key,"(",routed,",false).bytes")), i+1) yield out in
     let with_404=if not_found then push(pages,"fn neokit_page_404() -> Arr u8 _ = text_NotFound()") else pages in
-    let frames=gen_join_words(arr(i in 0..count) concat("neokit_page_",text_int(i),"()"),if not_found then gen_one("neokit_page_404()") else text_words()) in
+    let frames=text_concat_words(arr(i in 0..count) concat("neokit_page_",text_int(i),"()"),if not_found then text_one("neokit_page_404()") else text_words()) in
     let all=loop (o=text_empty(), i=0) while i<len(frames)
       next (concat(o,"let b",text_int(i),"=",text_word(frames,i)," in let w",text_int(i),"=print_out(concat(int_text(len(b",text_int(i),")),\"\\n\",b",text_int(i),")) in "), i+1) yield o in
     let one=loop (o=text_empty(), i=0) while i<count next (concat(o,"if index==",text_int(i)," then neokit_page_",text_int(i),"() else "), i+1) yield o in
@@ -1441,7 +1438,7 @@ type GenOutputs = { migration:Arr u8 _, revalidator:Arr u8 _, server_bytes:i64 }
 ; build()'s manifest.json.
 private fn gen_manifest(borrow app:Arr u8 _, borrow routes:Arr GenRoute _, borrow assets:Arr MetaPair _, borrow files:Arr MetaPair _,
     borrow rendered:GenRendered, borrow apis:Arr GenApi _, borrow site:GenSite, borrow target:Arr u8 _, borrow profile:Arr u8 _, borrow outputs:GenOutputs) -> Json
-  = let omitted=gen_join_words(loop (out=text_words(), i=0) while i<len(routes)
+  = let omitted=text_concat_words(loop (out=text_words(), i=0) while i<len(routes)
         next (let route=gen_route_at(routes,i) in if route.exported then out else push(out,route.path), i+1) yield out,
       arr(i in 0..len(apis)) gen_api_at(apis,i).url) in
     let js=loop (total=0, i=0) while i<len(files) next (let file=gen_pair_at(files,i) in if text_ends(file.key,".js") then total+len(file.value) else total, i+1) yield total in

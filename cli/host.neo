@@ -45,6 +45,7 @@ import "std:result"
 import "std:io"
 import "std:fs"
 import "std:process"
+import "std:signals"
 import "std:random"
 import "std:sha256"
 import "text.neo"
@@ -71,6 +72,7 @@ fn host_strerror(code:i64) -> Arr u8 _
     else if code==31 then "Too many links" else if code==32 then "Broken pipe"
     else if code==36 then "File name too long" else if code==39 then "Directory not empty"
     else if code==40 then "Too many levels of symbolic links" else if code==95 then "Operation not supported"
+    else if code==98 then "Address already in use" else if code==99 then "Cannot assign requested address"
     else if code==122 then "Disk quota exceeded"
     else concat("Unknown error ",text_int(code))
 ; str(OSError(code, os.strerror(code), path)): "[Errno 2] No such file or
@@ -88,15 +90,6 @@ private fn host_ok(borrow value:Arr u8 _) -> Result<Arr u8 _,Arr u8 _> = Ok::<Ar
 private fn host_err(borrow message:Arr u8 _) -> Result<Arr u8 _,Arr u8 _> = Err::<Arr u8 _,Arr u8 _>(message)
 private fn host_done(value:i64) -> Result<i64,Arr u8 _> = Ok::<i64,Arr u8 _>(value)
 private fn host_fail(borrow message:Arr u8 _) -> Result<i64,Arr u8 _> = Err::<i64,Arr u8 _>(message)
-private fn host_one(borrow word:Arr u8 _) -> Arr Arr u8 _ _ = push(text_words(),word)
-private fn host_drop_last(borrow words:Arr Arr u8 _ _) -> Arr Arr u8 _ _
-  = loop (out=text_words(), i=0) while i<len(words)-1 next (push(out,text_word(words,i)), i+1) yield out
-private fn host_take(borrow words:Arr Arr u8 _ _, count:i64) -> Arr Arr u8 _ _
-  = loop (out=text_words(), i=0) while i<count && i<len(words) next (push(out,text_word(words,i)), i+1) yield out
-private fn host_skip(borrow words:Arr Arr u8 _ _, count:i64) -> Arr Arr u8 _ _
-  = loop (out=text_words(), i=if count<0 then 0 else count) while i<len(words) next (push(out,text_word(words,i)), i+1) yield out
-private fn host_concat_words(borrow a:Arr Arr u8 _ _, borrow b:Arr Arr u8 _ _) -> Arr Arr u8 _ _
-  = loop (out=a, i=0) while i<len(b) next (push(out,text_word(b,i)), i+1) yield out
 
 ; ---------------------------------------------------------------- pure paths
 
@@ -123,13 +116,13 @@ fn host_posix_join(borrow a:Arr u8 _, borrow b:Arr u8 _) -> Arr u8 _
 fn host_join(borrow a:Arr u8 _, borrow b:Arr u8 _) -> Arr u8 _ = host_normalize(host_posix_join(a,b))
 ; Path(path).parts: ('/', 'a', 'b') or ('a', 'b'); () for "." and "".
 fn host_parts(borrow path:Arr u8 _) -> Arr Arr u8 _ _
-  = let root=host_root(path) in if len(root)==0 then host_tail(path) else host_concat_words(host_one(root),host_tail(path))
+  = let root=host_root(path) in if len(root)==0 then host_tail(path) else text_concat_words(text_one(root),host_tail(path))
 ; str(Path(path).parent): "/" and "." are their own parents.
-fn host_parent(borrow path:Arr u8 _) -> Arr u8 _ = host_format(host_root(path),host_drop_last(host_tail(path)))
+fn host_parent(borrow path:Arr u8 _) -> Arr u8 _ = host_format(host_root(path),text_drop_last(host_tail(path)))
 ; [str(p) for p in Path(path).parents], nearest first.
 fn host_parents(borrow path:Arr u8 _) -> Arr Arr u8 _ _
   = let root=host_root(path) in let tail=host_tail(path) in
-    loop (out=text_words(), k=len(tail)-1) while k>=0 next (push(out,host_format(root,host_take(tail,k))), k-1) yield out
+    loop (out=text_words(), k=len(tail)-1) while k>=0 next (push(out,host_format(root,text_take_words(tail,k))), k-1) yield out
 ; Path(path).name: the last component, "" for "/", "." and "".
 fn host_name(borrow path:Arr u8 _) -> Arr u8 _ = let tail=host_tail(path) in text_word(tail,len(tail)-1)
 private fn host_dot(borrow name:Arr u8 _) -> i64
@@ -148,7 +141,10 @@ fn host_with_name(borrow path:Arr u8 _, borrow name:Arr u8 _) -> Result<Arr u8 _
   = let tail=host_tail(path) in
     if len(tail)==0 then host_err(concat(host_path_repr(path)," has an empty name"))
     else if len(name)==0 || text_contains(name,"/") || text_equal(name,".") then host_err(concat("Invalid name ",text_repr(name)))
-    else host_ok(host_format(host_root(path),push(host_drop_last(tail),name)))
+    else host_ok(host_format(host_root(path),push(text_drop_last(tail),name)))
+; Path.with_name(path.name + suffix) for a path with a name: "app" and
+; "-export" give "app-export".
+fn host_sibling(borrow path:Arr u8 _, borrow suffix:Arr u8 _) -> Arr u8 _ = host_join(host_parent(path),concat(host_name(path),suffix))
 ; Path(path).is_absolute().
 fn host_is_absolute(borrow path:Arr u8 _) -> bool = text_starts(path,"/")
 ; Path(a) == Path(b).
@@ -162,8 +158,11 @@ fn host_is_relative_to(borrow path:Arr u8 _, borrow other:Arr u8 _) -> bool
   = text_equal(host_root(path),host_root(other)) && host_prefix(host_tail(path),host_tail(other))
 ; str(Path(path).relative_to(other)), or Python 3.12's ValueError text.
 fn host_relative_to(borrow path:Arr u8 _, borrow other:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
-  = if host_is_relative_to(path,other) then host_ok(host_format(text_empty(),host_skip(host_tail(path),len(host_tail(other)))))
+  = if host_is_relative_to(path,other) then host_ok(host_format(text_empty(),text_skip_words(host_tail(path),len(host_tail(other)))))
     else host_err(concat(text_repr(host_normalize(path))," is not in the subpath of ",text_repr(host_normalize(other))))
+; str(path.relative_to(base)) when path is below base, else path.
+fn host_relative_or_self(borrow path:Arr u8 _, borrow base:Arr u8 _) -> Arr u8 _
+  = match host_relative_to(path,base) { Ok(relative) => relative, Err(message) => path }
 
 ; os.path.normpath(path): like host_normalize, and "x/.." collapses too
 ; (lexically, so through symbolic links); ".." at the root is dropped.
@@ -175,7 +174,7 @@ fn host_normpath(borrow path:Arr u8 _) -> Arr u8 _
       next (let c=fields[i] in
             if len(c)==0 || text_equal(c,".") then out
             else if !text_equal(c,"..") || (len(root)==0 && len(out)==0) || text_equal(text_word(out,len(out)-1),"..") then push(out,c)
-            else if len(out)>0 then host_drop_last(out) else out, i+1) yield out in
+            else if len(out)>0 then text_drop_last(out) else out, i+1) yield out in
     host_format(root,comps)
 ; os.path.abspath(path) with cwd as the working directory.
 fn host_abspath_at(borrow path:Arr u8 _, borrow cwd:Arr u8 _) -> Arr u8 _
@@ -190,7 +189,7 @@ fn host_relpath_at(borrow path:Arr u8 _, borrow start:Arr u8 _, borrow cwd:Arr u
     let from=host_components(host_abspath_at(start,cwd)) in let to=host_components(host_abspath_at(path,cwd)) in
     let common=loop (i=0) while i<len(from) && i<len(to) && text_equal(text_word(from,i),text_word(to,i)) next (i+1) yield i in
     let ups=loop (out=text_words(), i=common) while i<len(from) next (push(out,".."), i+1) yield out in
-    let parts=host_concat_words(ups,host_skip(to,common)) in
+    let parts=text_concat_words(ups,text_skip_words(to,common)) in
     host_ok(if len(parts)==0 then "." else text_join(parts,"/"))
 ; Path(path).expanduser() with home as the home directory (Python reads
 ; HOME). "~user" is an error here; Python looks the user up.
@@ -201,7 +200,7 @@ fn host_expanduser_with(borrow path:Arr u8 _, borrow home:Arr u8 _) -> Result<Ar
     let trimmed=text_rstrip_chars(home,"/") in
     let directory=if len(trimmed)==0 then "/" else trimmed in
     if text_starts(directory,"~") then host_err("Could not determine home directory.")
-    else host_ok(host_format(host_root(directory),host_concat_words(host_tail(directory),host_skip(tail,1))))
+    else host_ok(host_format(host_root(directory),text_concat_words(host_tail(directory),text_skip_words(tail,1))))
 
 ; ---- ordering ----
 
@@ -565,7 +564,7 @@ effect(fs) fn host_glob(borrow directory:Arr u8 _, borrow pattern:Arr u8 _) -> A
   = let parts=host_tail(pattern) in
     let trailing=text_ends(pattern,"/") in
     if len(parts)==0 || text_starts(pattern,"/") then text_words() else
-    let start=if host_is_dir(directory) then host_one(host_normalize(directory)) else text_words() in
+    let start=if host_is_dir(directory) then text_one(host_normalize(directory)) else text_words() in
     let found=loop (paths=start, k=0) while k<len(parts)
       next (let part=text_word(parts,k) in let last=k==len(parts)-1 && !trailing in
             if text_equal(part,"..") then loop (o=text_words(), i=0) while i<len(paths) next (push(o,host_join(text_word(paths,i),"..")), i+1) yield o
@@ -670,11 +669,11 @@ effect(fs,env) fn host_tempdir() -> Result<Arr u8 _,Arr u8 _>
 private fn host_temp_letter(byte:i64) -> u8
   = let k=(if byte<0 then 0 else byte)%37 in u8(if k<26 then 97+k else if k<36 then 22+k else 95)
 type HostTemp = { attempt:i64, done:bool, path:Arr u8 _, err:Arr u8 _ }
-private effect(fs,process) fn host_temp_step(move s:HostTemp, borrow parent:Arr u8 _, borrow prefix:Arr u8 _) -> HostTemp
+private effect(fs,process) fn host_temp_step(move s:HostTemp, borrow parent:Arr u8 _, borrow prefix:Arr u8 _, mode:i64) -> HostTemp
   = let entropy=random_bytes(8) in
     if !entropy.ok then s with { done=true, err=host_errno_text(entropy.error.code) } else
     let name=host_posix_join(parent,concat(prefix,arr(i in 0..8) host_temp_letter(text_byte(entropy.value,i)))) in
-    let made=fs_mkdir_mode(name,448) in
+    let made=fs_mkdir_mode(name,mode) in
     if made.ok then s with { done=true, path=name }
     else if made.error.code==17 then s with { attempt=s.attempt+1 }
     else s with { done=true, err=host_os_error(made.error.code,name) }
@@ -685,9 +684,14 @@ private effect(fs,env) fn host_temp_parent(borrow directory:Arr u8 _) -> Result<
 ; EEXIST; directory "" is gettempdir(). Returns its absolute path.
 ; tempfile.TemporaryDirectory is this and host_remove_tree afterwards.
 effect(fs,env,process) fn host_mkdtemp(borrow prefix:Arr u8 _, borrow directory:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+  = host_mkdtemp_mode(prefix,directory,448)
+; host_mkdtemp, with the directory made with mode (less the umask) instead
+; of 0700: mkdtemp followed by the chmod that shutil.copytree's copystat
+; gives a reused destination (cli.py's export staging).
+effect(fs,env,process) fn host_mkdtemp_mode(borrow prefix:Arr u8 _, borrow directory:Arr u8 _, mode:i64) -> Result<Arr u8 _,Arr u8 _>
   = let parent=host_temp_parent(directory)? in
     let s=loop (s=HostTemp { attempt=0, done=false, path=text_empty(), err=text_empty() }) while !s.done && s.attempt<10000
-      next (host_temp_step(s,parent,prefix)) yield s in
+      next (host_temp_step(s,parent,prefix,mode)) yield s in
     if len(s.path)>0 then host_abspath(s.path)
     else if len(s.err)>0 then host_err(s.err)
     else host_err("[Errno 17] No usable temporary directory name found")
@@ -701,7 +705,7 @@ effect(fs,env,process) fn host_mkdtemp(borrow prefix:Arr u8 _, borrow directory:
 ; directory is.
 effect(fs) fn host_which_in(borrow name:Arr u8 _, borrow search:Arr u8 _) -> Arr u8 _
   = let found=host_split(name) in
-    let dirs=if len(found.head)>0 then host_one(found.head) else if len(search)==0 then text_words() else text_split_byte(search,58) in
+    let dirs=if len(found.head)>0 then text_one(found.head) else if len(search)==0 then text_words() else text_split_byte(search,58) in
     loop (i=0, seen=text_words(), hit=text_empty()) while len(hit)==0 && i<len(dirs)
       next (i+1, push(seen,text_word(dirs,i)),
             let directory=text_word(dirs,i) in
@@ -745,9 +749,9 @@ private effect(fs) fn host_program(borrow name:Arr u8 _, borrow environment:Arr 
 ; The program and arguments process_start gets: the program itself, or
 ; /bin/sh entering cwd first.
 private fn host_launch_args(borrow program:Arr u8 _, borrow argv:Arr Arr u8 _ _, borrow cwd:Arr u8 _) -> Arr Arr u8 _ _
-  = let rest=host_skip(argv,1) in
+  = let rest=text_skip_words(argv,1) in
     if len(cwd)==0 then rest else
-    host_concat_words(push(push(push(push(push(text_words(),"-c"),"cd -- \"$1\" && shift && exec \"$@\""),"sh"),cwd),program),rest)
+    text_concat_words(push(push(push(push(push(text_words(),"-c"),"cd -- \"$1\" && shift && exec \"$@\""),"sh"),cwd),program),rest)
 type HostLaunch = { ok:bool, path:Arr u8 _, args:Arr Arr u8 _ _, error:Arr u8 _ }
 ; Where and how argv runs: Python's errors for a missing working directory
 ; (checked first, as the child's chdir comes before exec) or program.
@@ -802,9 +806,49 @@ effect(fs,env,process,time) fn host_run_inherit(borrow argv:Arr Arr u8 _ _, borr
     using child=process_start_inherit(launch.path,launch.args,environment) in
     let status=loop (status=process_status(child), waits=0) while status.ok && status.running
       next (let paused=sleep_ms(if waits<50 then 2 else 20) in process_status(child), waits+1) yield status in
-    HostRun { ok=status.ok, code=if !status.ok then -1 else if status.signal!=0 then 128+status.signal else status.exit_code,
+    host_run_status(status)
+; The HostRun of a finished (or failed) inherited child.
+fn host_run_status(borrow status:ProcessStatus) -> HostRun
+  = HostRun { ok=status.ok, code=if !status.ok then -1 else if status.signal!=0 then 128+status.signal else status.exit_code,
       signal=if status.ok then status.signal else 0, output=text_empty(), errors=text_empty(),
       error=if status.ok then text_empty() else host_errno_text(status.error.code) }
+
+; A run that SIGINT or SIGTERM may cut short: signal is the one that
+; arrived while the child ran (2 or 15), else 0.
+type HostInterruptible = { run:HostRun, signal:i64 }
+type HostWatch = { status:ProcessStatus, signal:i64, waits:i64 }
+; The signal a shutdown monitor holds (2 or 15), else 0.
+effect(process) fn host_signal_taken(monitor:ShutdownSignal) -> i64
+  = let got=shutdown_signal_poll(monitor) in if got.ok && got.value>0 then got.value else 0
+; Waits up to grace milliseconds for child to end, then SIGKILLs it and
+; waits for that. Gives its final status.
+effect(process,time) fn host_reap(child:Process, grace:i64) -> ProcessStatus
+  = let waited=loop (status=process_status(child), waits=0) while status.ok && status.running && waits*5<grace
+      next (let paused=sleep_ms(5) in process_status(child), waits+1) yield status in
+    if !(waited.ok && waited.running) then waited else
+    let killed=process_signal(child,9) in
+    loop (status=process_status(child)) while status.ok && status.running next (let paused=sleep_ms(2) in process_status(child)) yield status
+; subprocess.run(argv, env=environment, cwd=cwd) as host_run_inherit, and
+; interruptible as Python's is. The child starts first, so that it gets
+; this process's signal mask (one started while a std:signals monitor is
+; open would start with SIGINT and SIGTERM blocked); then SIGINT and
+; SIGTERM are watched until it ends. After SIGINT the child, which a
+; terminal's Ctrl-C reaches too, gets 250 ms to end (Popen.wait after a
+; KeyboardInterrupt), then SIGKILL; after SIGTERM it is sent SIGTERM first.
+; A signal that arrived just as the child ended still counts.
+effect(fs,env,process,time) fn host_run_interruptible(borrow argv:Arr Arr u8 _ _, borrow environment:Arr Arr u8 _ _, borrow cwd:Arr u8 _) -> HostInterruptible
+  = let launch=host_launch(argv,environment,cwd) in
+    if !launch.ok then HostInterruptible { run=host_run_failed(launch.error), signal=0 } else
+    using child=process_start_inherit(launch.path,launch.args,environment) in
+    using monitor=shutdown_signal() in
+    let watched=loop (w=HostWatch { status=process_status(child), signal=0, waits=0 }) while w.status.ok && w.status.running && w.signal==0
+      next (let paused=sleep_ms(if w.waits<50 then 2 else 20) in
+            let taken=host_signal_taken(monitor) in
+            HostWatch { status=process_status(child), signal=taken, waits=w.waits+1 }) yield w in
+    let signal=if watched.signal!=0 then watched.signal else host_signal_taken(monitor) in
+    let sent=if watched.signal==15 then process_signal(child,15) else int_ok(0) in
+    let final=if watched.signal!=0 then host_reap(child,250) else watched.status in
+    HostInterruptible { run=host_run_status(final), signal=signal }
 
 ; repr(signal.Signals(number)) on Linux, or "" for a number that is not one.
 fn host_signal_repr(number:i64) -> Arr u8 _

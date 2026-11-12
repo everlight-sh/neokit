@@ -1,0 +1,660 @@
+; `neokit`, natively: compiler/cli.py's main() and its helpers (server,
+; stop, fingerprint, change_kind, write_status, develop) on top of the
+; ported modules: cmd_parse (args.neo), gen_* (build.neo), rel_*
+; (release.neo), scf_* (scaffold.neo) and cmd_preview (preview.neo).
+;
+; The `neokit` launcher builds this file and runs it with NEOKIT_ROOT set to
+; the framework root (cli.py's ROOT). Output, messages and exit statuses
+; are cli.py's: a failure (BuildError, CalledProcessError or OSError there,
+; an Err here) prints "neokit: MESSAGE" on stderr and exits 1; usage errors
+; print argparse's usage and exit 2; help exits 0; SIGINT (Python's
+; KeyboardInterrupt) ends quietly with 0 where cli.py catches it.
+;
+; Commands (cmd_command):
+;   init        scf_init with the compiler's environment, then "Created ..."
+;   release     rel_bundle, printed as json.dumps(indent=2)
+;   revalidate  gen_build (server), then the revalidator binary
+;   password    two hidden prompts, then tools/password.neo's binary
+;   migrate     gen_build_migration, then the migration binary
+;   doctor      the first line of `neo version`, `bun --version`, `clang --version`
+;   prepare     gen_prepare
+;   test        `neo test . --unit-only`, every tests/cli_golden/*/*.neo.toml,
+;               then cli.py's suites (bun test ./client, the query-builder
+;               native test, tests/core, --extended, --postgres)
+;   preview     cmd_preview
+;   build       gen_build (server), then the summary
+;   export      gen_build (static), then the staged copy, swap and manifest
+;   serve, dev  gen_build (server), then the server (below)
+;
+; Signals. std:signals' shutdown_signal() blocks SIGINT and SIGTERM and
+; reads them from a descriptor. A child started while such a monitor is open
+; starts with both signals blocked (Neo's rt_spawn_exec, unlike rt_fork,
+; does not restore the mask), so children that must stay interruptible are
+; started before the monitor is opened, or with none open.
+; - serve: cli.py execs the server. Neo has no exec, so the server is a
+;   child in neokit's process group (a signal to the group reaches both);
+;   SIGINT or SIGTERM sent to neokit is passed on as SIGTERM (std:process
+;   sends only SIGTERM and SIGKILL) unless the server ends within 250 ms
+;   (a signal sent to the whole group reaches it directly, and a second one
+;   could cut its shutdown short), and neokit exits with the server's
+;   status, 128+N when signal N ended it, as the exec'd server would.
+; - dev: each server lifetime is one stretch: the server starts, then the
+;   monitor opens and stays open while watching and rebuilding (build tools
+;   then start with the two signals blocked, so an interrupt that arrives
+;   during a rebuild takes effect when that build step ends). A reload stops
+;   the server (SIGTERM, 2 s, SIGKILL: cli.py's stop), takes a pending
+;   signal and closes the monitor before the next server starts. SIGINT or
+;   SIGTERM stops the server the same way and exits 0 or 143.
+; - test, revalidate and migrate run their programs with
+;   host_run_interruptible: after SIGINT the program gets 250 ms (Popen.wait
+;   after KeyboardInterrupt), then SIGKILL, and neokit exits 0.
+; - password holds a monitor while it reads, so the terminal's echo is
+;   restored however reading ends.
+; - Builds, init, release, prepare and doctor open no monitor: a signal
+;   ends neokit with the signal's default action.
+;
+; Differences from cli.py:
+; - SIGTERM: Python dies of it (a shell reports 143), leaving a dev server
+;   or test program it started running; here that child is stopped first,
+;   then neokit exits 143. SIGINT during a build or another step without a
+;   monitor ends neokit by the signal (130) where Python exits 0.
+; - dev: a rebuild failure is reported and watching goes on even when Python
+;   would see an OSError (which ends Python's dev with status 1), since
+;   build.neo returns both as Err. NEOKIT_DEV_STATUS is given to the server
+;   only (Python sets it in its own environment, which its build tools
+;   inherit too). A status revision is Unix milliseconds * 10^6 plus the
+;   monotonic clock's nanoseconds below a millisecond (std:io has no
+;   nanosecond wall clock). The server is stopped by signalling it alone,
+;   not its process group (it has none of its own).
+; - test: Python's unittest step is replaced by `neo test . --unit-only` and
+;   the golden tests, run with the compiler's environment from the root.
+; - serve: as neokit is not the server, a signal that kills the server
+;   (SIGKILL, say) ends neokit with 128+N rather than by that signal.
+; - doctor: no Python line.
+; - password: see cmd_password.
+import "std:option"
+import "std:result"
+import "std:json"
+import "std:io"
+import "std:fs"
+import "std:process"
+import "std:signals"
+import "std:time"
+import "text.neo"
+import "host.neo"
+import "pyjson.neo"
+import "args.neo"
+import "build.neo"
+import "release.neo"
+import "scaffold.neo"
+import "preview.neo"
+
+; ---------------------------------------------------------------- results
+
+private fn cmd_done(code:i64) -> Result<i64,Arr u8 _> = Ok::<i64,Arr u8 _>(code)
+private fn cmd_error(borrow message:Arr u8 _) -> Result<i64,Arr u8 _> = Err::<i64,Arr u8 _>(message)
+; print(text).
+private effect(fs) fn cmd_say(borrow text:Arr u8 _) -> IntResult = print_out(concat(text,"\n"))
+; neokit's exit status after an interrupt: SIGINT is the KeyboardInterrupt
+; cli.py ends quietly with 0; SIGTERM the status a shell reports for a
+; process it ended.
+fn cmd_interrupted(signal:i64) -> i64 = if signal==2 then 0 else 128+signal
+
+; subprocess.run(argv, env=environment, cwd=cwd, check=True), sharing
+; neokit's streams: Ok(-1) once it succeeded, Ok(status) when an interrupt
+; ended it (neokit then exits with status), else Err with Python's message.
+private effect(fs,env,process,time) fn cmd_step(borrow argv:Arr Arr u8 _ _, borrow environment:Arr Arr u8 _ _, borrow cwd:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let ran=host_run_interruptible(argv,environment,cwd) in
+    if ran.signal!=0 then cmd_done(cmd_interrupted(ran.signal))
+    else if !ran.run.ok then cmd_error(ran.run.error)
+    else if ran.run.code!=0 then cmd_error(host_process_error(argv,ran.run))
+    else cmd_done(-1)
+; cmd_step as a command's last step: 0 after success.
+private effect(fs,env,process,time) fn cmd_final_step(borrow argv:Arr Arr u8 _ _, borrow environment:Arr Arr u8 _ _, borrow cwd:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let code=cmd_step(argv,environment,cwd)? in cmd_done(if code<0 then 0 else code)
+
+; The text of a string member of a JSON object ("" when it is missing or
+; not a string).
+private fn cmd_json_text(borrow object:Json, borrow key:Arr u8 _) -> Arr u8 _
+  = let member=json_get(object,key) in
+    if !member.present then text_empty() else let text=json_text(member.value) in if text.ok then text.value else text_empty()
+; A JSON array of strings as words.
+private fn cmd_json_words(borrow value:Json) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=0) while i<json_array_len(value)
+      next (push(out,json_text(json_array_get(value,i).value).value), i+1) yield out
+type CmdMembers = { keys:Arr Arr u8 _ _, values:Arr Json _ }
+; {k: v for k, v in object.items() if k != key}.
+fn cmd_json_without(borrow object:Json, borrow key:Arr u8 _) -> Json
+  = let keys=json_object_keys(object) in
+    let kept=loop (m=CmdMembers { keys=text_words(), values=arr(i in 0..0) json_value_null() }, i=0) while i<len(keys)
+      next (if text_equal(text_word(keys,i),key) then m
+            else CmdMembers { keys=push(m.keys,text_word(keys,i)), values=push(m.values,json_object_value_at(object,i).value) }, i+1) yield m in
+    json_value_object(kept.keys,kept.values).value
+
+; ---------------------------------------------------------------- init, release, prepare
+
+private effect(fs,env,process,time) fn cmd_init(borrow root:Arr u8 _, borrow a:CmdArgs) -> Result<i64,Arr u8 _>
+  = let environment=gen_compiler_env(root)? in
+    let target=scf_init(a.path,root,environment,gen_compiler_command(environment),a.standalone)? in
+    let printed=cmd_say(scf_created(target,a.standalone)) in cmd_done(0)
+
+private effect(fs,env,process,time) fn cmd_release(borrow root:Arr u8 _, borrow a:CmdArgs) -> Result<i64,Arr u8 _>
+  = let bundle=rel_bundle(a.out,root,env_list(),if a.has_neo_archive then a.neo_archive else text_empty(),a.neo_sha256)? in
+    let printed=cmd_say(rel_bundle_json(bundle)) in cmd_done(0)
+
+private effect(fs,env,process,time) fn cmd_prepare(borrow root:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let cache=gen_prepare(root)? in cmd_done(0)
+
+; ---------------------------------------------------------------- revalidate, migrate
+
+private effect(fs,env,process,time) fn cmd_revalidate(borrow root:Arr u8 _, borrow a:CmdArgs) -> Result<i64,Arr u8 _>
+  = let app=host_resolve(a.app)? in
+    let out=host_resolve(a.out)? in
+    let built=gen_build(root,app,out,"server","release")? in
+    let binary=cmd_json_text(built.manifest,"revalidator_binary") in
+    if len(binary)==0 then cmd_error("Application has no stale_ttl routes") else
+    let token=env_get("NEOKIT_REVALIDATE_TOKEN") in
+    if text_char_count(if token.present then token.value else text_empty())<32 then cmd_error("Set NEOKIT_REVALIDATE_TOKEN to a random secret of at least 32 bytes")
+    else cmd_final_step(text_one(binary),env_list(),text_empty())
+
+private effect(fs,env,process,time) fn cmd_migrate(borrow root:Arr u8 _, borrow a:CmdArgs) -> Result<i64,Arr u8 _>
+  = let binary=gen_build_migration(root,a.app,a.out)? in
+    if a.build_only then cmd_done(0) else
+    let directory=env_get("NEOKIT_DATA_DIR") in
+    let made=if directory.present && len(directory.value)>0 then host_mkdir(directory.value,true,true) else cmd_done(0) in
+    let ready=made? in
+    cmd_final_step(text_one(binary),env_list(),text_empty())
+
+; ---------------------------------------------------------------- doctor
+
+private fn cmd_doctor_command(borrow neo:Arr Arr u8 _ _, i:i64) -> Arr Arr u8 _ _
+  = if i==0 then text_concat_words(neo,text_one("version"))
+    else if i==1 then push(text_one("bun"),"--version") else push(text_one("clang"),"--version")
+; Each tool's first output line, as subprocess.run(command, env=env,
+; capture_output=True, text=True, check=True).stdout.splitlines()[0].
+private effect(fs,env,process,time) fn cmd_doctor(borrow root:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let environment=gen_compiler_env(root)? in
+    let neo=gen_compiler_command(environment) in
+    let failed=loop (err=text_empty(), i=0) while len(err)==0 && i<3
+      next (let command=cmd_doctor_command(neo,i) in
+            let run=host_run_with(command,environment,text_empty(),text_empty()) in
+            if !run.ok then run.error
+            else if run.code!=0 then host_process_error(command,run)
+            else (let lines=text_splitlines(text_universal_newlines(run.output)) in
+                  if len(lines)==0 then "list index out of range" else let printed=cmd_say(text_word(lines,0)) in text_empty()),
+            i+1) yield err in
+    if len(failed)>0 then cmd_error(failed) else let printed=cmd_say("NeoKit toolchain OK") in cmd_done(0)
+
+; ---------------------------------------------------------------- test
+
+; The places cli.py looks for initdb and pg_ctl (as tests/tools/postgres.ts
+; does): NEOKIT_PG_BIN, else PATH and the versioned PostgreSQL directories.
+private effect(fs,env) fn cmd_postgres_found() -> bool
+  = let configured=env_get("NEOKIT_PG_BIN") in
+    let search=env_get("PATH") in
+    let places=if configured.present && len(configured.value)>0 then text_one(configured.value)
+      else text_concat_words(text_concat_words(text_split_byte(if search.present then search.value else text_empty(),58),
+             host_glob("/usr/lib/postgresql","*/bin")),host_glob("/usr/local/lib/postgresql","*/bin")) in
+    loop (i=0, found=false) while !found && i<len(places)
+      next (i+1, let place=text_word(places,i) in
+            len(place)>0 && host_is_file(host_join(place,"initdb")) && host_is_file(host_join(place,"pg_ctl"))) yield found
+private fn cmd_postgres_missing() -> Arr u8 _
+  = "test --postgres needs the PostgreSQL server programs initdb and pg_ctl (install PostgreSQL; its system service can stay disabled) or NEOKIT_PG_BIN set to their directory"
+; ["bun", "test", "--timeout", "600000", directory].
+private fn cmd_suite(borrow directory:Arr u8 _) -> Arr Arr u8 _ _ = push(text_split("bun test --timeout 600000"," "),directory)
+; The golden tests, relative to root, in sorted order.
+private effect(fs) fn cmd_goldens(borrow root:Arr u8 _) -> Arr Arr u8 _ _
+  = let found=host_glob(root,"tests/cli_golden/*/*.neo.toml") in
+    loop (out=text_words(), i=0) while i<len(found)
+      next (push(out,host_relative_or_self(text_word(found,i),root)), i+1) yield out
+type CmdSteps = { code:i64, error:Arr u8 _ }
+; `neo test FILE` for each golden test file, stopping at the first failure.
+private effect(fs,env,process,time) fn cmd_golden_steps(borrow neo:Arr Arr u8 _ _, borrow environment:Arr Arr u8 _ _, borrow root:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let files=cmd_goldens(root) in
+    let s=loop (s=CmdSteps { code= -1, error=text_empty() }, i=0) while s.code<0 && len(s.error)==0 && i<len(files)
+      next (match cmd_step(text_concat_words(neo,push(text_one("test"),text_word(files,i))),environment,root) {
+              Ok(code) => CmdSteps { code=code, error=text_empty() },
+              Err(message) => CmdSteps { code= -1, error=message } }, i+1) yield s in
+    if len(s.error)>0 then cmd_error(s.error) else cmd_done(s.code)
+private effect(fs,env,process,time) fn cmd_test(borrow root:Arr u8 _, borrow a:CmdArgs) -> Result<i64,Arr u8 _>
+  = if a.postgres && !cmd_postgres_found() then cmd_error(cmd_postgres_missing()) else
+    let environment=gen_compiler_env(root)? in
+    let neo=gen_compiler_command(environment) in
+    let unit_tests=cmd_step(text_concat_words(neo,text_split("test . --unit-only"," ")),environment,root)? in
+    if unit_tests>=0 then cmd_done(unit_tests) else
+    let golden=cmd_golden_steps(neo,environment,root)? in
+    if golden>=0 then cmd_done(golden) else
+    let client=cmd_step(text_split("bun test ./client"," "),env_list(),root)? in
+    if client>=0 then cmd_done(client) else
+    let query=host_join(root,"build/tools/query-builder") in
+    let built=gen_native_build(root,host_join(root,"tests/query_builder.neo"),query,"release",text_empty())? in
+    let queried=cmd_step(text_one(query),env_list(),root)? in
+    if queried>=0 then cmd_done(queried) else
+    let core=cmd_step(cmd_suite("./tests/core"),env_list(),root)? in
+    if core>=0 then cmd_done(core) else
+    let extended=if a.extended then cmd_step(cmd_suite("./tests/extended"),env_list(),root) else cmd_done(-1) in
+    let after_extended=extended? in
+    if after_extended>=0 then cmd_done(after_extended) else
+    let postgres=if a.postgres then cmd_step(text_concat_words(text_split("bun tests/tools/postgres.ts --"," "),cmd_suite("./tests/postgres")),env_list(),root)
+      else cmd_done(-1) in
+    let after_postgres=postgres? in
+    cmd_done(if after_postgres>=0 then after_postgres else 0)
+
+; ---------------------------------------------------------------- password
+
+; One getpass() answer: text once done, unless signal (2 or 15) cut it
+; short, input ended first (eof) or reading failed (error).
+type CmdSecret = { text:Arr u8 _, done:bool, signal:i64, eof:bool, error:Arr u8 _ }
+private fn cmd_secret() -> CmdSecret = CmdSecret { text=text_empty(), done=false, signal=0, eof=false, error=text_empty() }
+private fn cmd_read_error(code:i64) -> bool = code!=4 && code!=11
+; ["/bin/sh", "-c", script, "sh", argument].
+private fn cmd_sh(borrow script:Arr u8 _, borrow argument:Arr u8 _) -> Arr Arr u8 _ _
+  = push(push(push(push(text_one("/bin/sh"),"-c"),script),"sh"),argument)
+; `stty SETTINGS` on the inherited stdin (settings are split into words).
+private effect(fs,env,process,time) fn cmd_stty(borrow settings:Arr u8 _) -> bool
+  = let run=host_run_inherit(cmd_sh("stty $1",settings),env_list(),text_empty()) in run.ok && run.code==0
+; `stty -g` on the inherited stdin: the terminal's settings, or "" when
+; stdin is not a terminal. stty writes them to a file in a private
+; temporary directory, as its stdout cannot be captured while it shares
+; neokit's stdin.
+private effect(fs,env,process,time) fn cmd_tty_settings() -> Arr u8 _
+  = match host_mkdtemp("neokit-tty-",text_empty()) {
+      Err(message) => text_empty(),
+      Ok(directory) =>
+        let file=host_join(directory,"settings") in
+        let run=host_run_inherit(cmd_sh("stty -g > \"$1\" 2>/dev/null",file),env_list(),text_empty()) in
+        let saved=if run.ok && run.code==0 then (match host_read_text(file) { Ok(text) => text_strip(text), Err(message) => text_empty() }) else text_empty() in
+        let removed=host_remove_tree(directory) in
+        saved
+    }
+; The last character of text removed (a UTF-8 sequence counts as one).
+fn cmd_erase_char(borrow text:Arr u8 _) -> Arr u8 _
+  = let at=loop (k=len(text)-1) while k>0 && text_byte(text,k)>=128 && text_byte(text,k)<192 next (k-1) yield k in
+    text_slice(text,0,if at<0 then 0 else at)
+; The last word of text and the spaces after it removed (^W).
+fn cmd_erase_word(borrow text:Arr u8 _) -> Arr u8 _
+  = let spaces=loop (k=len(text)) while k>0 && text_byte(text,k-1)==32 next (k-1) yield k in
+    text_slice(text,0,loop (k=spaces) while k>0 && text_byte(text,k-1)!=32 next (k-1) yield k)
+; One byte typed at the hidden prompt, with the line editing the terminal
+; does in canonical mode: Enter ends the line, ^D on an empty line ends the
+; input, Backspace/DEL, ^U and ^W erase.
+fn cmd_secret_key(move s:CmdSecret, byte:i64) -> CmdSecret
+  = if byte==10 || byte==13 then s with { done=true }
+    else if byte==4 then (if len(s.text)==0 then s with { done=true, eof=true } else s)
+    else if byte==127 || byte==8 then s with { text=cmd_erase_char(s.text) }
+    else if byte==21 then s with { text=text_empty() }
+    else if byte==23 then s with { text=cmd_erase_word(s.text) }
+    else s with { text=push(s.text,u8(byte)) }
+; One wait at the hidden prompt: a signal, or the next byte (stty's
+; `min 0 time 1` makes a read give nothing after 0.1 s without input).
+private effect(fs,process) fn cmd_tty_step(monitor:ShutdownSignal, move s:CmdSecret) -> CmdSecret
+  = let signal=host_signal_taken(monitor) in
+    if signal!=0 then s with { done=true, signal=signal } else
+    let chunk=file_read_chunk(0,1) in
+    if !chunk.ok then (if cmd_read_error(chunk.error.code) then s with { done=true, error=host_errno_text(chunk.error.code) } else s)
+    else if len(chunk.value)==0 then s
+    else cmd_secret_key(s,text_byte(chunk.value,0))
+; getpass's fallback_getpass when stdin is not a terminal: the warning and
+; prompt on stderr, then one line of stdin (without its newline).
+private effect(fs) fn cmd_line_step(move s:CmdSecret) -> CmdSecret
+  = let chunk=file_read_chunk(0,1) in
+    if !chunk.ok then (if cmd_read_error(chunk.error.code) then s with { done=true, error=host_errno_text(chunk.error.code) } else s)
+    else if len(chunk.value)==0 then s with { done=true, eof=len(s.text)==0 }
+    else if text_byte(chunk.value,0)==10 then s with { done=true }
+    else s with { text=concat(s.text,chunk.value) }
+private effect(fs) fn cmd_line_read(borrow prompt:Arr u8 _) -> CmdSecret
+  = let warned=print_error(concat("Warning: Password input may be echoed.\n",prompt)) in
+    let s=loop (s=cmd_secret()) while !s.done next (cmd_line_step(s)) yield s in
+    let ended=if !s.eof && len(s.error)==0 then print_error("\n") else int_ok(0) in
+    s
+; getpass(prompt) on a terminal: echo and canonical mode off, the prompt on
+; stderr, the line read byte by byte (watching for signals), the saved
+; settings restored, then a newline.
+private effect(fs,env,process,time) fn cmd_tty_read(monitor:ShutdownSignal, borrow saved:Arr u8 _, borrow prompt:Arr u8 _) -> CmdSecret
+  = if !cmd_stty("-echo -icanon min 0 time 1") then (let restored=cmd_stty(saved) in cmd_line_read(prompt)) else
+    let shown=print_error(prompt) in
+    let s=loop (s=cmd_secret()) while !s.done next (cmd_tty_step(monitor,s)) yield s in
+    let restored=cmd_stty(saved) in
+    let ended=if s.signal==0 && !s.eof && len(s.error)==0 then print_error("\n") else int_ok(0) in
+    s
+type CmdPair = { text:Arr u8 _, same:bool, signal:i64, error:Arr u8 _ }
+private fn cmd_pair_failed(borrow s:CmdSecret) -> CmdPair
+  = CmdPair { text=text_empty(), same=false, signal=s.signal, error=if s.eof then "EOF when reading a line" else s.error }
+private fn cmd_failed(borrow s:CmdSecret) -> bool = s.signal!=0 || s.eof || len(s.error)>0
+private fn cmd_pair(borrow first:CmdSecret, borrow second:CmdSecret) -> CmdPair
+  = if cmd_failed(second) then cmd_pair_failed(second)
+    else CmdPair { text=first.text, same=text_equal(first.text,second.text), signal=0, error=text_empty() }
+private effect(fs,env,process,time) fn cmd_tty_pair(borrow saved:Arr u8 _) -> CmdPair
+  = using monitor=shutdown_signal() in
+    let first=cmd_tty_read(monitor,saved,"Password: ") in
+    if cmd_failed(first) then cmd_pair_failed(first) else
+    let second=cmd_tty_read(monitor,saved,"Confirm password: ") in
+    cmd_pair(first,second)
+private effect(fs) fn cmd_line_pair() -> CmdPair
+  = let first=cmd_line_read("Password: ") in
+    if cmd_failed(first) then cmd_pair_failed(first) else
+    let second=cmd_line_read("Confirm password: ") in
+    cmd_pair(first,second)
+; `neokit password`: getpass('Password: '), getpass('Confirm password: '),
+; then tools/password.neo's binary (built into ROOT/build/tools/password)
+; with the password on its stdin; prints its stripped output.
+;
+; Differences from getpass: when stdin is a terminal it is the terminal
+; read (Python opens /dev/tty, even with stdin redirected), the prompt goes
+; to stderr (Python writes it to /dev/tty), and the line editing keys are
+; the usual ones (^? and ^H, ^U, ^W, ^D) rather than the terminal's
+; configured ones. Without a terminal, stdin is read with Python's warning
+; line (not the GetPassWarning that names Python's source). Input that ends
+; before a line is "neokit: EOF when reading a line" with status 1 (Python's
+; EOFError ends in a traceback).
+private effect(fs,env,process,time) fn cmd_password(borrow root:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let saved=cmd_tty_settings() in
+    let pair=if len(saved)>0 then cmd_tty_pair(saved) else cmd_line_pair() in
+    if pair.signal!=0 then cmd_done(cmd_interrupted(pair.signal))
+    else if len(pair.error)>0 then cmd_error(pair.error)
+    else if !pair.same then cmd_error("Passwords do not match") else
+    let binary=host_join(root,"build/tools/password") in
+    let made=host_mkdirs(host_parent(binary))? in
+    let built=gen_native_build(root,host_join(root,"tools/password.neo"),binary,"release",text_empty())? in
+    let run=host_run_with(text_one(binary),env_list(),text_empty(),pair.text) in
+    if !run.ok then cmd_error(run.error)
+    else if run.code!=0 then cmd_error(host_process_error(text_one(binary),run))
+    else let printed=cmd_say(text_strip(run.output)) in cmd_done(0)
+
+; ---------------------------------------------------------------- export
+
+private fn cmd_has_path(borrow paths:Arr Arr u8 _ _, borrow path:Arr u8 _) -> bool
+  = loop (i=0, found=false) while !found && i<len(paths) next (i+1, host_path_equal(text_word(paths,i),path)) yield found
+; cli.py's test for an export destination that is, contains or lies in the
+; build output, is the framework root or one of its parents, is the
+; application or lies in it.
+fn cmd_export_overlaps(borrow root:Arr u8 _, borrow app:Arr u8 _, borrow out:Arr u8 _, borrow dest:Arr u8 _) -> bool
+  = host_path_equal(dest,out) || cmd_has_path(host_parents(out),dest) || cmd_has_path(host_parents(dest),out)
+    || host_path_equal(dest,root) || cmd_has_path(host_parents(root),dest)
+    || host_path_equal(app,dest) || cmd_has_path(host_parents(dest),app)
+; The staged export: the snapshots, the marker and the public manifest,
+; then the swap into dest.
+private effect(fs,env,process) fn cmd_export_stage(borrow staged:Arr u8 _, borrow snapshots:Arr u8 _, borrow dest:Arr u8 _, borrow manifest:Json) -> Result<i64,Arr u8 _>
+  = let copied=host_copy_tree(snapshots,staged,text_words(),true)? in
+    let marked=host_write_text(host_join(staged,".neokit-export"),"neokit v0.1\n")? in
+    let written=host_write_text(host_join(staged,"export-manifest.json"),concat(pj_dumps_indent2(cmd_json_without(manifest,"app")),"\n"))? in
+    let cleared=if host_exists(dest) then host_remove_tree(dest) else cmd_done(0) in
+    let ready=cleared? in
+    host_rename(staged,dest)
+; The export after the static build. The staging directory beside dest gets
+; the snapshots directory's mode, which copytree's copystat gives it in
+; Python (less the umask here).
+private effect(fs,env,process) fn cmd_export(borrow root:Arr u8 _, borrow app:Arr u8 _, borrow built:GenBuilt, borrow a:CmdArgs) -> Result<i64,Arr u8 _>
+  = let omitted=cmd_json_words(json_get(built.manifest,"omitted_server_routes").value) in
+    if a.strict && len(omitted)>0 then cmd_error(concat("Server-only routes cannot be exported: ",text_join(omitted,", "))) else
+    let dest=host_resolve(a.dest)? in
+    if cmd_export_overlaps(root,app,built.out,dest) then cmd_error("Export destination must be separate from source/build directories") else
+    let previous=host_is_file(host_join(dest,".neokit-export")) in
+    let listed=if host_exists(dest) then host_listdir(dest) else Ok::<Arr Arr u8 _ _,Arr u8 _>(text_words()) in
+    let names=listed? in
+    if len(names)>0 && !previous then cmd_error("Export destination must be empty or a previous NeoKit export") else
+    let parent=host_parent(dest) in
+    let made=host_mkdir(parent,true,true)? in
+    let snapshots=host_join(built.out,"snapshots") in
+    let mode=match host_mode(snapshots) { Ok(bits) => bits, Err(message) => 448 } in
+    let staged=host_mkdtemp_mode(concat(".",host_name(dest),"-"),parent,mode)? in
+    let result=cmd_export_stage(staged,snapshots,dest,built.manifest) in
+    let cleaned=if host_exists(staged) then host_remove_tree(staged) else cmd_done(0) in
+    let swapped=result? in
+    let count=json_array_len(json_get(built.manifest,"exported_paths").value) in
+    let printed=cmd_say(concat("Exported ",text_int(count)," pages to ",dest,"; local widgets work without a server.")) in
+    let listed_omitted=if len(omitted)>0 then cmd_say(concat("Server-only routes omitted: ",text_join(omitted,", "))) else int_ok(0) in
+    cmd_done(0)
+
+; ---------------------------------------------------------------- serve
+
+; `neokit serve`: the server as a child sharing neokit's streams and process
+; group. SIGINT or SIGTERM to neokit reaches it as SIGTERM; neokit ends with
+; its status.
+;
+; A signal sent to the whole group (a terminal's ^C, Supervised.stop) has
+; reached the server as well, and a second SIGTERM arriving once its
+; shutdown handler is done would end it by the signal; so the server gets
+; 250 ms to end on its own before neokit passes the signal on.
+private effect(process,time) fn cmd_pass_on(server:Process) -> IntResult
+  = let waited=loop (status=process_status(server), waits=0) while status.ok && status.running && waits<50
+      next (let paused=sleep_ms(5) in process_status(server), waits+1) yield status in
+    if waited.ok && waited.running then process_signal(server,15) else int_ok(0)
+private effect(fs,env,process,time) fn cmd_serve(borrow out:Arr u8 _, port:i64) -> Result<i64,Arr u8 _>
+  = let printed=cmd_say(concat("Native Neo SSR: http://127.0.0.1:",text_int(port))) in
+    using server=process_start_inherit(host_join(out,"server"),text_one(text_int(port)),env_list()) in
+    let started=process_status(server) in
+    if !started.ok then cmd_error(host_errno_text(started.error.code)) else
+    using monitor=shutdown_signal() in
+    let ended=loop (w=HostWatch { status=started, signal=0, waits=0 }) while w.status.ok && w.status.running
+      next (let taken=host_signal_taken(monitor) in
+            let sent=if taken!=0 then cmd_pass_on(server) else int_ok(0) in
+            let paused=if taken!=0 then int_ok(0) else sleep_ms(if w.waits<100 then 5 else 50) in
+            HostWatch { status=process_status(server), signal=if taken!=0 then taken else w.signal, waits=w.waits+1 }) yield w in
+    ; A signal to the whole group can stop the server before the monitor is
+    ; polled; take it here, or closing the monitor would deliver it.
+    let late=host_signal_taken(monitor) in
+    if !ended.status.ok then cmd_error(host_errno_text(ended.status.error.code))
+    else cmd_done(if ended.status.signal!=0 then 128+ended.status.signal else ended.status.exit_code)
+
+; ---------------------------------------------------------------- dev
+
+; cli.py's stop(process, grace): SIGTERM, up to grace ms, then SIGKILL (to
+; the server alone; it shares neokit's process group).
+private effect(process,time) fn cmd_halt(server:Process, grace:i64) -> ProcessStatus
+  = let status=process_status(server) in
+    if !(status.ok && status.running) then status else
+    let sent=process_signal(server,15) in host_reap(server,grace)
+; Popen.returncode: the exit status, or -N after signal N.
+fn cmd_returncode(borrow status:ProcessStatus) -> i64 = if status.signal!=0 then 0-status.signal else status.exit_code
+; time.sleep(.25), cut short by SIGINT or SIGTERM: that signal, else 0.
+private effect(process,time) fn cmd_nap(monitor:ShutdownSignal) -> i64
+  = loop (signal=0, k=0) while signal==0 && k<10 next (let paused=sleep_ms(25) in host_signal_taken(monitor), k+1) yield signal
+
+; A source's fingerprint entry: "PATH\0MTIME_NS".
+private effect(fs) fn cmd_stamp(move out:Arr Arr u8 _ _, borrow path:Arr u8 _) -> Arr Arr u8 _ _
+  = match host_mtime_ns(path) { Ok(ns) => push(out,concat(path,"\0",text_int(ns))), Err(message) => out }
+private fn cmd_unique(borrow sorted:Arr Arr u8 _ _) -> Arr Arr u8 _ _
+  = loop (out=text_words(), i=0) while i<len(sorted)
+      next (if i>0 && text_equal(text_word(sorted,i),text_word(sorted,i-1)) then out else push(out,text_word(sorted,i)), i+1) yield out
+; cli.py's fingerprint(app): the modification time of every file under
+; the application, ROOT/src, ROOT/compiler and ROOT/client (not entering
+; node_modules, .git, .neo-build, .neokit, __pycache__ or the application's
+; vendor/neokit-sdk), and of ROOT/package.json and ROOT/bun.lock. Sorted
+; "PATH\0MTIME_NS" entries; files that vanish while it runs are left out.
+effect(fs) fn cmd_fingerprint(borrow root:Arr u8 _, borrow app:Arr u8 _) -> Arr Arr u8 _ _
+  = let skip=HostWalkSkip { names=text_split("node_modules .git .neo-build .neokit __pycache__"," "), hidden=false,
+                            paths=text_one(host_join(app,"vendor/neokit-sdk")) } in
+    let bases=push(push(push(text_one(app),host_join(root,"src")),host_join(root,"compiler")),host_join(root,"client")) in
+    let walked=loop (out=text_words(), b=0) while b<len(bases)
+      next (let walks=host_walk_skipping(text_word(bases,b),skip) in
+            loop (o=out, w:i64{w>=0}=0) while w<len(walks)
+              next (loop (p=o, k=0) while k<len(walks[w].names) next (cmd_stamp(p,host_posix_join(walks[w].path,text_word(walks[w].names,k))), k+1) yield p,
+                    w+1) yield o,
+            b+1) yield out in
+    let extra=push(text_one(host_join(root,"package.json")),host_join(root,"bun.lock")) in
+    let stamped=loop (out=walked, i=0) while i<len(extra)
+      next (if host_is_file(text_word(extra,i)) then cmd_stamp(out,text_word(extra,i)) else out, i+1) yield out in
+    cmd_unique(text_sort(stamped))
+private fn cmd_same_words(borrow a:Arr Arr u8 _ _, borrow b:Arr Arr u8 _ _) -> bool
+  = len(a)==len(b) && loop (i=0, same=true) while same && i<len(a) next (i+1, text_equal(text_word(a,i),text_word(b,i))) yield same
+private fn cmd_entry_path(borrow entry:Arr u8 _) -> Arr u8 _ = text_partition(entry,"\0").before
+type CmdDiff = { i:i64, j:i64, paths:Arr Arr u8 _ _ }
+; The paths whose stamps differ between two fingerprints (added, removed or
+; touched): cli.py's `changed` set, as a list.
+fn cmd_changed(borrow current:Arr Arr u8 _ _, borrow previous:Arr Arr u8 _ _) -> Arr Arr u8 _ _
+  = let d=loop (d=CmdDiff { i=0, j=0, paths=text_words() }) while d.i<len(current) || d.j<len(previous)
+      next (let a=text_word(current,d.i) in let b=text_word(previous,d.j) in
+            if d.j>=len(previous) || (d.i<len(current) && text_less(a,b)) then CmdDiff { i=d.i+1, j=d.j, paths=push(d.paths,cmd_entry_path(a)) }
+            else if d.i>=len(current) || text_less(b,a) then CmdDiff { i=d.i, j=d.j+1, paths=push(d.paths,cmd_entry_path(b)) }
+            else CmdDiff { i=d.i+1, j=d.j+1, paths=d.paths }) yield d in
+    d.paths
+; cli.py's change_kind(app, changed): "css" when only app/styles changed,
+; "client" when only app/styles, app/client and ROOT/client did, else (and
+; for ROOT/client/dev.js) "reload".
+fn cmd_change_kind(borrow root:Arr u8 _, borrow app:Arr u8 _, borrow changed:Arr Arr u8 _ _) -> Arr u8 _
+  = let styles=host_join(app,"styles") in
+    let client=host_join(app,"client") in
+    let shared=host_join(root,"client") in
+    let dev_js=host_join(shared,"dev.js") in
+    let any_dev=loop (i=0, hit=false) while !hit && i<len(changed) next (i+1, host_path_equal(text_word(changed,i),dev_js)) yield hit in
+    let all_styles=loop (i=0, ok=true) while ok && i<len(changed) next (i+1, host_is_relative_to(text_word(changed,i),styles)) yield ok in
+    let all_client=loop (i=0, ok=true) while ok && i<len(changed)
+      next (i+1, let path=text_word(changed,i) in
+            host_is_relative_to(path,styles) || host_is_relative_to(path,client) || host_is_relative_to(path,shared)) yield ok in
+    if len(changed)==0 || any_dev then "reload" else if all_styles then "css" else if all_client then "client" else "reload"
+
+; time.time_ns() as far as std:io and std:time give it.
+private effect(time) fn cmd_revision() -> i64
+  = let ms=time_unix_ms() in let ns=monotonic_ns() in
+    (if ms.ok then ms.value else 0)*1000000+(if ns.ok then ns.value%1000000 else 0)
+; {'revision': revision, 'error': error, **status}: kind and entry follow
+; when kind is not "".
+fn cmd_status_json(revision:i64, borrow error:Json, borrow kind:Arr u8 _, borrow entry:Json) -> Json
+  = let keys=push(text_one("revision"),"error") in
+    let values=push(push(arr(i in 0..0) json_value_null(),json_value_int(revision)),error) in
+    if len(kind)==0 then json_value_object(keys,values).value
+    else json_value_object(push(push(keys,"kind"),"entry"),push(push(values,json_value_string(kind).value),entry)).value
+; cli.py's write_status: dev-status.json.next, then renamed over
+; dev-status.json.
+private effect(fs,process) fn cmd_write_status(borrow out:Arr u8 _, borrow status:Json) -> Result<i64,Arr u8 _>
+  = let staged=host_join(out,"dev-status.json.next") in
+    let written=host_write_text(staged,pj_dumps(status))? in
+    host_rename(staged,host_join(out,"dev-status.json"))
+; manifest['assets'].get('client.js') of out/manifest.json (null without).
+private effect(fs) fn cmd_client_entry(borrow out:Arr u8 _) -> Result<Json,Arr u8 _>
+  = let path=host_join(out,"manifest.json") in
+    let text=host_read_text(path)? in
+    let parsed=json_parse(text) in
+    if !parsed.ok then Err::<Json,Arr u8 _>(concat("Invalid JSON in ",path)) else
+    let assets=json_get(parsed.value,"assets") in
+    let entry=if assets.present then json_get(assets.value,"client.js") else json_none() in
+    Ok::<Json,Arr u8 _>(if entry.present then entry.value else json_value_null())
+
+; dev's fixed settings. environment is the server's: neokit's with
+; NEOKIT_DEV_STATUS and (unless set) NEO_THREADS=1.
+type CmdDev = { root:Arr u8 _, app:Arr u8 _, out:Arr u8 _, port:i64, profile:Arr u8 _, environment:Arr Arr u8 _ _ }
+; dev's state from one server lifetime to the next: the last fingerprint,
+; whether the server's exit was reported, restart (a rebuilt server is due;
+; pending is the status to write once it started, null for none), and done
+; with code, or with error for a failure.
+type CmdDevState = { previous:Arr Arr u8 _ _, first:bool, reported:bool, restart:bool, pending:Json, done:bool, code:i64, error:Arr u8 _ }
+private effect(fs,process) fn cmd_dev_failed(borrow dev:CmdDev, move t:CmdDevState, borrow message:Arr u8 _) -> CmdDevState
+  = match cmd_write_status(dev.out,cmd_status_json(0,json_value_string(host_decode_replace(message)).value,text_empty(),json_value_null())) {
+      Err(failure) => t with { done=true, error=failure },
+      Ok(count) => let shown=print_error(concat(message,"\n")) in t
+    }
+private effect(fs,process,time) fn cmd_dev_built(borrow dev:CmdDev, move t:CmdDevState, borrow kind:Arr u8 _) -> CmdDevState
+  = match cmd_client_entry(dev.out) {
+      Err(message) => t with { done=true, error=message },
+      Ok(entry) =>
+        let status=cmd_status_json(cmd_revision(),json_value_null(),kind,entry) in
+        if text_equal(kind,"reload") then t with { restart=true, pending=status }
+        else (match cmd_write_status(dev.out,status) { Err(message) => t with { done=true, error=message }, Ok(count) => t })
+    }
+private effect(fs,env,process,time) fn cmd_dev_rebuild(borrow dev:CmdDev, refresh:bool) -> Result<Arr u8 _,Arr u8 _>
+  = if refresh then gen_refresh_assets(dev.root,dev.app,dev.out)
+    else match gen_build(dev.root,dev.app,dev.out,"server",dev.profile) {
+      Ok(built) => Ok::<Arr u8 _,Arr u8 _>(built.out), Err(message) => Err::<Arr u8 _,Arr u8 _>(message) }
+; One pass of develop()'s loop: wait, report a server that exited, and on a
+; change refresh the assets (css, client) or rebuild the server (reload).
+private effect(fs,env,process,time) fn cmd_dev_tick(borrow dev:CmdDev, server:Process, monitor:ShutdownSignal, move t:CmdDevState) -> CmdDevState
+  = let signal=cmd_nap(monitor) in
+    if signal!=0 then t with { done=true, code=cmd_interrupted(signal) } else
+    let status=process_status(server) in
+    let report=!(status.ok && status.running) && !t.reported in
+    let shown=if report then print_error(concat("neokit: the development server exited with status ",text_int(cmd_returncode(status)),
+      "; fix the problem and save a file to restart it.\n")) else int_ok(0) in
+    let current=cmd_fingerprint(dev.root,dev.app) in
+    if cmd_same_words(current,t.previous) then t with { reported=t.reported || report } else
+    let kind=cmd_change_kind(dev.root,dev.app,cmd_changed(current,t.previous)) in
+    let now=process_status(server) in
+    let refresh=!text_equal(kind,"reload") && now.ok && now.running in
+    let rebuilt=cmd_dev_rebuild(dev,refresh) in
+    let moved=t with { previous=current, reported=t.reported || report } in
+    match rebuilt {
+      Err(message) => cmd_dev_failed(dev,moved,message),
+      Ok(path) => cmd_dev_built(dev,moved,if refresh then kind else "reload")
+    }
+; One server lifetime: start it (the first time also print the address and
+; take the first fingerprint), write the status a reload left pending, then
+; watch with a monitor open until a reload or the end; the server is
+; stopped either way.
+private effect(fs,env,process,time) fn cmd_dev_epoch(borrow dev:CmdDev, move s:CmdDevState) -> CmdDevState
+  = using server=process_start_inherit(host_join(dev.out,"server"),text_one(text_int(dev.port)),dev.environment) in
+    let started=process_status(server) in
+    if !started.ok then s with { done=true, error=host_errno_text(started.error.code) } else
+    let shown=if s.first then cmd_say(concat("Native Neo SSR: http://127.0.0.1:",text_int(dev.port))) else int_ok(0) in
+    let previous=if s.first then cmd_fingerprint(dev.root,dev.app) else s.previous in
+    let watching=if s.first then cmd_say("Watching sources; successful builds refresh connected development browsers.") else int_ok(0) in
+    let wrote=if json_is_null(s.pending) then cmd_done(0)
+      else cmd_write_status(dev.out,json_object_set(s.pending,"revision",json_value_int(cmd_revision())).value) in
+    let begun=match wrote {
+      Ok(count) => s with { previous=previous, first=false, reported=false, restart=false, pending=json_value_null() },
+      Err(message) => s with { previous=previous, first=false, done=true, error=message } } in
+    using monitor=shutdown_signal() in
+    let ended=loop (t=begun) while !t.done && !t.restart next (cmd_dev_tick(dev,server,monitor,t)) yield t in
+    let halted=cmd_halt(server,2000) in
+    ; A signal that came during the halt or the restart (always taken, so that
+    ; closing the monitor does not deliver it).
+    let signal=host_signal_taken(monitor) in
+    if signal!=0 && !ended.done then ended with { done=true, code=cmd_interrupted(signal) } else ended
+; cli.py's develop(app, out, port, profile).
+private effect(fs,env,process,time) fn cmd_dev(borrow root:Arr u8 _, borrow app:Arr u8 _, borrow out:Arr u8 _, port:i64, borrow profile:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let environment=host_env_setdefault(host_env_set(env_list(),"NEOKIT_DEV_STATUS",host_join(out,"dev-status.json")),"NEO_THREADS","1") in
+    let dev=CmdDev { root=root, app=app, out=out, port=port, profile=profile, environment=environment } in
+    let initial=cmd_write_status(out,cmd_status_json(cmd_revision(),json_value_null(),text_empty(),json_value_null()))? in
+    let start=CmdDevState { previous=text_words(), first=true, reported=false, restart=false, pending=json_value_null(), done=false, code=0, error=text_empty() } in
+    let ended=loop (s=start) while !s.done next (cmd_dev_epoch(dev,s)) yield s in
+    if len(ended.error)>0 then cmd_error(ended.error) else cmd_done(ended.code)
+
+; ---------------------------------------------------------------- build, serve, dev, export
+
+; build()'s result for the application commands; `serve --no-build` only
+; checks for the server.
+private effect(fs,env,process,time) fn cmd_app_build(borrow root:Arr u8 _, borrow app:Arr u8 _, borrow out:Arr u8 _, borrow a:CmdArgs) -> Result<GenBuilt,Arr u8 _>
+  = if text_equal(a.command,"serve") && a.no_build then
+      (if host_is_file(host_join(out,"server")) then Ok::<GenBuilt,Arr u8 _>(GenBuilt { out=out, manifest=json_value_null() })
+       else Err::<GenBuilt,Arr u8 _>("Run ./neokit build first"))
+    else gen_build(root,app,out,if text_equal(a.command,"export") then "static" else "server",a.profile)
+private effect(fs,env,process,time) fn cmd_app(borrow root:Arr u8 _, borrow a:CmdArgs) -> Result<i64,Arr u8 _>
+  = let app=host_resolve(a.app)? in
+    let out=host_resolve(a.out)? in
+    let built=cmd_app_build(root,app,out,a)? in
+    if text_equal(a.command,"build") then
+      (let routes=json_array_len(json_get(built.manifest,"routes").value) in
+       let bytes=json_encode(json_get(built.manifest,"browser_js_bytes").value) in
+       let printed=cmd_say(concat("Built ",built.out,"/server\nRoutes: ",text_int(routes),"; browser JS: ",bytes," bytes across split modules")) in
+       cmd_done(0))
+    else if text_equal(a.command,"export") then cmd_export(root,app,built,a)
+    else if a.port<=0 || a.port>=65536 then cmd_error("Port must be 1..65535")
+    else if text_equal(a.command,"serve") then cmd_serve(built.out,a.port)
+    else cmd_dev(root,app,built.out,a.port,a.profile)
+
+; ---------------------------------------------------------------- main
+
+private effect(fs,env,net,process,time) fn cmd_command(borrow root:Arr u8 _, borrow a:CmdArgs) -> Result<i64,Arr u8 _>
+  = if text_equal(a.command,"init") then cmd_init(root,a)
+    else if text_equal(a.command,"release") then cmd_release(root,a)
+    else if text_equal(a.command,"revalidate") then cmd_revalidate(root,a)
+    else if text_equal(a.command,"password") then cmd_password(root)
+    else if text_equal(a.command,"migrate") then cmd_migrate(root,a)
+    else if text_equal(a.command,"doctor") then cmd_doctor(root)
+    else if text_equal(a.command,"prepare") then cmd_prepare(root)
+    else if text_equal(a.command,"test") then cmd_test(root,a)
+    else if text_equal(a.command,"preview") then cmd_preview(a.dir,a.port)
+    else cmd_app(root,a)
+
+effect fn main() -> unit
+  = let configured=env_get("NEOKIT_ROOT") in
+    if !configured.present || len(configured.value)==0 then
+      (let shown=print_error("neokit: NEOKIT_ROOT is not set; run neokit through its launcher, the neokit script in the NeoKit directory, which sets it\n") in
+       process_exit(1))
+    else
+    let root=host_normalize(configured.value) in
+    let parsed=cmd_parse(text_skip_words(cli_args(),1),root,env_list()) in
+    if !parsed.ok then (let out=print_out(parsed.stdout) in let err=print_error(parsed.stderr) in process_exit(parsed.exit))
+    else match cmd_command(root,parsed.args) {
+      Ok(code) => if code!=0 then process_exit(code) else noop(),
+      Err(message) => let shown=print_error(concat("neokit: ",message,"\n")) in process_exit(1)
+    }

@@ -25,7 +25,7 @@ fn file(borrow path:Arr u8 _, borrow digest:Arr u8 _) -> RelFile = RelFile { pat
 fn files3(a:RelFile, b:RelFile, c:RelFile) -> Arr RelFile _ = push(push(push(arr(i in 0..0) file("",""),a),b),c)
 fn epoch(borrow value:Arr u8 _) -> Arr u8 _
   = match rel_source_date_epoch(push(push(text_words(),"PATH=/bin"),concat("SOURCE_DATE_EPOCH=",value))) { Ok(found) => text_int(found), Err(message) => message }
-fn parsed(borrow text:Arr u8 _) -> Arr u8 _ = let r=rel_int(text) in if r.ok then text_int(r.value) else rel_int_error(text)
+fn parsed(borrow text:Arr u8 _) -> Arr u8 _ = let r=text_parse_int(text) in if r.ok then text_int(r.value) else text_int_error(text)
 fn below(borrow name:Arr u8 _) -> Arr u8 _ = let m=rel_member(name) in if m.ok then concat("ok ",m.below) else "refused"
 
 fn test_constants() -> bool

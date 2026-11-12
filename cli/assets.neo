@@ -242,7 +242,6 @@ private effect(fs) fn meta_find_tool(borrow name:Arr u8 _, borrow search:Arr u8 
     if len(found)==0 then found else match host_abspath(found) { Ok(path) => path, Err(message) => text_empty() }
 private fn meta_missing(borrow tool:Arr u8 _) -> Arr u8 _
   = concat("Responsive images require ",tool," (libvips) on PATH in the build environment")
-private fn meta_one(borrow word:Arr u8 _) -> Arr Arr u8 _ _ = push(text_words(),word)
 ; The image tools found in search (a PATH value). Python instead imports
 ; Pillow and fails with 'Responsive images require Pillow in the build
 ; environment'.
@@ -251,7 +250,7 @@ effect(fs,env,process,time) fn meta_image_tools_in(borrow search:Arr u8 _) -> Re
     if len(vips)==0 then Err::<MetaTools,Arr u8 _>(meta_missing("vips")) else
     let header=meta_find_tool("vipsheader",search) in
     if len(header)==0 then Err::<MetaTools,Arr u8 _>(meta_missing("vipsheader")) else
-    let version=host_run(push(meta_one(vips),"--version")) in
+    let version=host_run(push(text_one(vips),"--version")) in
     if !version.ok || version.code!=0 || len(text_strip(version.output))==0
     then Err::<MetaTools,Arr u8 _>(concat(vips," --version failed: ",text_strip(version.errors)))
     else Ok::<MetaTools,Arr u8 _>(MetaTools { vips=vips, header=header, version=text_strip(version.output) })
@@ -266,7 +265,7 @@ private fn meta_field(borrow lines:Arr Arr u8 _ _, borrow name:Arr u8 _) -> i64
 ; The stored width and height of an image file and its EXIF orientation,
 ; as `vipsheader -a` reports them.
 effect(fs,env,process,time) fn meta_image_header(borrow tools:MetaTools, borrow path:Arr u8 _) -> Result<MetaHeader,Arr u8 _>
-  = let run=host_run(push(push(meta_one(tools.header),"-a"),path)) in
+  = let run=host_run(push(push(text_one(tools.header),"-a"),path)) in
     let lines=text_splitlines(run.output) in
     let width=meta_field(lines,"width") in let height=meta_field(lines,"height") in let orientation=meta_field(lines,"orientation") in
     if !run.ok || run.code!=0 || width<1 || height<1
@@ -422,7 +421,7 @@ private effect(fs,env,process,time) fn meta_images(move b:MetaBuild, borrow publ
         let sizes=if widths.present then arr(i in 0..len(widths.items)) check i>=0 && i<len(widths.items) in toml_int(widths.items[i])
           else arr(i in 0..3) if i==0 then 320 else if i==1 then 640 else 1280 in
         let kinds=if formats.present then arr(i in 0..len(formats.items)) check i>=0 && i<len(formats.items) in toml_text(formats.items[i])
-          else meta_one("webp") in
+          else text_one("webp") in
         loop (acc=b, i:i64{i>=0}=0) while len(acc.err)==0 && i<len(sources)
           next (meta_image_step(acc,tools,public,sources[i],sizes,kinds,cache), i+1) yield acc
     }

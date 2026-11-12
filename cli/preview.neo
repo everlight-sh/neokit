@@ -131,8 +131,6 @@ private fn cmd_pv_target_path(borrow target:Arr u8 _) -> Arr u8 _
   = let ask=text_find(target,"?",0) in let hash=text_find(target,"#",0) in
     let cut=if ask<0 then hash else if hash<0 then ask else if ask<hash then ask else hash in
     if cut<0 then target else text_slice(target,0,cut)
-private fn cmd_pv_drop_last(borrow words:Arr Arr u8 _ _) -> Arr Arr u8 _ _
-  = loop (out=text_words(), i=0) while i<len(words)-1 next (push(out,text_word(words,i)), i+1) yield out
 
 ; SimpleHTTPRequestHandler.translate_path(target) below the served
 ; directory: the words of the path (the query and fragment dropped,
@@ -144,7 +142,7 @@ fn cmd_preview_path(borrow target:Arr u8 _) -> CmdPreviewPath
     let parts=text_split(cmd_pv_unquote(path),"/") in
     let words=loop (out=text_words(), i=0) while i<len(parts)
       next (let w=text_word(parts,i) in
-            if len(w)==0 || text_equal(w,".") then out else if text_equal(w,"..") then cmd_pv_drop_last(out) else push(out,w), i+1) yield out in
+            if len(w)==0 || text_equal(w,".") then out else if text_equal(w,"..") then text_drop_last(out) else push(out,w), i+1) yield out in
     CmdPreviewPath { words=words, slash=text_ends(cmd_pv_rstrip(path),"/") }
 ; The file system path translate_path gives for target under root.
 fn cmd_preview_file(borrow root:Arr u8 _, borrow target:Arr u8 _) -> Arr u8 _
@@ -192,7 +190,7 @@ private fn cmd_pv_version(borrow version:Arr u8 _) -> CmdPvVersion
   = let parts=text_split(text_from(version,5),".") in
     if !text_starts(version,"HTTP/") || len(parts)!=2 || !cmd_pv_digits(text_word(parts,0)) || !cmd_pv_digits(text_word(parts,1))
     then CmdPvVersion { ok=false, major=0 }
-    else CmdPvVersion { ok=true, major=rel_int(text_word(parts,0)).value }
+    else CmdPvVersion { ok=true, major=text_parse_int(text_word(parts,0)).value }
 
 ; The header lines from at, as http.client's _read_headers reads them
 ; (lines of at most 65536 bytes, at most 100 with the blank line ending
@@ -294,12 +292,6 @@ private fn cmd_pv_months() -> Arr Arr u8 _ _
   = text_split("jan feb mar apr may jun jul aug sep oct nov dec january february march april may june july august september october november december"," ")
 private fn cmd_pv_index_of(borrow words:Arr Arr u8 _ _, borrow word:Arr u8 _) -> i64
   = loop (i=0, found= -1) while found<0 && i<len(words) next (i+1, if text_equal(text_word(words,i),word) then i else -1) yield found
-private fn cmd_pv_skip(borrow words:Arr Arr u8 _ _, count:i64) -> Arr Arr u8 _ _
-  = loop (out=text_words(), i=count) while i<len(words) next (push(out,text_word(words,i)), i+1) yield out
-private fn cmd_pv_take(borrow words:Arr Arr u8 _ _, count:i64) -> Arr Arr u8 _ _
-  = loop (out=text_words(), i=0) while i<count && i<len(words) next (push(out,text_word(words,i)), i+1) yield out
-private fn cmd_pv_join_words(borrow a:Arr Arr u8 _ _, borrow b:Arr Arr u8 _ _) -> Arr Arr u8 _ _
-  = loop (out=cmd_pv_take(a,len(a)), i=0) while i<len(b) next (push(out,text_word(b,i)), i+1) yield out
 private fn cmd_pv_chop(borrow text:Arr u8 _) -> Arr u8 _ = if text_ends(text,",") then text_slice(text,0,len(text)-1) else text
 ; email.utils._parsedate_tz's [dd, mm, yy, tm, tz] from a date, or fewer
 ; than five words when it has none.
@@ -307,13 +299,13 @@ private fn cmd_pv_date_words(borrow value:Arr u8 _) -> Arr Arr u8 _ _
   = let first=cmd_pv_words(value) in
     if len(first)==0 then first else
     let w0=text_word(first,0) in let comma=text_rfind(w0,",") in
-    let data=if text_ends(w0,",") || cmd_pv_index_of(cmd_pv_daynames(),text_lower(w0))>=0 then cmd_pv_skip(first,1)
-      else if comma>=0 then cmd_pv_join_words(push(text_words(),text_from(w0,comma+1)),cmd_pv_skip(first,1)) else first in
+    let data=if text_ends(w0,",") || cmd_pv_index_of(cmd_pv_daynames(),text_lower(w0))>=0 then text_skip_words(first,1)
+      else if comma>=0 then text_concat_words(push(text_words(),text_from(w0,comma+1)),text_skip_words(first,1)) else first in
     let stuff=text_split(text_word(data,0),"-") in
-    let dashed=if len(data)==3 && len(stuff)==3 then cmd_pv_join_words(stuff,cmd_pv_skip(data,1)) else data in
-    if len(dashed)!=4 then cmd_pv_take(dashed,5) else
+    let dashed=if len(data)==3 && len(stuff)==3 then text_concat_words(stuff,text_skip_words(data,1)) else data in
+    if len(dashed)!=4 then text_take_words(dashed,5) else
     let s=text_word(dashed,3) in let plus=text_find(s,"+",0) in let sign=if plus<0 then text_find(s,"-",0) else plus in
-    if sign>0 then push(push(cmd_pv_take(dashed,3),text_slice(s,0,sign)),text_from(s,sign)) else push(dashed,text_empty())
+    if sign>0 then push(push(text_take_words(dashed,3),text_slice(s,0,sign)),text_from(s,sign)) else push(dashed,text_empty())
 private fn cmd_pv_valid_day(year:i64, month:i64, day:i64) -> bool
   = let leap=year%4==0 && (year%100!=0 || year%400==0) in
     let days=if month==2 then (if leap then 29 else 28) else if month==4 || month==6 || month==9 || month==11 then 30 else 31 in
@@ -350,10 +342,10 @@ fn cmd_preview_since(borrow value:Arr u8 _) -> CmdPreviewSince
     let parts=if len(colons)==2 then push(colons,"0") else if len(colons)==3 then colons
       else if len(colons)==1 && len(dots)==2 then push(dots,"0") else if len(colons)==1 && len(dots)==3 then dots else text_words() in
     if len(parts)!=3 then cmd_pv_never() else
-    let y=rel_int(yy) in let d=rel_int(dd) in let h=rel_int(text_word(parts,0)) in let mi=rel_int(text_word(parts,1)) in let s=rel_int(text_word(parts,2)) in
+    let y=text_parse_int(yy) in let d=text_parse_int(dd) in let h=text_parse_int(text_word(parts,0)) in let mi=text_parse_int(text_word(parts,1)) in let s=text_parse_int(text_word(parts,2)) in
     if !y.ok || !d.ok || !h.ok || !mi.ok || !s.ok then cmd_pv_never() else
     let year=if y.value<100 then (if y.value>68 then y.value+1900 else y.value+2000) else y.value in
-    let zone=text_upper(tz) in let offset=rel_int(tz) in
+    let zone=text_upper(tz) in let offset=text_parse_int(tz) in
     let utc=text_equal(zone,"UT") || text_equal(zone,"UTC") || text_equal(zone,"GMT") || text_equal(zone,"Z")
       || (cmd_pv_index_of(text_split("AST ADT EST EDT CST CDT MST MDT PST PDT"," "),zone)<0 && (!offset.ok || offset.value==0)) in
     if !utc || year<1 || year>9999 || !cmd_pv_valid_day(year,month,d.value) || h.value<0 || h.value>23
@@ -480,11 +472,6 @@ type CmdPvEvents = { flags:Arr i64 _, accept:bool, signal:bool }
 
 private fn cmd_pv_limit() -> i64 = 128
 private fn cmd_pv_idle() -> i64 = 60000
-; str(OSError) for an errno: host_errno_text, with the socket errors
-; host_strerror lacks (Linux numbers, as host_strerror's).
-private fn cmd_pv_errno_text(code:i64) -> Arr u8 _
-  = if code==98 then "[Errno 98] Address already in use" else if code==99 then "[Errno 99] Cannot assign requested address"
-    else host_errno_text(code)
 ; EAGAIN (std:socket's typed "try again", rt_again()) or EINTR.
 private fn cmd_pv_again(code:i64) -> bool = code==rt_again() || code==4
 
@@ -558,7 +545,7 @@ private effect(fs,net,time,process) fn cmd_pv_round(borrow root:Arr u8 _, listen
     let interests=loop (out=watching, i=0) while i<count
       next (match vec_get(s.conns,i) { Some(c) => push(out,socket_interest(borrow_ref(c.socket),if c.writing then 4 else 1,i+2)), None => out }, i+1) yield out in
     let ready=reactor_wait(interests,now+1000,cancellation) in
-    if !ready.ok then s with { stop=true, error=cmd_pv_errno_text(ready.error.code) } else
+    if !ready.ok then s with { stop=true, error=host_errno_text(ready.error.code) } else
     let ev=cmd_pv_events(ready.events,count) in
     let polled=if ev.signal then shutdown_signal_poll(signal).ok else false in
     let served=loop (out=s.conns, i=0) while i<count next (cmd_pv_serve_at(root,out,i,cmd_pv_flag(ev.flags,i),now), i+1) yield out in
@@ -575,7 +562,7 @@ effect(fs,net,time,process) fn cmd_preview(borrow directory:Arr u8 _, port:i64) 
     if port<0 || port>65535 then Err::<i64,Arr u8 _>("bind(): port must be 0-65535.") else
     using listener=tcp_listen_ipv4("127.0.0.1",port,128) in
     let listening=listener_status(listener) in
-    if !listening.ok then Err::<i64,Arr u8 _>(cmd_pv_errno_text(listening.error.code)) else
+    if !listening.ok then Err::<i64,Arr u8 _>(host_errno_text(listening.error.code)) else
     using signal=shutdown_signal() in
     let watched=shutdown_signal_status(signal).ok in
     using arena=new_arena(cmd_pv_limit()+8) in

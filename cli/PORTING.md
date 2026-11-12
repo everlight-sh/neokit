@@ -114,7 +114,9 @@ The last Python modules are split between two ports that share this contract.
 - `cli/main.neo` (`cmd_`) replaces `compiler/cli.py`: the same commands,
   options, defaults, output and exit codes. Errors print `neokit: MESSAGE` to
   stderr and exit 1; usage errors follow argparse's wording and exit 2.
-- `neokit` becomes a POSIX sh launcher (no Python). It finds the framework
+- `neokit` is a POSIX sh launcher (no Python) and its single source (there
+  is no cli/launcher.sh); `./web` is a byte-for-byte copy, as `neo pkg lock`
+  refuses a package holding symbolic links. It finds the framework
   root (its own resolved directory) and a Neo toolchain (`NEO_HOME`, else the
   SDK's `../neo`, else `neo` on PATH), builds `cli/main.neo` on first use into
   `${XDG_CACHE_HOME:-$HOME/.cache}/neokit/cli/<key>/neokit` (key from the CLI
@@ -122,6 +124,7 @@ The last Python modules are split between two ports that share this contract.
   execs it with `NEOKIT_ROOT` set. A cache hit must cost only a few
   milliseconds. One SDK archive therefore serves every platform Neo supports,
   and no NeoKit binaries need building per platform.
+  `tests/tools/launcher_test.sh` checks it (see its header).
 
 Parity is checked by `tests/tools/parity.ts` on the box: every app with a
 `web.toml` (examples/*, tests/*_fixture, tests/cli_golden/assets/apps/*) is
@@ -132,6 +135,11 @@ built by the Python reference and by the native build, both with
 the box has python3-brotli installed. Gzip literals in generated code are
 compared after decompression, image variants by format and dimensions, and
 `server_bytes` only when neither applies.
+
+`tests/tools/cli_parity.ts` compares the commands themselves: `compiler/cli.py`
+(run as `python3 -c "from compiler.cli import main; main()"`, as the module
+has no `__main__` guard) against `./neokit` over a table of invocations, on
+stdout, stderr, exit status and the trees they write, with timings masked.
 
 ## Tests
 

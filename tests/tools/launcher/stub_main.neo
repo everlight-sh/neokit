@@ -1,0 +1,13 @@
+; Stub cli/main.neo for the launcher checks: prints NEOKIT_ROOT and its
+; arguments; "fail" as the first argument exits with status 3.
+import "std:io"
+import "std:strings"
+
+fn word(borrow words:Arr Arr u8 _ _, i:i64) -> Arr u8 _ = if i>=0 && i<len(words) then words[i] else ""
+effect fn main() -> unit
+  = let root=env_get("NEOKIT_ROOT") in
+    let args=cli_args() in
+    let shown=loop (out=concat("root=",if root.present then root.value else "(unset)","\n"), i=1) while i<len(args)
+        next (concat(out,"arg=[",word(args,i),"]\n"), i+1) yield out in
+    let printed=print_out(shown) in
+    if str_equal(word(args,1),"fail") then process_exit(3) else noop()

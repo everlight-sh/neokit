@@ -73,28 +73,6 @@ private fn rel_done(value:i64) -> Result<i64,Arr u8 _> = Ok::<i64,Arr u8 _>(valu
 private fn rel_fail(borrow message:Arr u8 _) -> Result<i64,Arr u8 _> = Err::<i64,Arr u8 _>(message)
 private fn rel_zeros(count:i64) -> Arr u8 _ = arr(i in 0..(if count<0 then 0 else count)) u8(0)
 
-; ---------------------------------------------------------------- Python int()
-
-; int(text) for base 10: surrounding whitespace, a sign, ASCII digits with
-; single underscores between them. A value beyond i64 saturates (Python
-; has big integers; NeoKit only range-checks such values). ok is false for
-; Python's ValueError, whose text is rel_int_error(text).
-type RelInt = { ok:bool, value:i64 }
-private fn rel_int_digits(borrow body:Arr u8 _, negative:bool) -> RelInt
-  = let scan=loop (i=0, value=0, ok=len(body)>0, big=false) while ok && i<len(body)
-      next (i+1,
-            let b=text_byte(body,i) in
-            if b>=48 && b<=57 then (if big || value>(9223372036854775807-(b-48))/10 then value else value*10+(b-48)) else value,
-            let b=text_byte(body,i) in
-            (b>=48 && b<=57) || (b==95 && i>0 && i<len(body)-1 && text_byte(body,i-1)!=95 && text_byte(body,i+1)>=48 && text_byte(body,i+1)<=57),
-            let b=text_byte(body,i) in big || (b>=48 && b<=57 && value>(9223372036854775807-(b-48))/10)) yield RelInt { ok=ok && text_byte(body,0)!=95, value=if big then (if negative then -9223372036854775807 else 9223372036854775807) else if negative then 0-value else value } in
-    scan
-fn rel_int(borrow text:Arr u8 _) -> RelInt
-  = let body=text_strip(text) in let sign=text_byte(body,0) in
-    if sign==43 || sign==45 then rel_int_digits(text_from(body,1),sign==45) else rel_int_digits(body,false)
-; str(ValueError) for int(text).
-fn rel_int_error(borrow text:Arr u8 _) -> Arr u8 _ = concat("invalid literal for int() with base 10: ",text_repr(text))
-
 ; ---------------------------------------------------------------- USTAR writing
 
 private fn rel_octal(value:i64, digits:i64) -> Arr u8 _
@@ -111,13 +89,10 @@ fn rel_tar_split(borrow name:Arr u8 _) -> Result<RelName,Arr u8 _>
   = if len(name)<=100 then Ok::<RelName,Arr u8 _>(RelName { prefix=text_empty(), name=name }) else
     let parts=text_split(name,"/") in
     let at=loop (i=1, found= -1) while found<0 && i<len(parts)
-      next (i+1, let prefix=text_join(rel_words_split(parts,i,true),"/") in let rest=text_join(rel_words_split(parts,i,false),"/") in
+      next (i+1, let prefix=text_join(text_take_words(parts,i),"/") in let rest=text_join(text_skip_words(parts,i),"/") in
             if len(prefix)<=155 && len(rest)<=100 then i else -1) yield found in
     if at<0 then Err::<RelName,Arr u8 _>("name is too long")
-    else Ok::<RelName,Arr u8 _>(RelName { prefix=text_join(rel_words_split(parts,at,true),"/"), name=text_join(rel_words_split(parts,at,false),"/") })
-; The first count words (keep) or the words after them.
-private fn rel_words_split(borrow words:Arr Arr u8 _ _, count:i64, keep:bool) -> Arr Arr u8 _ _
-  = loop (out=text_words(), i=0) while i<len(words) next (if (i<count)==keep then push(out,text_word(words,i)) else out, i+1) yield out
+    else Ok::<RelName,Arr u8 _>(RelName { prefix=text_join(text_take_words(parts,at),"/"), name=text_join(text_skip_words(parts,at),"/") })
 private fn rel_sum(borrow block:Arr u8 _, start:i64, end:i64) -> i64
   = loop (i=start, total=0) while i<end next (i+1, total+text_byte(block,i)) yield total
 ; The header block tarfile writes for a regular file in USTAR_FORMAT
@@ -175,7 +150,7 @@ type RelPax = { at:i64, found:Arr u8 _ }
 ; One "LENGTH key=value\n" record; at past the data ends the scan.
 private fn rel_pax_step(borrow data:Arr u8 _, borrow key:Arr u8 _, move s:RelPax) -> RelPax
   = let gap=text_find(data," ",s.at) in
-    let length=rel_int(text_slice(data,s.at,if gap<0 then s.at else gap)) in
+    let length=text_parse_int(text_slice(data,s.at,if gap<0 then s.at else gap)) in
     if gap<0 || !length.ok || length.value<=gap-s.at then s with { at=len(data) } else
     let pair=text_partition(text_slice(data,gap+1,s.at+length.value-1),"=") in
     RelPax { at=s.at+length.value, found=if pair.found && text_equal(pair.before,key) then pair.after else s.found }
@@ -210,7 +185,7 @@ private fn rel_tar_scan(borrow tar:Arr u8 _, move s:RelTarScan) -> RelTarScan
     if (regular || kind==76 || kind==120) && data+length>len(tar) then s with { error="unexpected end of data", done=true }
     else if kind==76 then s with { at=following, long_name=rel_nts(tar,data,data+length) }
     else if kind==120 then
-      (let pax=text_slice(tar,data,data+length) in let path=rel_pax_value(pax,"path") in let sized=rel_int(rel_pax_value(pax,"size")) in
+      (let pax=text_slice(tar,data,data+length) in let path=rel_pax_value(pax,"path") in let sized=text_parse_int(rel_pax_value(pax,"size")) in
        s with { at=following, pax_path=path, pax_size=if sized.ok then sized.value else -1 })
     else if kind==103 || kind==75 then s with { at=following }
     else s with { at=following, entries=push(s.entries,RelTarEntry { name=name, kind=kind, mode=mode.value, size=length, offset=data }),
@@ -239,7 +214,7 @@ fn rel_member(borrow name:Arr u8 _) -> RelMember
   = let parts=host_parts(name) in
     if host_is_absolute(name) || text_member(parts,"..") || len(parts)==0 || !text_equal(text_word(parts,0),concat("neo-",rel_neo_version()))
     then RelMember { ok=false, below=text_empty() }
-    else RelMember { ok=true, below=text_join(rel_words_split(parts,1,false),"/") }
+    else RelMember { ok=true, below=text_join(text_skip_words(parts,1),"/") }
 
 ; ---------------------------------------------------------------- effects
 
@@ -346,13 +321,11 @@ private effect(fs,process) fn rel_copy_packages(borrow root:Arr u8 _, borrow fra
 type RelFile = { path:Arr u8 _, digest:Arr u8 _ }
 private fn rel_no_files() -> Arr RelFile _ = arr(i in 0..0) RelFile { path=text_empty(), digest=text_empty() }
 type RelFiles = { files:Arr RelFile _, err:Arr u8 _ }
-private fn rel_relative(borrow path:Arr u8 _, borrow stage:Arr u8 _) -> Arr u8 _
-  = match host_relative_to(path,stage) { Ok(relative) => relative, Err(message) => path }
 private effect(fs) fn rel_hash_step(move s:RelFiles, borrow stage:Arr u8 _, borrow path:Arr u8 _) -> RelFiles
   = if !host_is_file(path) then s else
     match host_read_bytes(path) {
       Err(message) => s with { err=message },
-      Ok(data) => s with { files=push(s.files,RelFile { path=rel_relative(path,stage), digest=host_sha256_hex(data) }) }
+      Ok(data) => s with { files=push(s.files,RelFile { path=host_relative_or_self(path,stage), digest=host_sha256_hex(data) }) }
     }
 private effect(fs) fn rel_tree_files(borrow stage:Arr u8 _) -> Result<Arr RelFile _,Arr u8 _>
   = let paths=host_rglob(stage,"*") in
@@ -467,8 +440,8 @@ effect(fs,env,process,time) fn rel_assemble(borrow destination:Arr u8 _, borrow 
 fn rel_source_date_epoch(borrow environment:Arr Arr u8 _ _) -> Result<i64,Arr u8 _>
   = let configured=host_env_get(environment,"SOURCE_DATE_EPOCH") in
     let text=if configured.present then configured.value else "0" in
-    let parsed=rel_int(text) in
-    if !parsed.ok then rel_fail(rel_int_error(text))
+    let parsed=text_parse_int(text) in
+    if !parsed.ok then rel_fail(text_int_error(text))
     else if parsed.value<0 || parsed.value>4294967295 then rel_fail("SOURCE_DATE_EPOCH must be between 0 and 4294967295")
     else rel_done(parsed.value)
 
@@ -480,7 +453,7 @@ private effect(fs) fn rel_tar_step(move s:RelTar, borrow stage:Arr u8 _, borrow 
     match host_read_bytes(path) {
       Err(message) => s with { err=message },
       Ok(data) =>
-        let name=concat("neokit-",version,"/",rel_relative(path,stage)) in
+        let name=concat("neokit-",version,"/",host_relative_or_self(path,stage)) in
         let mode=if host_is_executable(path) then 493 else 420 in
         let failed=match rel_tar_split(name) { Ok(split) => text_empty(), Err(message) => message } in
         if len(failed)>0 then s with { err=failed } else

@@ -10,7 +10,8 @@
 ;                               of cases.tsv on a connection of its own and
 ;                               prints the response and the child's log
 ;                               lines, then two connections at once, the
-;                               stop (SIGTERM) and `neokit preview` errors.
+;                               stop (SIGTERM) and `neokit preview` errors;
+;                               then removes build/cli-golden-preview.
 import "std:io"
 import "std:fs"
 import "std:time"
@@ -21,7 +22,7 @@ import "../../../cli/preview.neo"
 effect fn arg(i:i64) -> Arr u8 _ = let value=cli_arg(i) in if value.present then value.value else text_empty()
 
 effect fn run_serve() -> unit
-  = let port=rel_int(arg(3)) in
+  = let port=text_parse_int(arg(3)) in
     match cmd_preview(arg(2),if port.ok then port.value else -1) {
       Ok(code) => noop(),
       Err(message) => let printed=print_error(concat("neokit: ",message,"\n")) in process_exit(1)
@@ -113,7 +114,7 @@ fn serve_args(borrow dir:Arr u8 _, borrow port:Arr u8 _) -> Arr Arr u8 _ _ = pus
 
 effect fn run_case(child:Process, port:i64, borrow row:Arr u8 _) -> Arr u8 _
   = let f=text_split(row,"\t") in
-    let count=rel_int(text_word(f,4)) in
+    let count=text_parse_int(text_word(f,4)) in
     let request=concat(unhex(text_word(f,3)),text_repeat(unhex(text_word(f,5)),if count.ok then count.value else 0),unhex(text_word(f,6))) in
     let response=exchange(port,request,text_word(f,1)) in
     concat("=== ",text_word(f,0),"\n",normalized(response),"--- log\n",log_lines(drain(child,2)))
@@ -157,6 +158,9 @@ effect fn run_fixture() -> unit
       "=== no directory\n",run_cli(exe.value,host_join(base,"nope"),text_int(port)),
       "=== port in use\n",in_use(exe.value,site),
       "=== port 70000\n",run_cli(exe.value,site,"70000")) in
+    ; The site holds symbolic links, which `neo pkg lock` refuses inside the
+    ; NeoKit package (neokit init), so nothing is left behind.
+    let removed=host_remove_tree(base) in
     let printed=print_out(concat(problems,served,errors)) in noop()
 
 effect fn main() -> unit
