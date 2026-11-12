@@ -1,5 +1,0 @@
-A preliminary run stopped on 32 wrk histogram-range/timeout errors despite a 4-second test and 10-second configured bound. wrk uses wall-clock subtraction and labels out-of-range latency samples as timeouts ([upstream source](https://github.com/wg/wrk/blob/master/src/wrk.c)). The cause was not established conclusively. A second attempt was stopped by the host disk guard. Both incomplete attempts are retained under `preliminary/`; neither contributes runtime samples to this report. Every accepted runtime trial uses monotonic client timing and retains zero socket/status/timeout errors.
-
-Completed build trials were reused after verifying build inputs and adapters had unchanged hashes; see `original-build-metadata.json` and `metadata.json`. Only benchmark driver/report/clock instrumentation changed. Production artifacts were retained to avoid reinstalling dependencies when host disk space became tight. The final Axon binary hash matches the preliminary binary hash.
-
-Host swap was in use during this local Docker run; short samples are subject to host scheduling and memory pressure. Ranges are retained. These results are not a dedicated-host capacity result.

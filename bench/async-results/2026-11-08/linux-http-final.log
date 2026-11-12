@@ -1,4 +1,0 @@
-PASS independent DB/network completion, shell-first framing and isolated timeout {'shell': 0.03502762599964626, 'network': 0.11566804299945943, 'error': 0.2842693179991329, 'database': 0.64401139399979, 'slow': 1.2365438339993489}
-PASS async pages/APIs yield during network waits; fast requests 0.005076151999674039
-PASS disconnect cancellation releases tasks, captures, results and upstream sockets
-PASS HEAD/method dispatch, buffered deadlines and clean idle resource counts

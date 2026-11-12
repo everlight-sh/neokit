@@ -36,5 +36,5 @@ an unquantified label when Server Timing is unsupported, and identifies static
 exported HTML explicitly. Server render time excludes its own timing header,
 socket delivery, asset loading and browser layout/paint.
 
-[Showcase measurements and browser captures](../bench/showcase-results/2026-11-08/REPORT.md)
+Showcase measurements and browser captures in the `neokit-bench` repository
 include the full release HTML work rather than just a string-building benchmark.

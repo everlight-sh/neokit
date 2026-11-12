@@ -1,5 +1,0 @@
-loader = "note_load"
-mode = "ssr"
-client = true
-export = true
-paths = ["/notes/native", "/notes/static", "/notes/islands"]

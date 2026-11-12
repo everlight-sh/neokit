@@ -1,2 +1,0 @@
-import "../../../../src/realtime.neo"
-effect fn fixture_wait(request:WebRequest)->WebResponse=let waited=sleep_ms(800) in web_json("{\"waited\":true}")

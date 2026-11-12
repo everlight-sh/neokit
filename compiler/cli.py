@@ -19,7 +19,7 @@ from .templates import BuildError
 # tests.async_rendering also needs a PostgreSQL server; run it directly.
 EXTENDED_SUITES = {
     'dev_css_smoke': (),
-    'large_responses': (('bench/frameworks/apps/axon', 'build/catalog'),),
+    'large_responses': (('tests/catalog_fixture', 'build/catalog'),),
     'realtime': (('tests/realtime_fixture', 'build/realtime/fixture'),),
     'showcase_smoke': tuple(('examples/'+name, 'build/showcase/'+name) for name in ('ssr-site', 'blog', 'saas')),
 }

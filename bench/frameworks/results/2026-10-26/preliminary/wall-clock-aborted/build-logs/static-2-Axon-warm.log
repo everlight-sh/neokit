@@ -1,9 +1,0 @@
-Bundled 3 modules in 5ms
-
-  client-qnxetx3b.js  4.93 KB    (entry point)
-  chunk-mtb2hxg4.js   268 bytes  (chunk)
-  chunk-an9wxp5m.js   379 bytes  (chunk)
-
-axonc: /work/axon-web/build/frameworks/axon-static/render  graph cb232c6212374d65  obligations 304/357 proven, 53 runtime checks, 30 parallel regions, 2 vectorised sums, 0 calls folded, 1 inlined, build hit
-axonc: /work/axon-web/build/frameworks/axon-static/server  graph 5eeb1c620b3529fd  obligations 304/359 proven, 55 runtime checks, 30 parallel regions, 2 vectorised sums, 0 calls folded, 1 inlined, build hit
-Exported 3 pages to /work/axon-web/build/frameworks/axon-export; local widgets work without a server.

@@ -1,6 +1,0 @@
----
-import Row from "./Row.astro";
-import "../../../../shared/site.css";
-const { value, metrics=false } = Astro.props;
----
-<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Framework catalog</title></head><body class="bg-[#f5f4ed] font-sans text-[15px] text-[#252b25] antialiased"><main class="mx-auto my-12 max-w-[1100px] px-6" id="benchmark" data-n={value.n} data-seed={value.seed}><h1 class="mb-5 font-serif text-5xl tracking-[-2px]">Framework catalog</h1><p class="request" id="request-token">{value.token}</p><output class="stamp" id="render-stamp">{value.stamp}</output><slot/><table class="w-full border-collapse bg-white"><thead><tr><th>ID</th><th>Name</th><th>Price</th><th>Stock</th><th>Note</th></tr></thead><tbody id="catalog-rows">{value.rows.map(row => <Row row={row}/>)}</tbody><tfoot><tr><td colspan="5" id="checksum">{value.checksum}</td></tr></tfoot></table></main>{metrics && <script is:inline defer src="/browser-metrics.js"></script>}</body></html>

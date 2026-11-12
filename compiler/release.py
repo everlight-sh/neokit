@@ -96,11 +96,6 @@ def assemble(destination, root, environment, neo_archive=None, neo_sha256=None):
             shutil.copy2(root/name, framework/name)
         for name in ('compiler', 'client', 'src', 'examples', 'docs', 'deploy', 'tools', 'tests'):
             copy_sources(root/name, framework/name)
-        # Standalone protocol tests share these small helpers with the benchmark.
-        for name in ('parity_performance.py', 'core_stats.py', 'frameworks/model.py'):
-            target = framework/'bench'/name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(root/'bench'/name, target)
         lock = json.loads((root/'neo.lock').read_text())
         for identity, package in lock['packages'].items():
             if identity == lock['root']:

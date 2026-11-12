@@ -95,4 +95,4 @@ async render task. See [the migrated raw stream](../examples/features/app/stream
 HTTP tests exercise real SCRAM PostgreSQL, delayed peers, timeouts, disconnects,
 HEAD/method dispatch and zero idle task counters. Browser checks cover streamed
 insertion, escaped UTF-8, isolated errors and widget mounting. Performance and
-verification results are linked from [the async report](../bench/async-results/2026-11-08/REPORT.md).
+verification results are in the `neokit-bench` repository.

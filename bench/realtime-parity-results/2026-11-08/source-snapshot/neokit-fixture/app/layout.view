@@ -1,2 +1,0 @@
-@props(title:text,content:html,client:bool,mode:text)
-<!doctype html><html><head><title>{{ title }}</title></head><body>{{ content }}</body></html>

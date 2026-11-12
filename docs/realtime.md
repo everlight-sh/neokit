@@ -179,6 +179,6 @@ feed 12 rows. Seeded historical revenue/customer data remains a separate
 read-only dataset. Static exports show a snapshot explanation and open no live
 connection.
 
-[Release measurements and verification](../bench/realtime-opt-results/2026-11-08/REPORT.md)
+Release measurements and verification in the `neokit-bench` repository
 cover unchanged SSR pages, 1/100/1,000 live subscribers, replay, cancellation,
 Linux execution, actual-browser behavior and the limits of these measurements.

@@ -14,5 +14,4 @@ build/
 !**/.env.example
 data/
 .neokit/
-bench/
 reports/

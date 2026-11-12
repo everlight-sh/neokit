@@ -1,8 +1,0 @@
-{
-  "sha256": "197f41aff02e7fcda79ab8b4476e207e82abecceeb1d05dddd1294fa0758c722",
-  "bytes": 285672,
-  "readelf_program_headers": "Elf file type is EXEC (Executable file)\nEntry point 0x441738\nThere are 5 program headers, starting at offset 64\n\nProgram Headers:\n  Type           Offset             VirtAddr           PhysAddr\n                 FileSiz            MemSiz              Flags  Align\n  LOAD           0x0000000000000000 0x0000000000400000 0x0000000000400000\n                 0x0000000000045014 0x0000000000045014  R E    0x10000\n  LOAD           0x000000000000fff0 0x000000000045fff0 0x000000000045fff0\n                 0x0000000000000000 0x0000000000000800  RW     0x10000\n  NOTE           0x0000000000000158 0x0000000000400158 0x0000000000400158\n                 0x0000000000000024 0x0000000000000024  R      0x4\n  GNU_EH_FRAME   0x0000000000044b10 0x0000000000444b10 0x0000000000444b10\n                 0x000000000000010c 0x000000000000010c  R      0x4\n  GNU_STACK      0x0000000000000000 0x0000000000000000 0x0000000000000000\n                 0x0000000000000000 0x0000000000000000  RW     0x10\n\n Section to Segment mapping:\n  Segment Sections...\n   00     .note.gnu.build-id .text .rodata .eh_frame_hdr .eh_frame \n   01     .bss \n   02     .note.gnu.build-id \n   03     .eh_frame_hdr \n   04",
-  "readelf_dynamic": "There is no dynamic section in this file.",
-  "undefined_symbols": "",
-  "passed": true
-}

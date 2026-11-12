@@ -1,1 +1,0 @@
-{"name": "sse-parity-astro", "private": true, "type": "module", "scripts": {"build": "astro build"}}

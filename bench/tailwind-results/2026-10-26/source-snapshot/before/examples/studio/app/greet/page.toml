@@ -1,4 +1,0 @@
-loader = "greet_load"
-mode = "ssr"
-client = false
-export = false

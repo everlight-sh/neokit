@@ -1,3 +1,0 @@
-[server]
-before="fixture_guard"
-shutdown_grace_ms=250

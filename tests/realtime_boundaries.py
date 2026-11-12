@@ -1,7 +1,7 @@
 """Exact large SSE replay across callback byte budgets, including reset."""
 import argparse,json,tempfile
 from pathlib import Path
-from bench.parity_performance import server,port
+from tests.support import server,port
 from tests.realtime import Events,request,quiet
 parser=argparse.ArgumentParser();parser.add_argument('--binary',type=Path,required=True);parser.add_argument('--newlines',type=int,default=3900);args=parser.parse_args()
 with tempfile.TemporaryDirectory(prefix='neokit-event-boundaries-') as temporary:

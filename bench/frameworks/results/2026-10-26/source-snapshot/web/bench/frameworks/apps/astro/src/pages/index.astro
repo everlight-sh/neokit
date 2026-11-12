@@ -1,8 +1,0 @@
----
-import Document from "../components/Document.astro";
-import { data } from "./../../../../shared/model.js";
-const isStatic=process.env.BENCH_MODE==="static";
-if (!isStatic) Astro.response.headers.set("Cache-Control","no-store");
-const value=data(isStatic ? {} : Astro.url.searchParams,3,isStatic ? 0 : Date.now());
----
-<Document value={value}></Document>

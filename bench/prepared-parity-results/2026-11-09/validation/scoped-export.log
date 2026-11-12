@@ -1,8 +1,0 @@
-Bundled 5 modules in 25ms
-
-  client-5fcz8tmt.js  5.61 KB  (entry point)
-
-neoc: /Users/marcoschwartz/Documents/code/neokit/build/prepared-parity-scoped/export-build/render  graph 355e3f40e53fea6c  obligations 122/136 proven, 14 runtime checks, 4 parallel regions, 0 vectorised sums, 0 calls folded, 8 inlined, build miss
-neoc: native libraries hit: 838 prechecked obligations, 148 embedded runtime checks
-Exported 3 pages to /Users/marcoschwartz/Documents/code/neokit/build/prepared-parity-scoped/export; local widgets work without a server.
-Server-only routes omitted: /api/events, /api/export-customers, /api/metrics

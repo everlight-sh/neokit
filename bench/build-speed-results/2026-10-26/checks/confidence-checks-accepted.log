@@ -1,3 +1,0 @@
-PASS checked integer arithmetic, explicit wrapping, division, reduction, SIMD masks, folding and float-cast boundaries
-PASS 80 generated programs × 5 inputs × 2 optimization modes against an independent evaluator
-PASS 2000 deterministic malformed-source parser fuzz inputs without internal crashes

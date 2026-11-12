@@ -1,7 +1,0 @@
-Bundled 5 modules in 28ms
-
-  client-5fcz8tmt.js  5.61 KB  (entry point)
-
-neoc: /Users/marcoschwartz/Documents/code/neokit/build/prepared-parity-final/saas/server  graph 2b519c722955d87b  obligations 812/979 proven, 167 runtime checks, 23 parallel regions, 0 vectorised sums, 0 calls folded, 8 inlined, build miss
-Built /Users/marcoschwartz/Documents/code/neokit/build/prepared-parity-final/saas/server
-Routes: 3; browser JS: 5639 bytes across split modules

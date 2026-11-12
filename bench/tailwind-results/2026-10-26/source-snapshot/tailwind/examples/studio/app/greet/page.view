@@ -1,2 +1,0 @@
-@props(title: text, name: text, stamp: int)
-<div class="greeting-response"><span class="result-label">AXON SAYS</span><p class="server-greeting">Hello, {{ name }}<span class="green-period">.</span></p><small>Fresh HTML from the native server · <span data-server-stamp>{{ stamp }}</span></small><a class="greeting-back" href="/">← Back to the workbench</a></div>

@@ -35,13 +35,13 @@ All companies, publication authors, customer accounts and financial data are
 fictional. Meridian is a public read-only demo; use the separate authenticated
 `dashboard` example for signed sessions, CSRF and persistent CRUD.
 
-[Measured performance and actual-browser checks](../bench/showcase-results/2026-11-08/REPORT.md)
-record release builds, response timing, throughput, sampled process resources
-and the limits of local measurements. Reproduce with:
+Measured performance and actual-browser checks of these examples (release
+builds, response timing, throughput, sampled process resources and the limits
+of local measurements) are in the separate `neokit-bench` repository. Check the
+showcases with:
 
 ```sh
 env PYTHONPATH=. python3 tests/showcase_smoke.py
-python3 bench/showcases.py --out bench/showcase-results/local
 ```
 
 Reusable foundations live below the apps: Neo's `str_concat_parts` and

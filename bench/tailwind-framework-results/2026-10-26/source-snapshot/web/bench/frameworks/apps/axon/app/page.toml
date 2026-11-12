@@ -1,4 +1,0 @@
-loader="load_home"
-mode="ssr"
-client=false
-export=true

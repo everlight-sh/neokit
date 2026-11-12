@@ -1,9 +1,0 @@
-database-and-network-streams 1 100000.1 fast req/s 8.18 p99 ms 5.8 MiB
-database-and-network-streams 2 141697.2 fast req/s 4.14 p99 ms 7.3 MiB
-database-and-network-streams 0 135707.3 fast req/s 3.33 p99 ms 7.2 MiB
-idle 0 120926.7 fast req/s 0.453 p99 ms 5.4 MiB
-network-waits 2 113098.9 fast req/s 1.5 p99 ms 6.8 MiB
-idle 2 114808.6 fast req/s 0.568 p99 ms 4.8 MiB
-network-waits 0 128277.8 fast req/s 0.483 p99 ms 6.5 MiB
-idle 1 93407.5 fast req/s 24.9 p99 ms 4.0 MiB
-network-waits 1 112941.1 fast req/s 0.386 p99 ms 7.1 MiB

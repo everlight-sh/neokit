@@ -1,6 +1,0 @@
-import "../../../../../src/lib.ax"
-
-type NoteProps = { title: Arr u8 _, slug: Arr u8 _, summary: Arr u8 _ }
-fn note_load(request: WebRequest) -> NoteProps
-  = NoteProps { title=if str_equal(request.param,"native") then "Start with the HTML" else if str_equal(request.param,"static") then "Ship a folder" else if str_equal(request.param,"islands") then "A little JavaScript" else concat("Field note: ",request.param),slug=request.param,
-      summary=if str_equal(request.param,"native") then "The first response is a complete document. Useful content arrives before any browser code runs." else if str_equal(request.param,"static") then "Render the site once, keep the assets, and serve it anywhere. Interactive browser modules work in the exported site too." else "Keep state close to the part of the page that needs it. Load a small module, attach behavior, and leave the rest as HTML." }

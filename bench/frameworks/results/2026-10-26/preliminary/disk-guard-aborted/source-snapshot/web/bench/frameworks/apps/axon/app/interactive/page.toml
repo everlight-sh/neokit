@@ -1,4 +1,0 @@
-loader="load_interactive"
-mode="ssr"
-client=true
-export=true

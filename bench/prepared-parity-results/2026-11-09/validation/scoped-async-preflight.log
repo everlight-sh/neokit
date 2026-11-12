@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/marcoschwartz/Documents/code/neokit/tests/async_rendering.py", line 107, in <module>
-    if __name__=='__main__':main()
-                            ~~~~^^
-  File "/Users/marcoschwartz/Documents/code/neokit/tests/async_rendering.py", line 64, in main
-    assert seen['shell']<.3 and seen['network']<seen['database']<seen['slow'] and seen['error']<seen['slow'],seen
-                                                ~~~~^^^^^^^^^^^^
-KeyError: 'database'

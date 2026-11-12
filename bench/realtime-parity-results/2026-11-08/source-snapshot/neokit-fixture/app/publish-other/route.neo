@@ -1,2 +1,0 @@
-import "../../../../src/realtime.neo"
-effect fn publish_other(request:WebRequest)->WebResponse=let sent=web_publish(web_channel("other"),"message","{}") in web_json("{}")

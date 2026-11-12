@@ -1,8 +1,0 @@
-Bundled 6 modules in 4ms
-
-  client-ex1kjpcc.js  15.24 KB  (entry point)
-
-neoc: /private/var/folders/r2/k6jy4ktn58q06gk460b7ybqm0000gn/T/neokit-consumer-tmd4udna/output/render  graph e01a354a188d3ed3  obligations 287/326 proven, 39 runtime checks, 5 parallel regions, 0 vectorised sums, 0 calls folded, 1 inlined, build miss
-neoc: /private/var/folders/r2/k6jy4ktn58q06gk460b7ybqm0000gn/T/neokit-consumer-tmd4udna/output/server  graph 80ffa09f1ad40f04  obligations 0/3 proven, 3 runtime checks, 0 parallel regions, 0 vectorised sums, 0 calls folded, 1 inlined, build miss
-neoc: native libraries hit: 326 prechecked obligations, 39 embedded runtime checks
-PASS isolated consumer: separate app/output, custom typed Neo loader, escaped attributes/text, bool condition, integer prop, default client entry and native SSR/static renderer

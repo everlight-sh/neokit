@@ -41,5 +41,5 @@ mounts about 15–22 rows in its 520px viewport. It keeps a deliberately expensi
 `render=full` diagnostic mode and a no-JavaScript full-render link. Static export
 uses the same renderer and model behavior.
 
-[Actual-browser before/after results](../bench/browser-results/2026-11-07-windowed/REPORT.md)
+Actual-browser before/after results in the `neokit-bench` repository
 separate the bounded-window workload from the saved unvirtualized reference.

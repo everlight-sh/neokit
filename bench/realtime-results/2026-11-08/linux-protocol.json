@@ -1,6 +1,0 @@
-{
-  "heartbeat_seconds": 15.179135626000061,
-  "shutdown_seconds": 0.2844417539999995,
-  "single_worker": "PASS auth/HEAD/methods, matching subscribers, replay, reset, UTF-8, heartbeat, bounds, slow readers, cleanup, shutdown",
-  "two_workers": "PASS same epoch, ID and payload across forked workers"
-}

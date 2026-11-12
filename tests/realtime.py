@@ -1,7 +1,7 @@
 """Independent HTTP/SSE peer: replay, auth, heartbeats, bounds and shutdown."""
 import argparse,concurrent.futures,http.client,json,os,signal,socket,subprocess,tempfile,time
 from pathlib import Path
-from bench.parity_performance import server,port
+from tests.support import server,port
 ROOT=Path(__file__).resolve().parents[1]
 
 def request(number,path,method='GET',body=None,headers=None):

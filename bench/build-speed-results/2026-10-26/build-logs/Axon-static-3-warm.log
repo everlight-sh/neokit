@@ -1,9 +1,0 @@
-Bundled 3 modules in 2ms
-
-  client-qnxetx3b.js  4.93 KB    (entry point)
-  chunk-mtb2hxg4.js   268 bytes  (chunk)
-  chunk-an9wxp5m.js   379 bytes  (chunk)
-
-axonc: /tmp/axon-astro-builds-isrz3amy/Axon-static/render  graph da3c2a3b6f464d12  obligations 8/9 proven, 1 runtime checks, 1 parallel regions, 2 vectorised sums, 0 calls folded, 0 inlined, build hit
-axonc: native libraries hit: 197 prechecked obligations, 18 embedded runtime checks
-Exported 3 pages to /tmp/axon-astro-builds-isrz3amy/Axon-static-export; local widgets work without a server.

@@ -7,11 +7,11 @@ io_uring and with epoll: pipelined responses (large and small mixed) arrive
 whole and in order to a slow reader with a tiny receive buffer, so sends are
 cut short; Connection: close and HTTP/1.0 responses arrive whole before the
 close; 32 concurrent connections each fetch large pages. Every body is checked
-by bench/frameworks/model.py.
+by tests/catalog_oracle.py.
 
   python3 tests/large_responses.py build/catalog/server
 
-where build/catalog is ./neokit build --app bench/frameworks/apps/axon --out build/catalog.
+where build/catalog is ./neokit build --app tests/catalog_fixture --out build/catalog.
 Each backend gets a fresh port: a server restarted on a port an io_uring
 server has just left can see connections reset while the old ring tears down.
 """
@@ -24,8 +24,8 @@ import threading
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "bench" / "frameworks"))
-from model import validate  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from tests.catalog_oracle import validate  # noqa: E402
 
 
 def free_port():
