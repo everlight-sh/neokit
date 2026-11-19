@@ -1,7 +1,8 @@
 # The native `neokit` CLI
 
 `neokit` is one native executable built from `cli/*.neo` with Neo. It needs
-Neo 0.2.7 or newer (`fs_mkdir_mode` in std:fs), Bun and Clang/LLVM. The code
+Neo 0.2.10 or newer (`fs_mkdir_mode` in std:fs, SIGINT in `process_signal`),
+Bun and Clang/LLVM. The code
 uses only `std:` modules, never `unsafe` or neo-libs packages.
 
 ## Modules
@@ -68,14 +69,14 @@ without the launcher, the executable exits 1 asking for `NEOKIT_ROOT`.
   the directory of `neo` on PATH, and fails with "Set NEO_HOME to an
   installed native Neo toolchain; checked PATH". Builds run `NEO_HOME/neo`
   with `NEO_HOME` and `NEO_ROOT` set and `NEOC` removed.
-- Signals. std:signals' monitor blocks SIGINT and SIGTERM, and children
-  started while it is open inherit the blocked mask, so interruptible
-  children start before it opens. `serve` runs the server as a child in
-  neokit's process group, passes SIGINT or SIGTERM on as SIGTERM (unless the
-  server ends within 250 ms) and exits with the server's status, 128+N after
-  signal N. `dev` keeps the monitor open while it watches and rebuilds; a
-  reload or a signal stops the server with SIGTERM, then SIGKILL after 2 s,
-  and a signal then exits 0 (SIGINT) or 143 (SIGTERM). `test`, `revalidate`
+- Signals. std:signals' monitor blocks SIGINT and SIGTERM; children started
+  while it is open start with both unblocked (Neo 0.2.8). `serve` runs the
+  server as a child in neokit's process group, passes SIGINT or SIGTERM on as
+  the same signal (unless the server ends within 250 ms) and exits with the
+  server's status, 128+N after signal N. `dev` keeps the monitor open while
+  it watches and rebuilds; a reload or a signal stops the server with
+  SIGTERM, then SIGKILL after 2 s, and a signal then exits 0 (SIGINT) or 143
+  (SIGTERM); a rebuild that a signal cut short is not reported. `test`, `revalidate`
   and `migrate` give their program 250 ms after SIGINT, then SIGKILL, and
   exit 0. Builds, `init`, `release`, `prepare` and `doctor` take a signal's
   default action. The header of `main.neo` has the details.
@@ -96,6 +97,9 @@ without the launcher, the executable exits 1 asking for `NEOKIT_ROOT`.
   and compare its output with `golden/`. The expectations were recorded
   from the Python reference (last present at commit 4757083) and are now
   fixed; change one only with the behaviour it records, and say why.
+  The release and scaffold drivers pass release.neo the Neo version their
+  stand-in archives were made with (0.2.6), not `rel_neo_version()`, so a
+  Neo upgrade changes only the `--neo-archive` help text in the args golden.
   `tests/cli_golden/build/driver.neo` runs build.neo's entry points
   directly for debugging; no manifest runs it.
 - The launcher: `sh tests/tools/launcher_test.sh [SHELL [full]]` from the

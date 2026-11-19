@@ -11,7 +11,7 @@
 # /bin/dash and /bin/bash (for `bash --posix` or busybox sh, a script that
 # execs them with its arguments). "full" also builds the real cli/main.neo
 # through the launcher and times its cache hit. NEO_ARCHIVE, when set, names
-# Neo's multi-platform release archive (neo-0.2.6.tar.gz) for the SDK
+# Neo's multi-platform release archive (neo-0.2.10.tar.gz) for the SDK
 # checks. The toolchain is copied once (about its size in
 # build/launcher-test, which is left for inspection). Prints one line per
 # check; exits 1 when one fails.
@@ -22,7 +22,7 @@ REPO=$(pwd -P)
 STUBS=$REPO/tests/tools/launcher
 RUN=${1:-/bin/sh}
 FULL=${2:-}
-FEAT=$(cd "$NEO_HOME" && pwd -P)
+TOOLCHAIN=$(cd "$NEO_HOME" && pwd -P)
 ARCHIVE=${NEO_ARCHIVE:-}
 T=$REPO/build/launcher-test
 FW=$T/sdk/framework
@@ -61,10 +61,10 @@ cp "$REPO/neokit" "$FW/neokit"
 chmod 755 "$FW/neokit"
 cp "$REPO/web" "$FW/web"
 cp "$STUBS/stub_main.neo" "$FW/cli/main.neo"
-wrapper "$T/tcA" "$FEAT"
-wrapper "$T/tcB" "$FEAT"
-wrapper "$T/tcD" "$FEAT"
-cp -a "$FEAT" "$T/tcC"
+wrapper "$T/tcA" "$TOOLCHAIN"
+wrapper "$T/tcB" "$TOOLCHAIN"
+wrapper "$T/tcD" "$TOOLCHAIN"
+cp -a "$TOOLCHAIN" "$T/tcC"
 cd "$T/work"
 export XDG_CACHE_HOME="$T/cache"
 export NEO_HOME="$T/tcA"
@@ -233,7 +233,7 @@ fi
 
 # ---- the real command line
 if [ -n "$FULL" ]; then
-  export NEO_HOME="$FEAT" XDG_CACHE_HOME="$T/cache-full"
+  export NEO_HOME="$TOOLCHAIN" XDG_CACHE_HOME="$T/cache-full"
   cp "$REPO/cli/main.neo" "$FW/cli/main.neo"
   started=$(now); out=$(launch -h 2>"$T/err"); st=$?; took=$(( ($(now)-started)/1000000 ))
   exe=$(ls -d "$XDG_CACHE_HOME"/neokit/cli/*/neokit 2>/dev/null)

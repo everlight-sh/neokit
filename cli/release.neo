@@ -4,7 +4,8 @@
 ; multi-platform Neo toolchain into a new directory:
 ;
 ;   framework/      the checkout's sources (rel_source_dirs, filtered)
-;   neo/            Neo rel_neo_version(), with every rel_neo_binaries() compiler
+;   neo/            the expected Neo release (neo_version), with every
+;                   rel_neo_binaries() compiler
 ;   neo-libs/       the locked dependencies of neo.lock, with their licenses
 ;   install.sh      deploy/install.sh (plain sh, no NeoKit code)
 ;   README.md       docs/alpha-release.md
@@ -49,9 +50,13 @@ import "pyjson.neo"
 
 ; ---------------------------------------------------------------- constants
 
-; The Neo release the SDK bundles, its compilers and the archive help text.
-; This is the only place NeoKit names the Neo version it ships with.
-fn rel_neo_version() -> Arr u8 _ = "0.2.6"
+; The Neo release the SDK bundles and its compilers. This is the only place
+; NeoKit names the Neo version it ships with. The functions that unpack or
+; check a Neo bundle take the expected version as their last parameter,
+; neo_version: the CLI's release and init commands pass this one (and the
+; --neo-archive help text names it), while the golden tests pass the
+; version their fixtures were made with.
+fn rel_neo_version() -> Arr u8 _ = "0.2.10"
 fn rel_neo_binaries() -> Arr Arr u8 _ _ = push(push(push(text_words(),"darwin-arm64"),"linux-arm64"),"linux-x86_64")
 
 ; The framework's top-level files, copied as they are.
@@ -206,19 +211,20 @@ fn rel_tar_payload(borrow archive:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
        if decoded.ok then rel_ok(decoded.value) else rel_err(concat("Neo archive is not a valid gzip file: ",decoded.error.message)))
     else rel_ok(archive)
 ; The check on one member name: relative, without "..", inside
-; neo-VERSION/. Returns the path below neo-VERSION ("" for the top), or ok
+; neo-NEO_VERSION/. Returns the path below it ("" for the top), or ok
 ; false.
 type RelMember = { ok:bool, below:Arr u8 _ }
-fn rel_member(borrow name:Arr u8 _) -> RelMember
+fn rel_member(borrow name:Arr u8 _, borrow neo_version:Arr u8 _) -> RelMember
   = let parts=host_parts(name) in
-    if host_is_absolute(name) || text_member(parts,"..") || len(parts)==0 || !text_equal(text_word(parts,0),concat("neo-",rel_neo_version()))
+    if host_is_absolute(name) || text_member(parts,"..") || len(parts)==0 || !text_equal(text_word(parts,0),concat("neo-",neo_version))
     then RelMember { ok=false, below=text_empty() }
     else RelMember { ok=true, below=text_join(text_skip_words(parts,1),"/") }
 
 ; ---------------------------------------------------------------- effects
 
-private effect(fs,process) fn rel_extract(borrow tar:Arr u8 _, borrow entry:RelTarEntry, borrow destination:Arr u8 _) -> Result<i64,Arr u8 _>
-  = let member=rel_member(entry.name) in
+private effect(fs,process) fn rel_extract(borrow tar:Arr u8 _, borrow entry:RelTarEntry, borrow destination:Arr u8 _,
+    borrow neo_version:Arr u8 _) -> Result<i64,Arr u8 _>
+  = let member=rel_member(entry.name,neo_version) in
     if !member.ok then rel_fail(concat("Unexpected compiler archive entry: ",entry.name)) else
     let target=if len(member.below)==0 then destination else host_join(destination,member.below) in
     if rel_tar_is_dir(entry) then host_mkdir(target,true,true)
@@ -227,9 +233,10 @@ private effect(fs,process) fn rel_extract(borrow tar:Arr u8 _, borrow entry:RelT
        let written=host_write_mode(target,text_slice(tar,entry.offset,entry.offset+entry.size),bit_and(entry.mode,493))? in rel_done(0))
     else rel_fail(concat("Unexpected compiler archive entry type: ",entry.name))
 ; unpack_neo: checks the archive's SHA-256 against checksum
-; ("" for None), then extracts every member below neo-VERSION/ into
+; ("" for None), then extracts every member below neo-NEO_VERSION/ into
 ; destination.
-effect(fs,process) fn rel_unpack_neo(borrow archive:Arr u8 _, borrow checksum:Arr u8 _, borrow destination:Arr u8 _) -> Result<i64,Arr u8 _>
+effect(fs,process) fn rel_unpack_neo(borrow archive:Arr u8 _, borrow checksum:Arr u8 _, borrow destination:Arr u8 _,
+    borrow neo_version:Arr u8 _) -> Result<i64,Arr u8 _>
   = if len(checksum)==0 then rel_fail("Neo archive SHA-256 does not match --neo-sha256") else
     let data=host_read_bytes(archive)? in
     if !text_equal(host_sha256_hex(data),text_lower(checksum)) then rel_fail("Neo archive SHA-256 does not match --neo-sha256") else
@@ -238,7 +245,7 @@ effect(fs,process) fn rel_unpack_neo(borrow archive:Arr u8 _, borrow checksum:Ar
       Err(message) => rel_fail(concat("Neo archive is not a valid tar archive: ",message)),
       Ok(entries) =>
         let failed=loop (err=text_empty(), i:i64{i>=0}=0) while len(err)==0 && i<len(entries)
-          next (match rel_extract(tar,entries[i],destination) { Ok(done) => text_empty(), Err(message) => message }, i+1) yield err in
+          next (match rel_extract(tar,entries[i],destination,neo_version) { Ok(done) => text_empty(), Err(message) => message }, i+1) yield err in
         if len(failed)>0 then rel_fail(failed) else rel_done(len(entries))
     }
 
@@ -357,17 +364,20 @@ fn rel_sums_text(borrow files:Arr RelFile _) -> Result<Arr u8 _,Arr u8 _>
 ; An assembled SDK: where it is and what its manifest says.
 type RelSdk = { path:Arr u8 _, version:Arr u8 _, neo_version:Arr u8 _, manifest:Arr u8 _ }
 
-private effect(fs,process) fn rel_install_neo(borrow root:Arr u8 _, borrow neo:Arr u8 _, borrow archive:Arr u8 _, borrow checksum:Arr u8 _) -> Result<i64,Arr u8 _>
-  = if len(archive)>0 then rel_unpack_neo(archive,checksum,neo) else
+private effect(fs,process) fn rel_install_neo(borrow root:Arr u8 _, borrow neo:Arr u8 _, borrow archive:Arr u8 _, borrow checksum:Arr u8 _,
+    borrow neo_version:Arr u8 _) -> Result<i64,Arr u8 _>
+  = if len(archive)>0 then rel_unpack_neo(archive,checksum,neo,neo_version) else
     let installed=host_join(host_parent(root),"neo") in
     if !host_is_file(host_join(installed,"bin/neoc-linux-arm64"))
     then rel_fail("Use a released SDK for standalone scaffolding, or build a release with --neo-archive and --neo-sha256")
     else host_copy_tree(installed,neo,push(push(text_words(),".neo-build"),"__pycache__"),false)
-private effect(fs) fn rel_neo_complete(borrow neo:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
+; The stripped neo/VERSION, when it is neo_version and every
+; rel_neo_binaries() compiler is there.
+private effect(fs) fn rel_neo_complete(borrow neo:Arr u8 _, borrow neo_version:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
   = let raw=host_read_text(host_join(neo,"VERSION"))? in let version=text_strip(raw) in
     let binaries=rel_neo_binaries() in
     let all=loop (i=0, ok=true) while ok && i<len(binaries) next (i+1, host_is_file(host_join(neo,concat("bin/neoc-",text_word(binaries,i))))) yield ok in
-    if !text_equal(version,rel_neo_version()) || !all then rel_err(concat("Expected a multi-platform native Neo ",rel_neo_version()," bundle")) else rel_ok(version)
+    if !text_equal(version,neo_version) || !all then rel_err(concat("Expected a multi-platform native Neo ",neo_version," bundle")) else rel_ok(version)
 private effect(fs,process) fn rel_copy_framework(borrow root:Arr u8 _, borrow framework:Arr u8 _) -> Result<i64,Arr u8 _>
   = let names=rel_framework_files() in
     let failed=loop (err=text_empty(), i=0) while len(err)==0 && i<len(names)
@@ -379,13 +389,13 @@ private effect(fs,process) fn rel_copy_framework(borrow root:Arr u8 _, borrow fr
     if len(copied)>0 then rel_fail(copied) else rel_done(0)
 
 private effect(fs,env,process,time) fn rel_assemble_in(borrow temporary:Arr u8 _, borrow destination:Arr u8 _, borrow root:Arr u8 _,
-    borrow environment:Arr Arr u8 _ _, borrow archive:Arr u8 _, borrow checksum:Arr u8 _) -> Result<RelSdk,Arr u8 _>
+    borrow environment:Arr Arr u8 _ _, borrow archive:Arr u8 _, borrow checksum:Arr u8 _, borrow neo_version:Arr u8 _) -> Result<RelSdk,Arr u8 _>
   = let resolved=host_resolve(temporary)? in let stage=host_join(resolved,"sdk") in
     let framework=host_join(stage,"framework") in
     let made=host_mkdir(framework,true,false)? in
     let neo=host_join(stage,"neo") in
-    let installed=rel_install_neo(root,neo,archive,checksum)? in
-    let complete=rel_neo_complete(neo)? in
+    let installed=rel_install_neo(root,neo,archive,checksum,neo_version)? in
+    let complete=rel_neo_complete(neo,neo_version)? in
     let bundled=host_env_remove(host_env_set(host_env_set(environment,"NEO_HOME",neo),"NEO_ROOT",neo),"NEOC") in
     let command=host_join(neo,"neo") in
     let checked=rel_verify(command,root,bundled)? in
@@ -399,9 +409,8 @@ private effect(fs,env,process,time) fn rel_assemble_in(borrow temporary:Arr u8 _
     let package=rel_member_of(config,"package")? in
     let version=rel_text_of(package,"version")? in
     let plain=host_write_text(host_join(stage,"VERSION"),concat(version,"\n"))? in
-    let neo_raw=host_read_text(host_join(stage,"neo/VERSION"))? in let neo_version=text_strip(neo_raw) in
     let files=rel_tree_files(stage)? in
-    let manifest=rel_manifest_text(version,neo_version,files) in
+    let manifest=rel_manifest_text(version,complete,files) in
     let written=host_write_text(host_join(stage,"MANIFEST.json"),manifest)? in
     let sums=rel_sums_text(push(files,RelFile { path="MANIFEST.json", digest=host_sha256_hex(manifest) }))? in
     let summed=host_write_text(host_join(stage,"SHA256SUMS"),sums)? in
@@ -411,24 +420,25 @@ private effect(fs,env,process,time) fn rel_assemble_in(borrow temporary:Arr u8 _
     let placed=match host_rename(stage,destination) { Ok(moved) => rel_done(0), Err(message) => host_copy_tree(stage,destination,text_words(),false) } in
     match placed {
       Err(message) => Err::<RelSdk,Arr u8 _>(message),
-      Ok(done) => Ok::<RelSdk,Arr u8 _>(RelSdk { path=destination, version=version, neo_version=neo_version, manifest=manifest })
+      Ok(done) => Ok::<RelSdk,Arr u8 _>(RelSdk { path=destination, version=version, neo_version=complete, manifest=manifest })
     }
 
 ; assemble(destination, root, environment, neo_archive,
-; neo_sha256): the SDK at destination (which must not exist), built in a
-; temporary directory that is removed afterwards. root is the framework
-; checkout; environment the variables `neo pkg verify` runs with (NEO_HOME
-; and NEO_ROOT point at the bundled Neo, NEOC is dropped). neo_archive ""
-; (None) copies the multi-platform Neo installed beside root (root/../neo)
-; instead of unpacking an archive, as standalone scaffolding from an
-; installed SDK does; neo_sha256 "" is None.
+; neo_sha256, neo_version): the SDK at destination (which must not exist),
+; built in a temporary directory that is removed afterwards. root is the
+; framework checkout; environment the variables `neo pkg verify` runs with
+; (NEO_HOME and NEO_ROOT point at the bundled Neo, NEOC is dropped).
+; neo_archive "" (None) copies the multi-platform Neo installed beside root
+; (root/../neo) instead of unpacking an archive, as standalone scaffolding
+; from an installed SDK does; neo_sha256 "" is None. The archive's entries
+; must lie below neo-NEO_VERSION/, and the Neo must be neo_version.
 effect(fs,env,process,time) fn rel_assemble(borrow destination:Arr u8 _, borrow root:Arr u8 _, borrow environment:Arr Arr u8 _ _,
-    borrow neo_archive:Arr u8 _, borrow neo_sha256:Arr u8 _) -> Result<RelSdk,Arr u8 _>
+    borrow neo_archive:Arr u8 _, borrow neo_sha256:Arr u8 _, borrow neo_version:Arr u8 _) -> Result<RelSdk,Arr u8 _>
   = let source=host_resolve(root)? in
     let target=host_resolve(destination)? in
     if host_exists(target) then Err::<RelSdk,Arr u8 _>(concat("SDK destination already exists: ",target)) else
     let temporary=host_mkdtemp("neokit-sdk-",text_empty())? in
-    let result=rel_assemble_in(temporary,target,source,environment,neo_archive,neo_sha256) in
+    let result=rel_assemble_in(temporary,target,source,environment,neo_archive,neo_sha256,neo_version) in
     let removed=host_remove_tree(temporary) in
     result
 
@@ -471,9 +481,9 @@ fn rel_bundle_json(borrow bundle:RelBundle) -> Arr u8 _
       push(push(push(arr(i in 0..0) json_value_null(),json_value_string(bundle.archive).value),json_value_string(bundle.version).value),json_value_string(bundle.sha256).value)).value)
 
 private effect(fs,env,process,time) fn rel_bundle_in(borrow temporary:Arr u8 _, borrow output:Arr u8 _, borrow root:Arr u8 _,
-    borrow environment:Arr Arr u8 _ _, borrow archive:Arr u8 _, borrow checksum:Arr u8 _, epoch:i64) -> Result<RelBundle,Arr u8 _>
+    borrow environment:Arr Arr u8 _ _, borrow archive:Arr u8 _, borrow checksum:Arr u8 _, epoch:i64, borrow neo_version:Arr u8 _) -> Result<RelBundle,Arr u8 _>
   = let stage=host_join(temporary,"sdk") in
-    let sdk=rel_assemble(stage,root,environment,archive,checksum)? in
+    let sdk=rel_assemble(stage,root,environment,archive,checksum,neo_version)? in
     let tar=rel_tar_tree(stage,sdk.version,epoch)? in
     let packed=rel_gzip(tar,epoch)? in
     let staged=host_join(temporary,"release.tar.gz") in
@@ -481,15 +491,15 @@ private effect(fs,env,process,time) fn rel_bundle_in(borrow temporary:Arr u8 _, 
     let moved=host_rename(staged,output)? in
     Ok::<RelBundle,Arr u8 _>(RelBundle { archive=output, version=sdk.version, sha256=host_sha256_hex(packed) })
 
-; bundle(output, root, neo_archive, neo_sha256), reading
-; SOURCE_DATE_EPOCH from environment: assembles the SDK and writes
-; output (a .tar.gz) through a temporary directory beside it.
+; bundle(output, root, neo_archive, neo_sha256, neo_version), reading
+; SOURCE_DATE_EPOCH from environment: assembles the SDK (rel_assemble) and
+; writes output (a .tar.gz) through a temporary directory beside it.
 effect(fs,env,process,time) fn rel_bundle(borrow output:Arr u8 _, borrow root:Arr u8 _, borrow environment:Arr Arr u8 _ _,
-    borrow neo_archive:Arr u8 _, borrow neo_sha256:Arr u8 _) -> Result<RelBundle,Arr u8 _>
+    borrow neo_archive:Arr u8 _, borrow neo_sha256:Arr u8 _, borrow neo_version:Arr u8 _) -> Result<RelBundle,Arr u8 _>
   = let out=host_resolve(output)? in
     let epoch=rel_source_date_epoch(environment)? in
     let made=host_mkdir(host_parent(out),true,true)? in
     let temporary=host_mkdtemp(".neokit-release-",host_parent(out))? in
-    let result=rel_bundle_in(temporary,out,root,environment,neo_archive,neo_sha256,epoch) in
+    let result=rel_bundle_in(temporary,out,root,environment,neo_archive,neo_sha256,epoch,neo_version) in
     let removed=host_remove_tree(temporary) in
     result

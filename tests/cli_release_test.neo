@@ -25,10 +25,10 @@ fn files3(a:RelFile, b:RelFile, c:RelFile) -> Arr RelFile _ = push(push(push(arr
 fn epoch(borrow value:Arr u8 _) -> Arr u8 _
   = match rel_source_date_epoch(push(push(text_words(),"PATH=/bin"),concat("SOURCE_DATE_EPOCH=",value))) { Ok(found) => text_int(found), Err(message) => message }
 fn parsed(borrow text:Arr u8 _) -> Arr u8 _ = let r=text_parse_int(text) in if r.ok then text_int(r.value) else text_int_error(text)
-fn below(borrow name:Arr u8 _) -> Arr u8 _ = let m=rel_member(name) in if m.ok then concat("ok ",m.below) else "refused"
+fn below(borrow version:Arr u8 _, borrow name:Arr u8 _) -> Arr u8 _ = let m=rel_member(name,version) in if m.ok then concat("ok ",m.below) else "refused"
 
 fn test_constants() -> bool
-  = same(rel_neo_version(),"0.2.6") && same(text_join(rel_neo_binaries(),","),"darwin-arm64,linux-arm64,linux-x86_64")
+  = same(rel_neo_version(),"0.2.10") && same(text_join(rel_neo_binaries(),","),"darwin-arm64,linux-arm64,linux-x86_64")
     && same(text_join(rel_framework_files()," "),"neokit web neo.toml neo.lock package.json bun.lock Dockerfile .dockerignore README.md AGENTS.md LICENSE SECURITY.md CHANGELOG.md")
     && same(text_join(rel_source_dirs()," "),"cli client src examples docs deploy tools tests")
     && same(text_join(rel_source_suffixes()," "),".ax .neo .ts .js .view .toml .css .svg .json .lock .md .sh .yaml .png .jpg .webp")
@@ -86,11 +86,15 @@ fn test_gzip_header_is_gzipfile() -> bool
     && (match rel_tar_payload("plain") { Ok(tar) => same(tar,"plain"), Err(message) => false })
     && (match rel_tar_payload("\x1f\x8b\x08\x00garbage") { Ok(tar) => false, Err(message) => text_starts(message,"Neo archive is not a valid gzip file: ") })
 
+; The top directory is neo-VERSION for the version asked for, whatever
+; rel_neo_version() is.
 fn test_member_names_like_unpack_neo() -> bool
-  = same(below("neo-0.2.6"),"ok ") && same(below("neo-0.2.6/"),"ok ") && same(below("neo-0.2.6/bin/neoc"),"ok bin/neoc")
-    && same(below("./neo-0.2.6//bin/./x"),"ok bin/x")
-    && same(below("/neo-0.2.6/x"),"refused") && same(below("neo-0.2.6/../x"),"refused") && same(below("neo-0.2.6/a/.."),"refused")
-    && same(below("."),"refused") && same(below(""),"refused") && same(below("neo-0.2.4/x"),"refused") && same(below("neo-0.2.60/x"),"refused")
+  = same(below("0.2.7","neo-0.2.7"),"ok ") && same(below("0.2.7","neo-0.2.7/"),"ok ") && same(below("0.2.7","neo-0.2.7/bin/neoc"),"ok bin/neoc")
+    && same(below("0.2.7","./neo-0.2.7//bin/./x"),"ok bin/x")
+    && same(below("0.2.7","/neo-0.2.7/x"),"refused") && same(below("0.2.7","neo-0.2.7/../x"),"refused") && same(below("0.2.7","neo-0.2.7/a/.."),"refused")
+    && same(below("0.2.7","."),"refused") && same(below("0.2.7",""),"refused") && same(below("0.2.7","neo-0.2.4/x"),"refused") && same(below("0.2.7","neo-0.2.70/x"),"refused")
+    && same(below("0.2.7","neo-0.2.6/x"),"refused") && same(below("0.2.6","neo-0.2.6/bin/neoc"),"ok bin/neoc") && same(below("0.2.6","neo-0.2.7/x"),"refused")
+    && same(below("1.0.0","neo-1.0.0/VERSION"),"ok VERSION")
 
 fn test_source_names_like_copy_sources() -> bool
   = rel_source_wanted(".env.example") && !rel_source_wanted(".env") && !rel_source_wanted(".hidden.neo")

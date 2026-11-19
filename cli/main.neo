@@ -10,8 +10,9 @@
 ; exits 0; SIGINT ends quietly with 0 where a step is interruptible.
 ;
 ; Commands (cmd_command):
-;   init        scf_init with the compiler's environment, then "Created ..."
-;   release     rel_bundle, printed as json.dumps(indent=2)
+;   init        scf_init with the compiler's environment and rel_neo_version(),
+;               then "Created ..."
+;   release     rel_bundle for rel_neo_version(), printed as json.dumps(indent=2)
 ;   revalidate  gen_build (server), then the revalidator binary
 ;   password    two hidden prompts, then tools/password.neo's binary
 ;   migrate     gen_build_migration, then the migration binary
@@ -26,21 +27,19 @@
 ;   serve, dev  gen_build (server), then the server (below)
 ;
 ; Signals. std:signals' shutdown_signal() blocks SIGINT and SIGTERM and
-; reads them from a descriptor. A child started while such a monitor is open
-; starts with both signals blocked (Neo's rt_spawn_exec, unlike rt_fork,
-; does not restore the mask), so children that must stay interruptible are
-; started before the monitor is opened, or with none open.
+; reads them from a descriptor. Since Neo 0.2.8 a child started while such a
+; monitor is open starts with both unblocked (the rest of the mask is
+; inherited), so every child stays interruptible.
 ; - serve: Neo has no exec, so the server is a child in neokit's process
 ;   group (a signal to the group reaches both); SIGINT or SIGTERM sent to
-;   neokit is passed on as SIGTERM (std:process sends only SIGTERM and
-;   SIGKILL) unless the server ends within 250 ms (a signal sent to the
-;   whole group reaches it directly, and a second one could cut its
-;   shutdown short), and neokit exits with the server's status, 128+N when
-;   signal N ended it, as an exec'd server would.
+;   neokit is passed on as the same signal unless the server ends within
+;   250 ms (a signal sent to the whole group reaches it directly, and a
+;   second one could cut its shutdown short), and neokit exits with the
+;   server's status, 128+N when signal N ended it, as an exec'd server would.
 ; - dev: each server lifetime is one stretch: the server starts, then the
-;   monitor opens and stays open while watching and rebuilding (build tools
-;   then start with the two signals blocked, so an interrupt that arrives
-;   during a rebuild takes effect when that build step ends). A reload stops
+;   monitor opens and stays open while watching and rebuilding (a terminal's
+;   ^C reaches the build tools too; a rebuild that fails with a signal
+;   pending ends neokit without reporting the failure). A reload stops
 ;   the server (SIGTERM, 2 s, SIGKILL: cmd_halt), takes a pending signal
 ;   and closes the monitor before the next server starts. SIGINT or SIGTERM
 ;   stops the server the same way and exits 0 or 143.
@@ -135,11 +134,11 @@ fn cmd_json_without(borrow object:Json, borrow key:Arr u8 _) -> Json
 
 private effect(fs,env,process,time) fn cmd_init(borrow root:Arr u8 _, borrow a:CmdArgs) -> Result<i64,Arr u8 _>
   = let environment=gen_compiler_env(root)? in
-    let target=scf_init(a.path,root,environment,gen_compiler_command(environment),a.standalone)? in
+    let target=scf_init(a.path,root,environment,gen_compiler_command(environment),a.standalone,rel_neo_version())? in
     let printed=cmd_say(scf_created(target,a.standalone)) in cmd_done(0)
 
 private effect(fs,env,process,time) fn cmd_release(borrow root:Arr u8 _, borrow a:CmdArgs) -> Result<i64,Arr u8 _>
-  = let bundle=rel_bundle(a.out,root,env_list(),if a.has_neo_archive then a.neo_archive else text_empty(),a.neo_sha256)? in
+  = let bundle=rel_bundle(a.out,root,env_list(),if a.has_neo_archive then a.neo_archive else text_empty(),a.neo_sha256,rel_neo_version())? in
     let printed=cmd_say(rel_bundle_json(bundle)) in cmd_done(0)
 
 private effect(fs,env,process,time) fn cmd_prepare(borrow root:Arr u8 _) -> Result<i64,Arr u8 _>
@@ -410,17 +409,19 @@ private effect(fs,env,process) fn cmd_export(borrow root:Arr u8 _, borrow app:Ar
 ; ---------------------------------------------------------------- serve
 
 ; `neokit serve`: the server as a child sharing neokit's streams and process
-; group. SIGINT or SIGTERM to neokit reaches it as SIGTERM; neokit ends with
-; its status.
+; group. SIGINT or SIGTERM to neokit reaches it as the same signal; neokit
+; ends with its status.
 ;
 ; A signal sent to the whole group (a terminal's ^C, Supervised.stop) has
-; reached the server as well, and a second SIGTERM arriving once its
-; shutdown handler is done would end it by the signal; so the server gets
-; 250 ms to end on its own before neokit passes the signal on.
-private effect(process,time) fn cmd_pass_on(server:Process) -> IntResult
+; reached the server as well, and a second one arriving once its shutdown
+; handler is done would end it by the signal; so the server gets 250 ms to
+; end on its own before neokit passes the signal on. A Neo before 0.2.8
+; refuses to send SIGINT; the server then gets SIGTERM.
+private effect(process,time) fn cmd_pass_on(server:Process, signal:i64) -> IntResult
   = let waited=loop (status=process_status(server), waits=0) while status.ok && status.running && waits<50
       next (let paused=sleep_ms(5) in process_status(server), waits+1) yield status in
-    if waited.ok && waited.running then process_signal(server,15) else int_ok(0)
+    if !(waited.ok && waited.running) then int_ok(0) else
+    let sent=process_signal(server,signal) in if sent.ok then sent else process_signal(server,15)
 private effect(fs,env,process,time) fn cmd_serve(borrow out:Arr u8 _, port:i64) -> Result<i64,Arr u8 _>
   = let printed=cmd_say(concat("Native Neo SSR: http://127.0.0.1:",text_int(port))) in
     using server=process_start_inherit(host_join(out,"server"),text_one(text_int(port)),env_list()) in
@@ -429,7 +430,7 @@ private effect(fs,env,process,time) fn cmd_serve(borrow out:Arr u8 _, port:i64) 
     using monitor=shutdown_signal() in
     let ended=loop (w=HostWatch { status=started, signal=0, waits=0 }) while w.status.ok && w.status.running
       next (let taken=host_signal_taken(monitor) in
-            let sent=if taken!=0 then cmd_pass_on(server) else int_ok(0) in
+            let sent=if taken!=0 then cmd_pass_on(server,taken) else int_ok(0) in
             let paused=if taken!=0 then int_ok(0) else sleep_ms(if w.waits<100 then 5 else 50) in
             HostWatch { status=process_status(server), signal=if taken!=0 then taken else w.signal, waits=w.waits+1 }) yield w in
     ; A signal to the whole group can stop the server before the monitor is
@@ -574,7 +575,11 @@ private effect(fs,env,process,time) fn cmd_dev_tick(borrow dev:CmdDev, server:Pr
     let rebuilt=cmd_dev_rebuild(dev,refresh) in
     let moved=t with { previous=current, reported=t.reported || report } in
     match rebuilt {
-      Err(message) => cmd_dev_failed(dev,moved,message),
+      Err(message) =>
+        ; A terminal's ^C reaches the build tools too: then the signal, not
+        ; the build it cut short, ends neokit.
+        let late=host_signal_taken(monitor) in
+        if late!=0 then moved with { done=true, code=cmd_interrupted(late) } else cmd_dev_failed(dev,moved,message),
       Ok(path) => cmd_dev_built(dev,moved,if refresh then kind else "reload")
     }
 ; One server lifetime: start it (the first time also print the address and

@@ -8,6 +8,17 @@ on:
 permissions:
   contents: read
 
+env:
+  # The released Neo the native jobs install, and the SHA-256 of each platform
+  # bundle as the release's SHA256SUMS lists them. Change them together, here only.
+  NEO_VERSION: '0.2.10'
+  NEO_SHA256SUMS: |
+    a362b4e61b9dfc5a8011449a0e7bc43c89fc90cec112e905474d987b2a5ffa0b  neo-0.2.10-linux-x86_64.tar.gz
+    57ce47c75ccdf360903a3cb2099a8c155ea3354e577c468cb42a99fa5b961aad  neo-0.2.10-linux-arm64.tar.gz
+    d27089d46c8d20a4ba7bfb9adcaf84813b04b457c014e87a18eadbc13c24206a  neo-0.2.10-darwin-arm64.tar.gz
+  # neo.lock pins the neo-libs packages by content; this tag holds those bytes.
+  NEO_LIBS_REF: v0.1.1
+
 jobs:
   unit:
     # Browser runtime unit tests; they need no native Neo toolchain.
@@ -21,3 +32,72 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Browser runtime tests
         run: bun test ./client
+
+  native:
+    # ./neokit test with the released Neo: the CLI's unit and golden tests, the
+    # Bun suites and the native query-builder test. On Linux x86-64 also the
+    # extended suites and the PostgreSQL suites in a private cluster: the image's
+    # PostgreSQL 16 is in /usr/lib/postgresql/16/bin (its service stays
+    # disabled), where tests/tools/postgres.ts looks when initdb is not on PATH,
+    # so NEOKIT_PG_BIN is not needed.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux-x86_64
+            suites: --extended --postgres
+            timeout: 90
+          - runner: ubuntu-24.04-arm
+            platform: linux-arm64
+            suites: ''
+            timeout: 45
+          - runner: macos-15
+            platform: darwin-arm64
+            suites: ''
+            timeout: 45
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: ${{ matrix.timeout }}
+    defaults:
+      run:
+        # neo.toml's path dependencies are ../neo-libs/*, so both repositories
+        # are checked out side by side.
+        working-directory: neokit
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: neokit
+      - uses: actions/checkout@v4
+        with:
+          repository: everlight-sh/neo-libs
+          ref: ${{ env.NEO_LIBS_REF }}
+          path: neo-libs
+      - name: Install Neo
+        env:
+          NEO_PLATFORM: ${{ matrix.platform }}
+        run: |
+          name="neo-$NEO_VERSION-$NEO_PLATFORM.tar.gz"
+          cd "$RUNNER_TEMP"
+          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+            --output "$name" -- "https://github.com/everlight-sh/neo/releases/download/v$NEO_VERSION/$name"
+          printf '%s\n' "$NEO_SHA256SUMS" | awk -v name="$name" '$2 == name' > "$name.sha256"
+          [ -s "$name.sha256" ] || { echo "No SHA-256 for $name in NEO_SHA256SUMS" >&2; exit 1; }
+          if command -v sha256sum > /dev/null 2>&1; then sha256sum -c "$name.sha256"; else shasum -a 256 -c "$name.sha256"; fi
+          tar -xzf "$name"
+          home="$RUNNER_TEMP/neo-$NEO_VERSION"
+          [ "$(cat "$home/VERSION")" = "$NEO_VERSION" ] || { echo "$name does not hold Neo $NEO_VERSION" >&2; exit 1; }
+          [ "$(cat "$home/PLATFORM")" = "$NEO_PLATFORM" ] || { echo "$name is not for $NEO_PLATFORM" >&2; exit 1; }
+          "$home/neo" version
+          echo "NEO_HOME=$home" >> "$GITHUB_ENV"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.13'
+      - name: Install native build tools (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang lld binutils libvips-tools
+      - name: Install libvips (macOS)
+        if: runner.os == 'macOS'
+        run: brew install vips
+      - run: bun install --frozen-lockfile
+      - name: ./neokit test ${{ matrix.suites }}
+        run: ./neokit test ${{ matrix.suites }}

@@ -7,7 +7,9 @@
 ;                                               file count or the error
 ;   driver.neo fixture                          the golden cases (see
 ;                                               release.neo.toml)
-; ARCHIVE "-" means None (the Neo installed beside ROOT). Errors print as
+; ARCHIVE "-" means None (the Neo installed beside ROOT). bundle, assemble
+; and unpack expect the Neo `neokit release` does (rel_neo_version); the
+; fixture cases expect fixture_neo_version(). Errors print as
 ; "error: MESSAGE" on stdout and exit 1, as `neokit` prints them on stderr.
 import "std:io"
 import "std:fs"
@@ -21,17 +23,17 @@ effect fn finish(borrow output:Arr u8 _, failed:bool) -> unit
   = let printed=print_out(output) in if failed then process_exit(1) else noop()
 
 effect fn run_bundle() -> unit
-  = match rel_bundle(arg(2),arg(3),env_list(),none_dash(arg(4)),arg(5)) {
+  = match rel_bundle(arg(2),arg(3),env_list(),none_dash(arg(4)),arg(5),rel_neo_version()) {
       Ok(bundle) => finish(concat(rel_bundle_json(bundle),"\n"),false),
       Err(message) => finish(concat("error: ",message,"\n"),true)
     }
 effect fn run_assemble() -> unit
-  = match rel_assemble(arg(2),arg(3),env_list(),none_dash(arg(4)),arg(5)) {
+  = match rel_assemble(arg(2),arg(3),env_list(),none_dash(arg(4)),arg(5),rel_neo_version()) {
       Ok(sdk) => finish(concat(sdk.version,"\n"),false),
       Err(message) => finish(concat("error: ",message,"\n"),true)
     }
 effect fn run_unpack() -> unit
-  = match rel_unpack_neo(arg(2),arg(3),arg(4)) {
+  = match rel_unpack_neo(arg(2),arg(3),arg(4),rel_neo_version()) {
       Ok(count) => finish(concat(text_int(count)," entries\n"),false),
       Err(message) => finish(concat("error: ",message,"\n"),true)
     }
@@ -46,8 +48,15 @@ effect fn scratch() -> Arr u8 _
 effect fn read_or(borrow path:Arr u8 _) -> Arr u8 _ = match host_read_bytes(path) { Ok(data) => data, Err(message) => concat("error: ",message) }
 effect fn shown(borrow result:Result<i64,Arr u8 _>) -> Arr u8 _ = match result { Ok(count) => concat("ok ",text_int(count)), Err(message) => concat("error: ",message) }
 effect fn archive_sha(borrow name:Arr u8 _) -> Arr u8 _ = host_sha256_hex(read_or(host_join(fixture_dir(),name)))
-; The stand-in Neo archive in fixture/, named after rel_neo_version.
-fn neo_archive_name() -> Arr u8 _ = concat("neo-",rel_neo_version(),".tar.gz")
+; The Neo version the fixtures were made with: fixture/neo-0.2.6.tar.gz and
+; the unpack/ archives hold neo-0.2.6/ entries (with GNU and pax long names
+; among them) and a VERSION of 0.2.6, and golden/fixture.out records them.
+; Their generators are gone, so this stays 0.2.6 whatever Neo NeoKit ships
+; with (rel_neo_version): a Neo upgrade then needs no new fixtures or
+; goldens.
+fn fixture_neo_version() -> Arr u8 _ = "0.2.6"
+; The stand-in Neo archive in fixture/.
+fn neo_archive_name() -> Arr u8 _ = concat("neo-",fixture_neo_version(),".tar.gz")
 
 ; Each member of the SDK archive: mode, size, SHA-256 and name, then the
 ; SHA-256 and size of the whole uncompressed tar.
@@ -61,7 +70,7 @@ fn listing(borrow tar:Arr u8 _) -> Arr u8 _
 effect fn bundle_case(borrow base:Arr u8 _, borrow environment:Arr Arr u8 _ _) -> Arr u8 _
   = let output=host_join(base,"out/neokit.tar.gz") in
     let archive=host_join(fixture_dir(),neo_archive_name()) in
-    match rel_bundle(output,host_join(fixture_dir(),"root"),environment,archive,archive_sha(neo_archive_name())) {
+    match rel_bundle(output,host_join(fixture_dir(),"root"),environment,archive,archive_sha(neo_archive_name()),fixture_neo_version()) {
       Err(message) => concat("bundle error: ",message,"\n"),
       Ok(bundle) =>
         let packed=read_or(output) in
@@ -76,10 +85,10 @@ effect fn bundle_case(borrow base:Arr u8 _, borrow environment:Arr Arr u8 _ _) -
 effect fn assemble_case(borrow base:Arr u8 _, borrow environment:Arr Arr u8 _ _) -> Arr u8 _
   = let sdk=host_join(base,"sdk") in
     let archive=host_join(fixture_dir(),neo_archive_name()) in
-    match rel_assemble(sdk,host_join(fixture_dir(),"root"),environment,archive,archive_sha(neo_archive_name())) {
+    match rel_assemble(sdk,host_join(fixture_dir(),"root"),environment,archive,archive_sha(neo_archive_name()),fixture_neo_version()) {
       Err(message) => concat("assemble error: ",message,"\n"),
       Ok(done) =>
-        let again=match rel_assemble(sdk,host_join(fixture_dir(),"root"),environment,archive,archive_sha(neo_archive_name())) {
+        let again=match rel_assemble(sdk,host_join(fixture_dir(),"root"),environment,archive,archive_sha(neo_archive_name()),fixture_neo_version()) {
           Ok(twice) => "ok", Err(message) => concat("error: ",message) } in
         concat("--- MANIFEST.json\n",read_or(host_join(sdk,"MANIFEST.json")),
           "--- SHA256SUMS\n",read_or(host_join(sdk,"SHA256SUMS")),
@@ -94,7 +103,7 @@ effect fn unpack_cases(borrow base:Arr u8 _) -> Arr u8 _
     loop (out=text_empty(), i=0) while i<len(names)
       next (let name=text_word(names,i) in let archive=host_join(host_join(fixture_dir(),"unpack"),name) in
             let target=host_join(base,concat("unpack-",text_int(i))) in
-            let result=shown(rel_unpack_neo(archive,text_upper(host_sha256_hex(read_or(archive))),target)) in
+            let result=shown(rel_unpack_neo(archive,text_upper(host_sha256_hex(read_or(archive))),target,fixture_neo_version())) in
             let files=if text_starts(result,"ok") then
               loop (o=text_empty(), j=0) while j<len(host_rglob(target,"*"))
                 next (let path=text_word(host_rglob(target,"*"),j) in
@@ -102,8 +111,8 @@ effect fn unpack_cases(borrow base:Arr u8 _) -> Arr u8 _
                         if host_is_dir(path) then "/" else concat(" ",text_int(match host_mode(path) { Ok(mode) => mode, Err(m) => -1 })," ",host_sha256_hex(read_or(path))),"\n"), j+1) yield o
               else text_empty() in
             concat(out,name,": ",text_replace(result,base,"BASE"),"\n",files,
-              name," wrong sum: ",shown(rel_unpack_neo(archive,"00",host_join(base,"never"))),"\n",
-              name," no sum: ",shown(rel_unpack_neo(archive,"",host_join(base,"never"))),"\n"), i+1) yield out
+              name," wrong sum: ",shown(rel_unpack_neo(archive,"00",host_join(base,"never"),fixture_neo_version())),"\n",
+              name," no sum: ",shown(rel_unpack_neo(archive,"",host_join(base,"never"),fixture_neo_version())),"\n"), i+1) yield out
 
 effect fn run_fixture() -> unit
   = let base=scratch() in

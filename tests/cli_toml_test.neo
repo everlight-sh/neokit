@@ -1,6 +1,6 @@
 ; Unit tests for cli/toml.neo, NeoKit's configuration layer over std:toml.
-; std:toml ships with Neo 0.2.6: until then run with the branch build
-; (NEO_HOME=/root/neo-dev/neo-feat on the test box).
+; std:toml shipped in Neo 0.2.6; run them with the released Neo 0.2.10, which
+; NeoKit needs.
 import "std:json"
 import "std:option"
 import "std:result"

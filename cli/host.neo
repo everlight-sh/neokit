@@ -832,9 +832,7 @@ effect(process,time) fn host_reap(child:Process, grace:i64) -> ProcessStatus
     let killed=process_signal(child,9) in
     loop (status=process_status(child)) while status.ok && status.running next (let paused=sleep_ms(2) in process_status(child)) yield status
 ; subprocess.run(argv, env=environment, cwd=cwd) as host_run_inherit, and
-; interruptible as subprocess.run is. The child starts first, so that it gets
-; this process's signal mask (one started while a std:signals monitor is
-; open would start with SIGINT and SIGTERM blocked); then SIGINT and
+; interruptible as subprocess.run is. The child starts, then SIGINT and
 ; SIGTERM are watched until it ends. After SIGINT the child, which a
 ; terminal's Ctrl-C reaches too, gets 250 ms to end (Popen.wait after a
 ; KeyboardInterrupt), then SIGKILL; after SIGTERM it is sent SIGTERM first.

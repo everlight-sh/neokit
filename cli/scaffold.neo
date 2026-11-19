@@ -7,7 +7,9 @@
 ; [NEO_HOME/neo]) are explicit arguments, so this module does not depend
 ; on build.neo.
 ; --standalone first assembles an SDK into vendor/neokit-sdk with
-; rel_assemble, then locks against its framework with its Neo.
+; rel_assemble, then locks against its framework with its Neo; the Neo
+; version that SDK must hold is an argument too (the CLI passes
+; rel_neo_version()).
 import "std:option"
 import "std:result"
 import "std:json"
@@ -62,11 +64,12 @@ private effect(fs) fn scf_check_empty(borrow path:Arr u8 _) -> Result<i64,Arr u8
 
 type ScfSetup = { root:Arr u8 _, environment:Arr Arr u8 _ _, neo:Arr Arr u8 _ _ }
 ; --standalone: the SDK in vendor/neokit-sdk (assembled from root, with the
-; multi-platform Neo installed beside it) and the project launcher. The
-; rest of init then uses the SDK's framework and Neo.
-private effect(fs,env,process,time) fn scf_standalone(borrow path:Arr u8 _, borrow root:Arr u8 _, borrow environment:Arr Arr u8 _ _) -> Result<ScfSetup,Arr u8 _>
+; multi-platform Neo neo_version installed beside it) and the project
+; launcher. The rest of init then uses the SDK's framework and Neo.
+private effect(fs,env,process,time) fn scf_standalone(borrow path:Arr u8 _, borrow root:Arr u8 _, borrow environment:Arr Arr u8 _ _,
+    borrow neo_version:Arr u8 _) -> Result<ScfSetup,Arr u8 _>
   = let sdk=host_join(path,"vendor/neokit-sdk") in
-    let assembled=rel_assemble(sdk,root,environment,text_empty(),text_empty())? in
+    let assembled=rel_assemble(sdk,root,environment,text_empty(),text_empty(),neo_version)? in
     let neo=host_join(sdk,"neo") in
     let launcher=host_write_mode(host_join(path,"neokit"),scf_launcher(),493)? in
     Ok::<ScfSetup,Arr u8 _>(ScfSetup { root=host_join(sdk,"framework"),
@@ -74,23 +77,24 @@ private effect(fs,env,process,time) fn scf_standalone(borrow path:Arr u8 _, borr
       neo=push(text_words(),host_join(neo,"neo")) })
 
 private effect(fs,env,process,time) fn scf_setup(borrow path:Arr u8 _, borrow root:Arr u8 _, borrow environment:Arr Arr u8 _ _,
-    borrow neo:Arr Arr u8 _ _, standalone:bool) -> Result<ScfSetup,Arr u8 _>
-  = if standalone then scf_standalone(path,root,environment)
+    borrow neo:Arr Arr u8 _ _, standalone:bool, borrow neo_version:Arr u8 _) -> Result<ScfSetup,Arr u8 _>
+  = if standalone then scf_standalone(path,root,environment,neo_version)
     else Ok::<ScfSetup,Arr u8 _>(ScfSetup { root=root, environment=environment, neo=neo })
 
 private effect(fs,process) fn scf_write(borrow path:Arr u8 _, borrow name:Arr u8 _, borrow text:Arr u8 _) -> Arr u8 _
   = match host_write_text(host_join(path,name),text) { Ok(count) => text_empty(), Err(message) => message }
 
-; scf_init(path, root, environment, neo, standalone): creates the
-; project at path (which must be missing or empty), locks it with
-; `NEO pkg lock PATH` (neo is the command, environment its variables; the
-; child shares stdin, stdout and stderr) and returns the resolved path.
+; scf_init(path, root, environment, neo, standalone, neo_version):
+; creates the project at path (which must be missing or empty), locks it
+; with `NEO pkg lock PATH` (neo is the command, environment its variables;
+; the child shares stdin, stdout and stderr) and returns the resolved path.
+; neo_version is the Neo a standalone project's SDK must bundle.
 effect(fs,env,process,time) fn scf_init(borrow path:Arr u8 _, borrow root:Arr u8 _, borrow environment:Arr Arr u8 _ _,
-    borrow neo:Arr Arr u8 _ _, standalone:bool) -> Result<Arr u8 _,Arr u8 _>
+    borrow neo:Arr Arr u8 _ _, standalone:bool, borrow neo_version:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
   = let project=host_resolve(path)? in
     let empty=scf_check_empty(project)? in
     let made=host_mkdir(project,true,true)? in
-    let setup=scf_setup(project,root,environment,neo,standalone)? in
+    let setup=scf_setup(project,root,environment,neo,standalone,neo_version)? in
     let folders=push(push(push(text_words(),"app"),"client"),"public") in
     let created=loop (err=text_empty(), i=0) while len(err)==0 && i<len(folders)
       next (match host_mkdir(host_join(project,text_word(folders,i)),false,true) { Ok(done) => text_empty(), Err(message) => message }, i+1) yield err in
