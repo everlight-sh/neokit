@@ -4,7 +4,7 @@ NeoKit builds native Neo servers and static sites. This alpha includes a source 
 
 ## Install and create an app
 
-Use Bun 1.3.13 and Clang/LLVM with a platform linker. Linux builds use LLD. The SDK contains the native Neo 0.2.10 compiler binaries for macOS ARM64 and Linux ARM64/x86-64, runtime sources, exact local libraries, and browser assets. The `neokit` command is a small sh launcher: its first run builds NeoKit's native CLI from the SDK's sources with the bundled Neo compiler, which takes a minute or so, and caches it under `${XDG_CACHE_HOME:-~/.cache}/neokit/cli`. The Neo compiler, the CLI and the deployed app execute natively. Verify the published SHA-256 of the archive before unpacking it.
+Use Bun 1.3.13 and Clang/LLVM with a platform linker. Linux builds use LLD. The SDK contains the native Neo 0.2.11 compiler binaries for macOS ARM64 and Linux ARM64/x86-64, runtime sources, exact local libraries, and browser assets. The `neokit` command is a small sh launcher: its first run builds NeoKit's native CLI from the SDK's sources with the bundled Neo compiler, which takes a minute or so, and caches it under `${XDG_CACHE_HOME:-~/.cache}/neokit/cli`. The Neo compiler, the CLI and the deployed app execute natively. Verify the published SHA-256 of the archive before unpacking it.
 
 ```sh
 tar -xzf neokit-0.1.0-alpha.1.tar.gz
