@@ -1,5 +1,5 @@
 # Expectations recorded from the Python reference (last present at commit 4757083) and now fixed.
-# Run with the released Neo 0.2.11: neo test tests/cli_golden/assets/assets.neo.toml
+# Run with the released Neo 0.2.12: neo test tests/cli_golden/assets/assets.neo.toml
 
 [[test]]
 name = "assets metadata"

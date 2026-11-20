@@ -11,7 +11,7 @@
 # /bin/dash and /bin/bash (for `bash --posix` or busybox sh, a script that
 # execs them with its arguments). "full" also builds the real cli/main.neo
 # through the launcher and times its cache hit. NEO_ARCHIVE, when set, names
-# Neo's multi-platform release archive (neo-0.2.11.tar.gz) for the SDK
+# Neo's multi-platform release archive (neo-0.2.12.tar.gz) for the SDK
 # checks. The toolchain is copied once (about its size in
 # build/launcher-test, which is left for inspection). Prints one line per
 # check; exits 1 when one fails.

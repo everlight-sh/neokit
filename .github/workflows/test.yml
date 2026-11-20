@@ -11,11 +11,11 @@ permissions:
 env:
   # The released Neo the native jobs install, and the SHA-256 of each platform
   # bundle as the release's SHA256SUMS lists them. Change them together, here only.
-  NEO_VERSION: '0.2.11'
+  NEO_VERSION: '0.2.12'
   NEO_SHA256SUMS: |
-    f4fde50666898362dca95529c82f840c8ef3c9c67941a09f98d46e35229fc5e0  neo-0.2.11-linux-x86_64.tar.gz
-    a7f290997393e28febbf65826464e02cfb5c0f57b9ce0896d2325fd770a96e01  neo-0.2.11-linux-arm64.tar.gz
-    9786fecc34911cb26e9749467d794937ae8252a90a0c257cda0cca09d31a214e  neo-0.2.11-darwin-arm64.tar.gz
+    a5a6d9ea503a5b46da8b903bd65937e0241cd0dcb524ecb6b49db5d0e471a4bd  neo-0.2.12-linux-x86_64.tar.gz
+    9b3b51667e8e95f1c91c1f10c2d241f51bdc97f3ba39f76c75333776b87b24c4  neo-0.2.12-linux-arm64.tar.gz
+    39bf4a271abfe4256a02a6bb7d13d7f2d01e1182f1511ce4dbd72c1afc87c2f8  neo-0.2.12-darwin-arm64.tar.gz
   # neo.lock pins the neo-libs packages by content; this tag holds those bytes.
   NEO_LIBS_REF: v0.1.1
 

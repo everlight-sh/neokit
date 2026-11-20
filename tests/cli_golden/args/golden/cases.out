@@ -224,7 +224,7 @@ options:
   -h, --help            show this help message and exit
   --out OUT
   --neo-archive NEO_ARCHIVE
-                        Neo 0.2.11 multi-platform native release archive
+                        Neo 0.2.12 multi-platform native release archive
   --neo-sha256 NEO_SHA256
                         expected SHA-256 of the Neo archive
 --- stderr
@@ -365,7 +365,7 @@ options:
     exit
   --out OUT
   --neo-archive NEO_ARCHIVE
-    Neo 0.2.11
+    Neo 0.2.12
     multi-
     platform
     native
@@ -577,7 +577,7 @@ options:
     exit
   --out OUT
   --neo-archive NEO_ARCHIVE
-    Neo 0.2.11
+    Neo 0.2.12
     multi-platform
     native release
     archive
@@ -763,7 +763,7 @@ options:
         message and exit
   --out OUT
   --neo-archive NEO_ARCHIVE
-        Neo 0.2.11 multi-
+        Neo 0.2.12 multi-
         platform native
         release archive
   --neo-sha256 NEO_SHA256
@@ -923,7 +923,7 @@ options:
                   message and exit
   --out OUT
   --neo-archive NEO_ARCHIVE
-                  Neo 0.2.11 multi-
+                  Neo 0.2.12 multi-
                   platform native
                   release archive
   --neo-sha256 NEO_SHA256
@@ -1061,7 +1061,7 @@ options:
                         exit
   --out OUT
   --neo-archive NEO_ARCHIVE
-                        Neo 0.2.11 multi-platform
+                        Neo 0.2.12 multi-platform
                         native release archive
   --neo-sha256 NEO_SHA256
                         expected SHA-256 of the
@@ -1183,7 +1183,7 @@ options:
   -h, --help            show this help message and exit
   --out OUT
   --neo-archive NEO_ARCHIVE
-                        Neo 0.2.11 multi-platform native
+                        Neo 0.2.12 multi-platform native
                         release archive
   --neo-sha256 NEO_SHA256
                         expected SHA-256 of the Neo
@@ -1296,7 +1296,7 @@ options:
   -h, --help            show this help message and exit
   --out OUT
   --neo-archive NEO_ARCHIVE
-                        Neo 0.2.11 multi-platform native release archive
+                        Neo 0.2.12 multi-platform native release archive
   --neo-sha256 NEO_SHA256
                         expected SHA-256 of the Neo archive
 --- stderr
@@ -1397,7 +1397,7 @@ options:
   -h, --help            show this help message and exit
   --out OUT
   --neo-archive NEO_ARCHIVE
-                        Neo 0.2.11 multi-platform native release archive
+                        Neo 0.2.12 multi-platform native release archive
   --neo-sha256 NEO_SHA256
                         expected SHA-256 of the Neo archive
 --- stderr
@@ -1500,7 +1500,7 @@ options:
   -h, --help            show this help message and exit
   --out OUT
   --neo-archive NEO_ARCHIVE
-                        Neo 0.2.11 multi-platform native release archive
+                        Neo 0.2.12 multi-platform native release archive
   --neo-sha256 NEO_SHA256
                         expected SHA-256 of the Neo archive
 --- stderr
@@ -1609,7 +1609,7 @@ options:
   -h, --help            show this help message and exit
   --out OUT
   --neo-archive NEO_ARCHIVE
-                        Neo 0.2.11 multi-platform native release archive
+                        Neo 0.2.12 multi-platform native release archive
   --neo-sha256 NEO_SHA256
                         expected SHA-256 of the Neo archive
 --- stderr
@@ -1728,7 +1728,7 @@ options:
                         and exit
   --out OUT
   --neo-archive NEO_ARCHIVE
-                        Neo 0.2.11 multi-
+                        Neo 0.2.12 multi-
                         platform native release
                         archive
   --neo-sha256 NEO_SHA256
@@ -1849,7 +1849,7 @@ options:
   -h, --help            show this help message and exit
   --out OUT
   --neo-archive NEO_ARCHIVE
-                        Neo 0.2.11 multi-platform native release archive
+                        Neo 0.2.12 multi-platform native release archive
   --neo-sha256 NEO_SHA256
                         expected SHA-256 of the Neo archive
 --- stderr

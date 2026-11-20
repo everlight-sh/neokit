@@ -1,7 +1,7 @@
 # The native `neokit` CLI
 
 `neokit` is one native executable built from `cli/*.neo` with Neo. It needs
-Neo 0.2.11 or newer (`fs_mkdir_mode` in std:fs, SIGINT in `process_signal`),
+Neo 0.2.12 or newer (`fs_mkdir_mode` in std:fs, SIGINT in `process_signal`),
 Bun and Clang/LLVM. The code
 uses only `std:` modules, never `unsafe` or neo-libs packages.
 
