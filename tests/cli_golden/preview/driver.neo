@@ -62,22 +62,9 @@ effect fn free_port(from:i64) -> i64
 effect fn reachable(port:i64) -> bool = using probe=tcp_connect_ipv4("127.0.0.1",port,soon(1000)) in socket_status(probe).ok
 effect fn wait_up(port:i64) -> bool
   = loop (up=false, i=0) while !up && i<500 next (if reachable(port) then true else (let slept=sleep_ms(10) in false), i+1) yield up
-effect fn read_step(socket:Socket, borrow r:Reading) -> Reading
-  = let got=socket_read(socket,soon(10000)) in
-    if got.ok && len(got.value)>0 then Reading { out=concat(r.out,got.value), more=true } else r with { more=false }
-effect fn read_all(socket:Socket) -> Arr u8 _
-  = let r=loop (r=Reading { out=text_empty(), more=true }) while r.more next (read_step(socket,r)) yield r in r.out
 effect fn send_pieces(socket:Socket, borrow request:Arr u8 _) -> bool
   = loop (i=0, ok=true) while ok && i<len(request)
       next (i+3, let sent=socket_write(socket,text_slice(request,i,i+3),soon(10000)) in let slept=sleep_ms(5) in sent.ok) yield ok
-; One request on its own connection: mode "split" sends it 3 bytes at a
-; time, "eof" shuts down the sending side after it.
-effect fn exchange(port:i64, borrow request:Arr u8 _, borrow mode:Arr u8 _) -> Arr u8 _
-  = using socket=tcp_connect_ipv4("127.0.0.1",port,soon(5000)) in
-    if !socket_status(socket).ok then "(no connection)" else
-    let sent=if text_equal(mode,"split") then send_pieces(socket,request) else socket_write(socket,request,soon(10000)).ok in
-    let shut=if text_equal(mode,"eof") then socket_close_write(socket).ok else true in
-    read_all(socket)
 
 ; ---- output, normalized as the goldens record it ----
 
@@ -107,6 +94,30 @@ effect fn drain_step(child:Process, stream:i64, borrow r:Reading) -> Reading
 ; What the child has written on stream (1 stdout, 2 stderr) so far.
 effect fn drain(child:Process, stream:i64) -> Arr u8 _
   = let r=loop (r=Reading { out=text_empty(), more=true }) while r.more next (drain_step(child,stream,r)) yield r in r.out
+; A reply, and what the server logged while it was awaited.
+type Reply = { out:Arr u8 _, log:Arr u8 _, more:bool, idle:i64 }
+; The server writes its log line before it replies, and this process is the
+; one that reads that log. A child's output channel holds about 200 KiB on
+; Linux and 8 KiB on macOS, so a long log line (a request line at the limit
+; is 64 KiB) blocks the server until it is read: the log is read while the
+; reply is awaited, for up to 10 s without news.
+effect fn receive_step(socket:Socket, child:Process, borrow r:Reply) -> Reply
+  = let got=socket_try_read(socket,65536) in
+    if got.ok && len(got.value)>0 then r with { out=concat(r.out,got.value), idle=0 }
+    else if got.ok then r with { more=false }
+    else if got.error.code!=rt_again() && got.error.code!=4 then r with { more=false }
+    else let log=drain(child,2) in let slept=sleep_ms(2) in
+      r with { log=concat(r.log,log), idle=if len(log)>0 then 0 else r.idle+1, more=r.idle<5000 }
+effect fn receive(socket:Socket, child:Process) -> Reply
+  = loop (r=Reply { out=text_empty(), log=text_empty(), more=true, idle=0 }) while r.more next (receive_step(socket,child,r)) yield r
+; One request on its own connection: mode "split" sends it 3 bytes at a
+; time, "eof" shuts down the sending side after it.
+effect fn exchange(child:Process, port:i64, borrow request:Arr u8 _, borrow mode:Arr u8 _) -> Reply
+  = using socket=tcp_connect_ipv4("127.0.0.1",port,soon(5000)) in
+    if !socket_status(socket).ok then Reply { out="(no connection)", log=text_empty(), more=false, idle=0 } else
+    let sent=if text_equal(mode,"split") then send_pieces(socket,request) else socket_write(socket,request,soon(10000)).ok in
+    let shut=if text_equal(mode,"eof") then socket_close_write(socket).ok else true in
+    receive(socket,child)
 effect fn wait_exit(child:Process) -> ProcessStatus
   = loop (st=process_status(child), i=0) while st.ok && st.running && i<1000
       next (let slept=sleep_ms(10) in process_status(child), i+1) yield st
@@ -116,17 +127,18 @@ effect fn run_case(child:Process, port:i64, borrow row:Arr u8 _) -> Arr u8 _
   = let f=text_split(row,"\t") in
     let count=text_parse_int(text_word(f,4)) in
     let request=concat(unhex(text_word(f,3)),text_repeat(unhex(text_word(f,5)),if count.ok then count.value else 0),unhex(text_word(f,6))) in
-    let response=exchange(port,request,text_word(f,1)) in
-    concat("=== ",text_word(f,0),"\n",normalized(response),"--- log\n",log_lines(drain(child,2)))
+    let reply=exchange(child,port,request,text_word(f,1)) in
+    concat("=== ",text_word(f,0),"\n",normalized(reply.out),"--- log\n",log_lines(concat(reply.log,drain(child,2))))
 ; A connection idle halfway through its request while another is served.
 effect fn concurrent(child:Process, port:i64) -> Arr u8 _
   = using first=tcp_connect_ipv4("127.0.0.1",port,soon(5000)) in
     let started=socket_write(first,"GET /about/ HTTP/1.0\r\nHost: x\r\n",soon(5000)) in
     let slept=sleep_ms(50) in
-    let other=exchange(port,"GET / HTTP/1.0\r\n\r\n","") in
+    let other=exchange(child,port,"GET / HTTP/1.0\r\n\r\n","") in
     let ended=socket_write(first,"\r\n",soon(5000)) in
-    let answer=read_all(first) in
-    concat("=== concurrent\n--- B\n",normalized(other),"--- A\n",normalized(answer),"--- log\n",log_lines(drain(child,2)))
+    let answer=receive(first,child) in
+    concat("=== concurrent\n--- B\n",normalized(other.out),"--- A\n",normalized(answer.out),"--- log\n",
+      log_lines(concat(other.log,answer.log,drain(child,2))))
 effect fn serve_cases(borrow exe:Arr u8 _, borrow site:Arr u8 _, port:i64, borrow rows:Arr Arr u8 _ _) -> Arr u8 _
   = using child=process_start(exe,serve_args(site,text_int(port)),env_list()) in
     let up=wait_up(port) in
