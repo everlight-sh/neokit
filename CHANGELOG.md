@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0-alpha.2
+
+- Neo 0.2.14: NeoKit needs it (`http_async_stopping` in std:http_async, `os_name` in std:process), and SDK releases bundle the 0.2.14 archive.
+- Event streams end properly when the server stops. A stream that was open at a stop used to be cut off without its last chunk once the grace period ran out, which a proxy reports to the browser as a connection reset; it now ends at once with `: reconnect`, and the server exits without waiting for the grace period. The HTTPS deployment check of the alpha failed on this.
+- macOS: the command-line tools now read the system's own error numbers. An error such as a directory that is not empty showed as `Unknown error 66`, a symbolic-link loop was not reported, and input piped to a child process stopped after 8 KiB (fixed in Neo 0.2.14).
+- Faster pages with Neo 0.2.14: text that is escaped when the page is built (a name from a request or a database) costs about a fifth less CPU on a 1,000-row page, and each server process uses about 0.14 MiB less memory.
+
 ## 0.1.0-alpha.1
 
 The first tagged release.

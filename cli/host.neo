@@ -39,8 +39,10 @@
 ;   parameter), which also sets PWD and OLDPWD in the child's environment.
 ; - ~user and a missing HOME are errors (the former CLI consulted the
 ;   password database). Text is UTF-8 whatever the locale.
-; - Error texts (host_strerror) are Linux's; macOS numbers its errno values
-;   above 34 differently.
+; - Error texts (host_strerror) are Linux's, by Linux's error numbers. macOS
+;   numbers its errors differently above 34, so an error that comes from the
+;   system is shown with the system's own number and the text of the same
+;   error (host_system_text).
 import "std:option"
 import "std:result"
 import "std:io"
@@ -76,16 +78,28 @@ fn host_strerror(code:i64) -> Arr u8 _
     else if code==98 then "Address already in use" else if code==99 then "Cannot assign requested address"
     else if code==122 then "Disk quota exceeded"
     else concat("Unknown error ",text_int(code))
+; Linux's number for an error the system reported, or -1 when this table has
+; none. Linux and macOS agree up to 34 except that "try again" and "deadlock"
+; are swapped (11 and 35); above that macOS has its own numbers.
+fn host_errno_linux(code:i64) -> i64
+  = if !text_equal(os_name(),"macos") then code
+    else if code==35 then 11 else if code==11 then 35 else if code<=34 then code
+    else if code==62 then 40 else if code==63 then 36 else if code==66 then 39
+    else if code==48 then 98 else if code==49 then 99 else if code==69 then 122
+    else if code==102 || code==45 then 95 else -1
+; The text of an error the system reported.
+fn host_system_text(code:i64) -> Arr u8 _
+  = let linux=host_errno_linux(code) in if linux<0 then concat("Unknown error ",text_int(code)) else host_strerror(linux)
 ; str(OSError(code, os.strerror(code), path)): "[Errno 2] No such file or
 ; directory: '/path'", with the path quoted as repr() quotes it.
 fn host_os_error(code:i64, borrow path:Arr u8 _) -> Arr u8 _
-  = concat("[Errno ",text_int(code),"] ",host_strerror(code),": ",text_repr(path))
+  = concat("[Errno ",text_int(code),"] ",host_system_text(code),": ",text_repr(path))
 ; The two-path form os.replace, os.rename and os.symlink raise:
 ; "[Errno 2] No such file or directory: 'a' -> 'b'".
 fn host_os_error2(code:i64, borrow path:Arr u8 _, borrow other:Arr u8 _) -> Arr u8 _
   = concat(host_os_error(code,path)," -> ",text_repr(other))
 ; An OSError without a file name: "[Errno 2] No such file or directory".
-fn host_errno_text(code:i64) -> Arr u8 _ = concat("[Errno ",text_int(code),"] ",host_strerror(code))
+fn host_errno_text(code:i64) -> Arr u8 _ = concat("[Errno ",text_int(code),"] ",host_system_text(code))
 
 private fn host_ok(borrow value:Arr u8 _) -> Result<Arr u8 _,Arr u8 _> = Ok::<Arr u8 _,Arr u8 _>(value)
 private fn host_err(borrow message:Arr u8 _) -> Result<Arr u8 _,Arr u8 _> = Err::<Arr u8 _,Arr u8 _>(message)
@@ -396,7 +410,7 @@ effect(fs) fn host_realpath(borrow path:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
 effect(fs) fn host_resolve(borrow path:Arr u8 _) -> Result<Arr u8 _,Arr u8 _>
   = let real=host_realpath(host_fs(path))? in
     let stat=fs_stat(real,true) in
-    if !stat.ok && stat.error.code==40 then host_err(concat("Symlink loop from ",text_repr(real))) else host_ok(real)
+    if !stat.ok && host_errno_linux(stat.error.code)==40 then host_err(concat("Symlink loop from ",text_repr(real))) else host_ok(real)
 
 ; Path.home(): HOME as os.path.expanduser('~') uses it.
 effect(env) fn host_home() -> Result<Arr u8 _,Arr u8 _>

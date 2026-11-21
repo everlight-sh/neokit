@@ -25,7 +25,9 @@ private effect(process) fn realtime_append(channel:EventChannel,epoch:i64,messag
 effect(fs,net,env,time,process) fn web_events_step(capture:Arr u8 n)->Arr u8 _
   = let restored=http_async_state_get() in let now=monotonic_ms() in
     if !restored.ok || !now.ok then http_async_close("") else let state=restored.value in
-    let deadline=state.word4 in if now.value+1>=deadline then http_async_close(": reconnect\n\n") else
+    ; The server is stopping, or this stream has had its time: end it properly,
+    ; so the client reconnects (to this server's replacement) with its cursor.
+    let deadline=state.word4 in if now.value+1>=deadline || http_async_stopping() then http_async_close(": reconnect\n\n") else
     if !http_async_event_ready() then
       let saved=http_async_state_set(state with {word3=now.value}) in
       http_async_send_bytes(": heartbeat\n\n",realtime_wake(now.value,deadline)) else

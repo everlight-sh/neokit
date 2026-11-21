@@ -186,7 +186,7 @@ effect fn fs_test_read_text_and_errors() -> bool
       && report("mkdir no parent",shown(match host_mkdir(host_join(root,"m/n"),false,true) { Ok(n) => Ok::<Arr u8 _,Arr u8 _>("made"), Err(m) => Err::<Arr u8 _,Arr u8 _>(m) }),
         concat("error: [Errno 2] No such file or directory: ",text_repr(host_join(root,"m/n"))))
       && report("rmdir non-empty",shown(match host_rmdir(host_join(root,"p")) { Ok(n) => Ok::<Arr u8 _,Arr u8 _>("gone"), Err(m) => Err::<Arr u8 _,Arr u8 _>(m) }),
-        concat("error: [Errno 39] Directory not empty: ",text_repr(host_join(root,"p"))))
+        concat("error: [Errno ",if text_equal(os_name(),"macos") then "66" else "39","] Directory not empty: ",text_repr(host_join(root,"p"))))
       && report("listdir file",shown(match host_listdir(crlf) { Ok(n) => Ok::<Arr u8 _,Arr u8 _>("listed"), Err(m) => Err::<Arr u8 _,Arr u8 _>(m) }),
         concat("error: [Errno 20] Not a directory: ",text_repr(crlf)))
       && report("rename missing",shown(match host_rename(missing,bad) { Ok(n) => Ok::<Arr u8 _,Arr u8 _>("moved"), Err(m) => Err::<Arr u8 _,Arr u8 _>(m) }),
