@@ -39,10 +39,11 @@
 ;   parameter), which also sets PWD and OLDPWD in the child's environment.
 ; - ~user and a missing HOME are errors (the former CLI consulted the
 ;   password database). Text is UTF-8 whatever the locale.
-; - Error texts (host_strerror) are Linux's, by Linux's error numbers. macOS
-;   numbers its errors differently above 34, so an error that comes from the
-;   system is shown with the system's own number and the text of the same
-;   error (host_system_text).
+; - Error numbers and texts are Linux's on every system, so the same failure
+;   reads the same everywhere. macOS numbers its errors differently above 34;
+;   an error it reports is shown with Linux's number for it (host_os_error),
+;   and one this table has no Linux number for keeps its own as "Unknown
+;   error N".
 import "std:option"
 import "std:result"
 import "std:io"
@@ -87,19 +88,25 @@ fn host_errno_linux(code:i64) -> i64
     else if code==62 then 40 else if code==63 then 36 else if code==66 then 39
     else if code==48 then 98 else if code==49 then 99 else if code==69 then 122
     else if code==102 || code==45 then 95 else -1
-; The text of an error the system reported.
-fn host_system_text(code:i64) -> Arr u8 _
-  = let linux=host_errno_linux(code) in if linux<0 then concat("Unknown error ",text_int(code)) else host_strerror(linux)
-; str(OSError(code, os.strerror(code), path)): "[Errno 2] No such file or
-; directory: '/path'", with the path quoted as repr() quotes it.
+; str(OSError(code, os.strerror(code), path)) on Linux, for one of Linux's
+; error numbers: "[Errno 2] No such file or directory: '/path'", with the
+; path quoted as repr() quotes it.
+fn host_os_error_linux(code:i64, borrow path:Arr u8 _) -> Arr u8 _
+  = concat("[Errno ",text_int(code),"] ",host_strerror(code),": ",text_repr(path))
+; The same for an error the system reported.
 fn host_os_error(code:i64, borrow path:Arr u8 _) -> Arr u8 _
-  = concat("[Errno ",text_int(code),"] ",host_system_text(code),": ",text_repr(path))
+  = let linux=host_errno_linux(code) in
+    if linux<0 then concat("[Errno ",text_int(code),"] Unknown error ",text_int(code),": ",text_repr(path)) else host_os_error_linux(linux,path)
 ; The two-path form os.replace, os.rename and os.symlink raise:
 ; "[Errno 2] No such file or directory: 'a' -> 'b'".
+fn host_os_error2_linux(code:i64, borrow path:Arr u8 _, borrow other:Arr u8 _) -> Arr u8 _
+  = concat(host_os_error_linux(code,path)," -> ",text_repr(other))
 fn host_os_error2(code:i64, borrow path:Arr u8 _, borrow other:Arr u8 _) -> Arr u8 _
   = concat(host_os_error(code,path)," -> ",text_repr(other))
 ; An OSError without a file name: "[Errno 2] No such file or directory".
-fn host_errno_text(code:i64) -> Arr u8 _ = concat("[Errno ",text_int(code),"] ",host_system_text(code))
+fn host_errno_text(code:i64) -> Arr u8 _
+  = let linux=host_errno_linux(code) in
+    if linux<0 then concat("[Errno ",text_int(code),"] Unknown error ",text_int(code)) else concat("[Errno ",text_int(linux),"] ",host_strerror(linux))
 
 private fn host_ok(borrow value:Arr u8 _) -> Result<Arr u8 _,Arr u8 _> = Ok::<Arr u8 _,Arr u8 _>(value)
 private fn host_err(borrow message:Arr u8 _) -> Result<Arr u8 _,Arr u8 _> = Err::<Arr u8 _,Arr u8 _>(message)

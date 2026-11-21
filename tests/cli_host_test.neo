@@ -51,8 +51,8 @@ fn apply(borrow op:Arr u8 _, borrow a:Arr u8 _, borrow b:Arr u8 _, borrow c:Arr 
     else if text_equal(op,"fnmatch") then flag(host_glob_match(a,b))
     else if text_equal(op,"utf8") then host_utf8_error(a)
     else if text_equal(op,"strerror") then host_strerror(number(a))
-    else if text_equal(op,"os_error") then host_os_error(number(a),b)
-    else if text_equal(op,"os_error2") then host_os_error2(number(a),b,c)
+    else if text_equal(op,"os_error") then host_os_error_linux(number(a),b)
+    else if text_equal(op,"os_error2") then host_os_error2_linux(number(a),b,c)
     else if text_equal(op,"signal") then host_signal_repr(number(a))
     else if text_equal(op,"process_error") then
       host_process_error(list_of(a),HostRun { ok=true, code=number(b), signal=number(c), output="", errors="", error="" })
@@ -186,7 +186,7 @@ effect fn fs_test_read_text_and_errors() -> bool
       && report("mkdir no parent",shown(match host_mkdir(host_join(root,"m/n"),false,true) { Ok(n) => Ok::<Arr u8 _,Arr u8 _>("made"), Err(m) => Err::<Arr u8 _,Arr u8 _>(m) }),
         concat("error: [Errno 2] No such file or directory: ",text_repr(host_join(root,"m/n"))))
       && report("rmdir non-empty",shown(match host_rmdir(host_join(root,"p")) { Ok(n) => Ok::<Arr u8 _,Arr u8 _>("gone"), Err(m) => Err::<Arr u8 _,Arr u8 _>(m) }),
-        concat("error: [Errno ",if text_equal(os_name(),"macos") then "66" else "39","] Directory not empty: ",text_repr(host_join(root,"p"))))
+        concat("error: [Errno 39] Directory not empty: ",text_repr(host_join(root,"p"))))
       && report("listdir file",shown(match host_listdir(crlf) { Ok(n) => Ok::<Arr u8 _,Arr u8 _>("listed"), Err(m) => Err::<Arr u8 _,Arr u8 _>(m) }),
         concat("error: [Errno 20] Not a directory: ",text_repr(crlf)))
       && report("rename missing",shown(match host_rename(missing,bad) { Ok(n) => Ok::<Arr u8 _,Arr u8 _>("moved"), Err(m) => Err::<Arr u8 _,Arr u8 _>(m) }),
