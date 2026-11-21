@@ -1,7 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.1
 
+The first tagged release.
+
+- Relocatable source SDK with the Neo compiler, locked libraries, browser runtime, and installer.
+- Standalone app scaffolding and a read-only Meridian deployment behind HTTPS.
+- Native SSR, static exports, typed templates and actions, async loaders, streamed sections, and same-host SSE replay.
 - NeoKit no longer needs Python. The CLI is native Neo (`cli/`): the `neokit` sh launcher builds it with Neo on first use and caches it under `${XDG_CACHE_HOME:-~/.cache}/neokit/cli`. It needs Neo 0.2.13. Commands, options, output and exit statuses are unchanged; `cli/README.md` lists the few differences from the former Python CLI. Image variants need libvips (`vips` and `vipsheader`) instead of Pillow. Precompressed assets are gzip only (no Brotli). `examples/run.ts` and `tests/tools/alpha_*.ts` replace the Python scripts.
 - Neo 0.2.13: on x86-64 Linux the server now runs on io_uring by default (lower tail latency, about 0.3 MiB more memory). `NEO_HTTP_URING=0` keeps epoll.
 - Neo 0.2.12 escapes text that is fixed in the source when the application is built, so `html_escape` of a literal costs nothing per request.
@@ -27,9 +32,3 @@
 - Tests: `tests/core/audit_features.test.ts` compiles one app that uses every routing, template, caching and metadata option above, then checks its server and export. `./neokit test` runs it.
 - Tests: the integration suites are Bun tests that drive only the `neokit` CLI: `./neokit test` runs `tests/core`, `--extended` adds `tests/extended`, and the new `--postgres` runs `tests/postgres` in a private PostgreSQL cluster (`tests/tools/postgres.ts`). The browser, empty-root and container tools are in `tests/tools`.
 - Deploy: pinned Caddy, compression and security headers, HSTS for public domains, log rotation, memory limits, a Docker healthcheck, Pillow and Brotli in the image, and a CI unit-test workflow.
-
-## 0.1.0-alpha.1
-
-- Relocatable source SDK with the Neo compiler, locked libraries, browser runtime, and installer.
-- Standalone app scaffolding and a read-only Meridian deployment behind HTTPS.
-- Native SSR, static exports, typed templates and actions, async loaders, streamed sections, and same-host SSE replay.
