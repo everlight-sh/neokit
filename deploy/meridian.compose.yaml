@@ -1,6 +1,6 @@
 services:
   app:
-    image: ${NEOKIT_APP_IMAGE:-neokit-meridian:0.1.0-alpha.1}
+    image: ${NEOKIT_APP_IMAGE:-neokit-meridian:0.1.0-alpha.2}
     init: true
     build:
       context: ..

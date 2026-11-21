@@ -1,7 +1,7 @@
 # Expectations recorded from the Python reference (last present at commit 4757083) and now fixed.
 # Updated natively once since: the fixture lost tools/run.py when .py files stopped
 # being release sources, which changes only the file lists and their checksums.
-# Run with the released Neo 0.2.13: neo test tests/cli_golden/scaffold/scaffold.neo.toml
+# Run with the released Neo 0.2.14: neo test tests/cli_golden/scaffold/scaffold.neo.toml
 
 [[test]]
 name = "scaffold init on the release fixture's SDK"

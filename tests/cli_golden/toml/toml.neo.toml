@@ -1,5 +1,5 @@
 # Expectations recorded from the Python reference (last present at commit 4757083) and now fixed.
-# Run with the released Neo 0.2.13: neo test tests/cli_golden/toml/toml.neo.toml
+# Run with the released Neo 0.2.14: neo test tests/cli_golden/toml/toml.neo.toml
 
 [[test]]
 name = "toml repository files"

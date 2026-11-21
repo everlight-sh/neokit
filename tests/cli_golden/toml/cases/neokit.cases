@@ -107,7 +107,7 @@ version="0.1.0"
 entry="app/page.neo"
 
 [dependencies]
-neokit={path="../neokit",version="0.1.0-alpha.1"}
+neokit={path="../neokit",version="0.1.0-alpha.2"}
 #--- config with wrong types that the build rejects later
 loader = 1
 mode = ["ssr"]

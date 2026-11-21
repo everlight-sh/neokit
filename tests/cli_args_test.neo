@@ -51,7 +51,7 @@ fn test_width() -> bool
 ; textwrap.wrap: hyphenated words break after the hyphen, long words are
 ; cut, "SHA-256" is one word.
 fn test_wrap_like_textwrap() -> bool
-  = same(text_join(text_wrap("Neo 0.2.13 multi-platform native release archive",11),"|"),"Neo 0.2.13|multi-|platform|native|release|archive")
+  = same(text_join(text_wrap("Neo 0.2.14 multi-platform native release archive",11),"|"),"Neo 0.2.14|multi-|platform|native|release|archive")
     && same(text_join(text_wrap("expected SHA-256 of the Neo archive",11),"|"),"expected|SHA-256 of|the Neo|archive")
     && same(text_join(text_wrap("abcdefghijklmnop  q",11),"|"),"abcdefghijk|lmnop q")
     && same(text_join(text_wrap("  a   b ",11),"|"),"a b")

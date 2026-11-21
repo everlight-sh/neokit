@@ -1,8 +1,8 @@
 # Expectations recorded from the Python reference (last present at commit 4757083) and now fixed.
 # Updated natively since: the --neo-archive help names rel_neo_version(), now Neo
-# 0.2.13. That is one character longer than 0.2.6, so one case (COLUMNS=50) also wraps
+# 0.2.14. That is one character longer than 0.2.6, so one case (COLUMNS=50) also wraps
 # differently: "multi-platform" breaks at its hyphen, as argparse breaks it.
-# Run with the released Neo 0.2.13: neo test tests/cli_golden/args/args.neo.toml
+# Run with the released Neo 0.2.14: neo test tests/cli_golden/args/args.neo.toml
 
 [[test]]
 name = "argument parsing, help and usage errors"

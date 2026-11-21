@@ -61,7 +61,7 @@
       "sha256": "e63ad2479b644a28b600f105390b53b6ebfa5f91de0758f70f335bd4cd3dedc5",
       "version": "0.1.0"
     },
-    "neokit@0.1.0-alpha.1": {
+    "neokit@0.1.0-alpha.2": {
       "dependencies": {
         "document-store": "neo-document-store@0.1.0",
         "http-server": "neo-http-server@0.1.0",
@@ -81,8 +81,8 @@
       "name": "neokit",
       "path": ".",
       "sha256": null,
-      "version": "0.1.0-alpha.1"
+      "version": "0.1.0-alpha.2"
     }
   },
-  "root": "neokit@0.1.0-alpha.1"
+  "root": "neokit@0.1.0-alpha.2"
 }

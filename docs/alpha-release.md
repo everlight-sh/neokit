@@ -1,14 +1,14 @@
-# NeoKit 0.1.0-alpha.1
+# NeoKit 0.1.0-alpha.2
 
 NeoKit builds native Neo servers and static sites. This alpha includes a source SDK, the Meridian analytics demo, and a standalone starter. The supported deployment profile is one Linux host with native HTTP/1.1 workers behind Caddy. Realtime shares a bounded replay window across workers on the same host. A full restart resets the replay history. Async database and network waits yield to the worker. Regular disk I/O and PostgreSQL result buffering are part of the current profile.
 
 ## Install and create an app
 
-Use Bun 1.3.13 and Clang/LLVM with a platform linker. Linux builds use LLD. The SDK contains the native Neo 0.2.13 compiler binaries for macOS ARM64 and Linux ARM64/x86-64, runtime sources, exact local libraries, and browser assets. The `neokit` command is a small sh launcher: its first run builds NeoKit's native CLI from the SDK's sources with the bundled Neo compiler, which takes a minute or so, and caches it under `${XDG_CACHE_HOME:-~/.cache}/neokit/cli`. The Neo compiler, the CLI and the deployed app execute natively. Verify the published SHA-256 of the archive before unpacking it.
+Use Bun 1.3.13 and Clang/LLVM with a platform linker. Linux builds use LLD. The SDK contains the native Neo 0.2.14 compiler binaries for macOS ARM64 and Linux ARM64/x86-64, runtime sources, exact local libraries, and browser assets. The `neokit` command is a small sh launcher: its first run builds NeoKit's native CLI from the SDK's sources with the bundled Neo compiler, which takes a minute or so, and caches it under `${XDG_CACHE_HOME:-~/.cache}/neokit/cli`. The Neo compiler, the CLI and the deployed app execute natively. Verify the published SHA-256 of the archive before unpacking it.
 
 ```sh
-tar -xzf neokit-0.1.0-alpha.1.tar.gz
-cd neokit-0.1.0-alpha.1
+tar -xzf neokit-0.1.0-alpha.2.tar.gz
+cd neokit-0.1.0-alpha.2
 ./install.sh "$HOME/.local"
 "$HOME/.local/bin/neokit" doctor
 "$HOME/.local/bin/neokit" init --standalone "$HOME/first-neokit-app"

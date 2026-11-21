@@ -8,8 +8,8 @@ import "../cli/scaffold.neo"
 fn same(actual:Arr u8 _, expected:Arr u8 _) -> bool = text_equal(actual,expected)
 
 fn test_neo_toml_quotes_like_json_dumps() -> bool
-  = same(scf_neo_toml("plain","../neokit","0.1.0-alpha.1"),
-      "[package]\nname=\"plain\"\nversion=\"0.1.0\"\nentry=\"app/page.neo\"\n\n[dependencies]\nneokit={path=\"../neokit\",version=\"0.1.0-alpha.1\"}\n")
+  = same(scf_neo_toml("plain","../neokit","0.1.0-alpha.2"),
+      "[package]\nname=\"plain\"\nversion=\"0.1.0\"\nentry=\"app/page.neo\"\n\n[dependencies]\nneokit={path=\"../neokit\",version=\"0.1.0-alpha.2\"}\n")
     && same(scf_neo_toml("my \"app\" \xc3\xa9","a\\b","1"),
       "[package]\nname=\"my \\\"app\\\" \\u00e9\"\nversion=\"0.1.0\"\nentry=\"app/page.neo\"\n\n[dependencies]\nneokit={path=\"a\\\\b\",version=\"1\"}\n")
 

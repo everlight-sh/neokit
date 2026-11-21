@@ -1,5 +1,5 @@
 ; Golden driver for std:toml as NeoKit reads configs (cli/toml.neo) and
-; cli/pyjson.neo. Run it with Neo 0.2.13 (std:toml shipped in 0.2.6). Its
+; cli/pyjson.neo. Run it with Neo 0.2.14 (std:toml shipped in 0.2.6). Its
 ; expected output was recorded from the Python reference (last present at
 ; commit 4757083) and now fixed.
 ;
