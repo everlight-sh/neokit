@@ -56,7 +56,7 @@ import "pyjson.neo"
 ; neo_version: the CLI's release and init commands pass this one (and the
 ; --neo-archive help text names it), while the golden tests pass the
 ; version their fixtures were made with.
-fn rel_neo_version() -> Arr u8 _ = "0.2.12"
+fn rel_neo_version() -> Arr u8 _ = "0.2.13"
 fn rel_neo_binaries() -> Arr Arr u8 _ _ = push(push(push(text_words(),"darwin-arm64"),"linux-arm64"),"linux-x86_64")
 
 ; The framework's top-level files, copied as they are.

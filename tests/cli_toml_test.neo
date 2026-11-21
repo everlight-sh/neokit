@@ -1,5 +1,5 @@
 ; Unit tests for cli/toml.neo, NeoKit's configuration layer over std:toml.
-; std:toml shipped in Neo 0.2.6; run them with the released Neo 0.2.12, which
+; std:toml shipped in Neo 0.2.6; run them with the released Neo 0.2.13, which
 ; NeoKit needs.
 import "std:json"
 import "std:option"

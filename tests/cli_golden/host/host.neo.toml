@@ -1,6 +1,6 @@
 # The effectful cases of tests/cli_host_test.neo, whose expected values were
 # recorded from the Python reference (last present at commit 4757083) and now fixed.
-# Run with the released Neo 0.2.12: neo test tests/cli_golden/host/host.neo.toml
+# Run with the released Neo 0.2.13: neo test tests/cli_golden/host/host.neo.toml
 
 [[test]]
 name = "host effectful unit cases"

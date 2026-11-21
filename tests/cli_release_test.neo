@@ -28,7 +28,7 @@ fn parsed(borrow text:Arr u8 _) -> Arr u8 _ = let r=text_parse_int(text) in if r
 fn below(borrow version:Arr u8 _, borrow name:Arr u8 _) -> Arr u8 _ = let m=rel_member(name,version) in if m.ok then concat("ok ",m.below) else "refused"
 
 fn test_constants() -> bool
-  = same(rel_neo_version(),"0.2.12") && same(text_join(rel_neo_binaries(),","),"darwin-arm64,linux-arm64,linux-x86_64")
+  = same(rel_neo_version(),"0.2.13") && same(text_join(rel_neo_binaries(),","),"darwin-arm64,linux-arm64,linux-x86_64")
     && same(text_join(rel_framework_files()," "),"neokit web neo.toml neo.lock package.json bun.lock Dockerfile .dockerignore README.md AGENTS.md LICENSE SECURITY.md CHANGELOG.md")
     && same(text_join(rel_source_dirs()," "),"cli client src examples docs deploy tools tests")
     && same(text_join(rel_source_suffixes()," "),".ax .neo .ts .js .view .toml .css .svg .json .lock .md .sh .yaml .png .jpg .webp")
